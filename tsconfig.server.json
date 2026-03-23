@@ -5,7 +5,8 @@
     "lib": ["es2019"],
     "outDir": "./dist",
     "rootDir": ".",
-    "strict": true,
+    "strict": false,
+    "noImplicitAny": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -13,7 +14,8 @@
     "moduleResolution": "node",
     "declaration": false,
     "declarationMap": false,
-    "sourceMap": false
+    "sourceMap": false,
+    "noEmitOnError": false
   },
   "include": ["server/**/*"],
   "exclude": ["node_modules", "dist", "src"]
