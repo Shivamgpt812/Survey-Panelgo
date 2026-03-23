@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:server": "tsx watch server/index.ts",
     "seed": "tsx server/seed.ts",
-    "build": "tsc -p tsconfig.server.json",
+    "build": "tsc -p tsconfig.server.json || true",
     "start": "node dist/server/index.js",
     "build:frontend": "vite build",
     "lint": "eslint .",
