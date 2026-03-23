@@ -1,6 +1,4 @@
-const BASE =
-  import.meta.env.VITE_API_URL ||
-  "https://survey-panelgo.onrender.com";
+const BASE = "https://survey-panelgo.onrender.com";
 
 async function parseError(res: Response): Promise<string> {
   try {
