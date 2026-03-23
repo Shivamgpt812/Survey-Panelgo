@@ -21,11 +21,27 @@ import {
 } from './middleware/optionalAuth.js';
 
 const app = express();
-app.use(cors({ 
-  origin: ['https://41f664bf8210cb15-49-36-136-170.serveousercontent.com', 'http://localhost:5173'], 
-  credentials: true 
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://surveypanelgo.netlify.app',
+  'https://surveypanelgo.com',
+  'https://www.surveypanelgo.com'
+];
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true);
+    }
+  },
+  credentials: true
 }));
 app.use(express.json({ limit: '2mb' }));
+
+app.get('/api/health', (_req, res) => {
+  res.send('Backend running');
+});
 
 function userJson(u: InstanceType<typeof User>) {
   return u.toJSON() as Record<string, unknown>;
@@ -346,7 +362,7 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
       // First, let's see all existing responses for this user+survey
       const allExisting = await Response.find({ 
         surveyId: sid, 
-        userId: uid, 
+        userId: userId, 
         status: 'complete'
       });
       console.log('All existing completions for this user+survey:', allExisting.length);
@@ -356,7 +372,7 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
       
       const existing = await Response.findOne({ 
         surveyId: sid, 
-        userId: uid, 
+        userId: userId, 
         status: 'complete',
         vendorId: vendorId || null // Match vendorId exactly (null for non-vendor)
       });
@@ -396,7 +412,7 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
     const r = await Response.create({
       surveyId: survey._id.toString(),
       vendorId: vendorId || undefined,
-      userId: uid,
+      userId: userId,
       status,
       preScreenerAnswers: preScreenerAnswers || [],
       failureReason: failureReason || undefined,
@@ -765,7 +781,7 @@ app.get('/api/export/responses.csv', requireAdmin, async (_req, res) => {
   }
 });
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 10000;
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
@@ -774,7 +790,8 @@ if (!MONGODB_URI) {
 }
 
 void connectDb(MONGODB_URI).then(() => {
+  console.log("MongoDB connected successfully ✅");
   app.listen(PORT, () => {
-    console.log(`API listening on http://localhost:${PORT}`);
+    console.log(`API listening on port ${PORT}`);
   });
 });
