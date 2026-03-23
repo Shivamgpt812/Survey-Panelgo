@@ -1,0 +1,114 @@
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AuthProvider } from '@/hooks/useAuth';
+import { ToastProvider } from '@/hooks/useToast';
+import { AdminRoute, UserRoute } from '@/components/auth/ProtectedRoute';
+import { LandingPage, AuthPage, DashboardPage, SurveyPage, RewardsPage, InternalSurveyPage, ServicesPage, ServiceDetailPage, BlogPage, AboutPage, BlogDetailPage, CountryDetailPage, CountryHeroSection } from '@/pages';
+import SurveyResult from '@/pages/SurveyResult';
+import { WhatsAppFloat } from '@/components/ui/playful';
+import PreScreenerPage from '@/pages/PreScreenerPage';
+import AdminPage from '@/pages/AdminPage';
+import AdminUsersPage from '@/pages/AdminUsersPage';
+import VendorEntryPage from '@/pages/VendorEntryPage';
+import './App.css';
+
+function AppContent() {
+  const location = useLocation();
+  const hideWhatsApp = location.pathname.startsWith('/auth');
+
+  return (
+    <>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/global" element={<CountryHeroSection />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/start" element={<VendorEntryPage />} />
+        <Route path="/survey-result/:clickId" element={<SurveyResult />} />
+        <Route path="/services" element={<ServicesPage />} />
+        <Route path="/services/:serviceId" element={<ServiceDetailPage />} />
+        <Route path="/blog" element={<BlogPage />} />
+        <Route path="/blog/:id" element={<BlogDetailPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/country/:country" element={<CountryDetailPage />} />
+
+        {/* User Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <UserRoute>
+              <DashboardPage />
+            </UserRoute>
+          }
+        />
+        <Route
+          path="/rewards"
+          element={
+            <UserRoute>
+              <RewardsPage />
+            </UserRoute>
+          }
+        />
+        <Route
+          path="/survey/:surveyId"
+          element={
+            <UserRoute>
+              <SurveyPage />
+            </UserRoute>
+          }
+        />
+        <Route
+          path="/survey/:surveyId/precheck"
+          element={
+            <UserRoute>
+              <PreScreenerPage />
+            </UserRoute>
+          }
+        />
+        <Route
+          path="/survey/:surveyId/take"
+          element={
+            <UserRoute>
+              <InternalSurveyPage />
+            </UserRoute>
+          }
+        />
+
+        {/* Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <AdminRoute>
+              <AdminUsersPage />
+            </AdminRoute>
+          }
+        />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      {!hideWhatsApp && <WhatsAppFloat />}
+    </>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <ToastProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </ToastProvider>
+    </AuthProvider>
+  );
+}
+
+export default App;

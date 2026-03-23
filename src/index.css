@@ -1,0 +1,303 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Playful Geometric Design System */
+    --background: 230 100% 98%;
+    --foreground: 233 60% 16%;
+    --card: 0 0% 100%;
+    --card-foreground: 233 60% 16%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 233 60% 16%;
+    --primary: 252 100% 69%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 230 100% 95%;
+    --secondary-foreground: 233 60% 16%;
+    --muted: 230 50% 95%;
+    --muted-foreground: 233 25% 45%;
+    --accent: 252 100% 69%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 233 60% 16%;
+    --input: 233 60% 16%;
+    --ring: 252 100% 69%;
+    --radius: 1.125rem;
+
+    /* Custom Design Tokens */
+    --shadow-hard: 6px 6px 0 #11133E;
+    --shadow-hard-hover: 10px 10px 0 #11133E;
+    --shadow-hard-active: 2px 2px 0 #11133E;
+    --border-thick: 2px;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-periwinkle text-navy font-jakarta antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-outfit font-bold tracking-tight;
+  }
+
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl;
+    line-height: 0.95;
+  }
+
+  h2 {
+    @apply text-2xl md:text-3xl lg:text-4xl;
+    line-height: 1.05;
+  }
+
+  h3 {
+    @apply text-xl md:text-2xl;
+    line-height: 1.15;
+  }
+}
+
+@layer components {
+
+  /* Playful Button Styles */
+  .btn-playful {
+    @apply relative inline-flex items-center justify-center gap-2 px-6 py-3 font-outfit font-bold text-sm md:text-base rounded-pill border-2 border-navy bg-white transition-all duration-150 ease-out shadow-hard;
+  }
+
+  .btn-playful:hover {
+    @apply shadow-hard-hover;
+    transform: translate(-2px, -2px);
+  }
+
+  .btn-playful:active {
+    @apply shadow-hard-active;
+    transform: translate(4px, 4px);
+  }
+
+  .btn-playful-primary {
+    @apply bg-violet text-white border-navy;
+  }
+
+  .btn-playful-secondary {
+    @apply bg-white text-navy border-navy;
+  }
+
+  .btn-playful-accent {
+    @apply bg-pink text-navy border-navy;
+  }
+
+  /* Playful Card Styles */
+  .card-playful {
+    @apply relative bg-white border-2 border-navy rounded-3xl transition-all duration-200 ease-out shadow-hard;
+  }
+
+  .card-playful:hover {
+    @apply shadow-hard-hover;
+    transform: translate(-2px, -2px) rotate(-1deg);
+  }
+
+  .card-playful:active {
+    @apply shadow-hard-active;
+    transform: translate(4px, 4px);
+  }
+
+  /* Playful Input Styles */
+  .input-playful {
+    @apply w-full px-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta text-base text-navy placeholder:text-navy/50 transition-all duration-150 ease-out focus:outline-none focus:ring-0;
+    box-shadow: 4px 4px 0 transparent;
+  }
+
+  .input-playful:focus {
+    box-shadow: 4px 4px 0 #7B61FF;
+  }
+
+  /* Playful Badge Styles */
+  .badge-playful {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-wider border-2 border-navy rounded-pill;
+  }
+
+  .badge-playful-violet {
+    @apply bg-violet text-white;
+  }
+
+  .badge-playful-pink {
+    @apply bg-pink text-navy;
+  }
+
+  .badge-playful-yellow {
+    @apply bg-yellow text-navy;
+  }
+
+  .badge-playful-green {
+    @apply bg-green text-navy;
+  }
+
+  /* Icon Circle */
+  .icon-circle {
+    @apply inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 border-2 border-navy rounded-full transition-transform duration-200;
+  }
+
+  .icon-circle:hover {
+    transform: scale(1.1) rotate(5deg);
+  }
+
+  /* Progress Bar Playful */
+  .progress-playful {
+    @apply w-full h-4 bg-periwinkle-dark border-2 border-navy rounded-pill overflow-hidden;
+  }
+
+  .progress-playful-bar {
+    @apply h-full bg-violet rounded-pill transition-all duration-500 ease-out;
+  }
+
+  /* Dot Grid Background Pattern */
+  .dot-grid {
+    background-image: radial-gradient(#11133E 1.5px, transparent 1.5px);
+    background-size: 24px 24px;
+    opacity: 0.08;
+  }
+
+  /* Decorative Blob */
+  .blob {
+    @apply absolute rounded-full opacity-80 pointer-events-none;
+  }
+
+  /* Page Container */
+  .page-container {
+    @apply min-h-screen w-full px-4 sm:px-6 lg:px-8 xl:px-12;
+  }
+
+  /* Section Container */
+  .section-container {
+    @apply w-full max-w-7xl mx-auto;
+  }
+}
+
+@layer utilities {
+
+  /* Hard Shadow Utilities */
+  .shadow-playful {
+    box-shadow: 6px 6px 0 #11133E;
+  }
+
+  .shadow-playful-hover {
+    box-shadow: 10px 10px 0 #11133E;
+  }
+
+  .shadow-playful-active {
+    box-shadow: 2px 2px 0 #11133E;
+  }
+
+  .shadow-playful-sm {
+    box-shadow: 4px 4px 0 #11133E;
+  }
+
+  .shadow-playful-lg {
+    box-shadow: 8px 8px 0 #11133E;
+  }
+
+  /* Text Shadow for Playful Effect */
+  .text-shadow-playful {
+    text-shadow: 2px 2px 0 #11133E;
+  }
+
+  /* Border Thick */
+  .border-thick {
+    border-width: 2px;
+  }
+
+  /* Animation Delays */
+  .animation-delay-100 {
+    animation-delay: 100ms;
+  }
+
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .animation-delay-300 {
+    animation-delay: 300ms;
+  }
+
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+
+  .animation-delay-500 {
+    animation-delay: 500ms;
+  }
+
+  /* Hover Transform */
+  .hover-lift {
+    @apply transition-all duration-200;
+  }
+
+  .hover-lift:hover {
+    transform: translate(-2px, -2px);
+  }
+
+  /* Press Effect */
+  .press-effect:active {
+    transform: translate(2px, 2px);
+  }
+
+  /* Scroll-triggered fade and slide animation */
+  @keyframes fadeSlideUp {
+    0% {
+      opacity: 0;
+      transform: translateY(2rem);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fadeSlideUp {
+    animation: fadeSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #E8ECFF;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #7B61FF;
+  border-radius: 999px;
+  border: 2px solid #E8ECFF;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5A43CC;
+}
+
+/* Selection Color */
+::selection {
+  background: #7B61FF;
+  color: white;
+}
