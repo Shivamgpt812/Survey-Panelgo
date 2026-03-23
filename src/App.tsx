@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ToastProvider } from '@/hooks/useToast';
 import { AdminRoute, UserRoute } from '@/components/auth/ProtectedRoute';
@@ -100,6 +101,20 @@ function AppContent() {
 }
 
 function App() {
+  useEffect(() => {
+    console.log("Warming up backend...");
+    const wakeBackend = async () => {
+      try {
+        await fetch("https://survey-panelgo.onrender.com/api/health");
+        console.log("Backend warmed up 🔥");
+      } catch (error) {
+        console.log("Backend waking up...");
+      }
+    };
+
+    wakeBackend();
+  }, []);
+
   return (
     <AuthProvider>
       <ToastProvider>
