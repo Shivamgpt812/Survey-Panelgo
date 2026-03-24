@@ -48,6 +48,7 @@ import type {
 } from '@/types';
 import { downloadExcel } from '@/lib/excel';
 import SurveyLogs from '@/components/admin/SurveyLogs';
+import RedirectAnalytics from '@/components/admin/RedirectAnalytics';
 import {
   LineChart,
   Line,
@@ -86,7 +87,7 @@ const AdminPage: React.FC = () => {
   const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>([]);
   const [responses, setResponses] = useState<SurveyResponseRecord[]>([]);
   const [templateList, setTemplateList] = useState<PreScreenerQuestion[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'surveys' | 'create' | 'vendors' | 'edit' | 'logs' | 'survey-logs'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'surveys' | 'create' | 'vendors' | 'edit' | 'logs' | 'survey-logs' | 'redirect-analytics'>('dashboard');
   const [editingSurveyId, setEditingSurveyId] = useState<string | null>(null);
 
   const loadDashboardData = useCallback(async () => {
@@ -558,6 +559,16 @@ const AdminPage: React.FC = () => {
             >
               <Activity className="w-5 h-5" />
               Survey Logs
+            </button>
+            <button
+              onClick={() => setActiveTab('redirect-analytics')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-jakarta font-medium transition-all ${activeTab === 'redirect-analytics'
+                ? 'bg-violet text-white shadow-hard'
+                : 'text-navy hover:bg-periwinkle'
+                }`}
+            >
+              <BarChart3 className="w-5 h-5" />
+              Redirect Analytics
             </button>
           </nav>
 
@@ -1967,6 +1978,11 @@ const AdminPage: React.FC = () => {
           {/* SURVEY LOGS TAB */}
           {activeTab === 'survey-logs' && (
             <SurveyLogs />
+          )}
+
+          {/* REDIRECT ANALYTICS TAB */}
+          {activeTab === 'redirect-analytics' && (
+            <RedirectAnalytics />
           )}
         </main>
       </div>

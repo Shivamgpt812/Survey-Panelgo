@@ -12,7 +12,9 @@ import { Vendor } from './models/Vendor.js';
 import { Response } from './models/Response.js';
 import { ActivityLog } from './models/ActivityLog.js';
 import { SurveyTracking } from './models/SurveyTracking.js';
+import { SurveyRedirectLogs } from './models/SurveyRedirectLogs.js';
 import { preScreenerTemplates } from './preScreenerTemplates.js';
+import { REDIRECT_URLS, getStatusText, isValidStatus } from './config/redirectConfig.js';
 import {
   optionalAuth,
   requireAuth,
@@ -694,6 +696,111 @@ app.get('/api/survey-tracking', requireAdmin, async (_req: any, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to load survey tracking logs' });
+  }
+});
+
+// ---------- Survey Redirect Tracking ----------
+app.get('/api/redirect', async (req, res) => {
+  try {
+    const { pid, uid, status } = req.query;
+
+    if (!pid || !uid || !status) {
+      return res.status(400).json({ error: 'Missing required parameters: pid, uid, status' });
+    }
+
+    const pidStr = String(pid).trim();
+    const uidStr = String(uid).trim();
+    
+    if (!isValidStatus(status)) {
+      return res.status(400).json({ error: 'Invalid status. Must be 1, 2, 3, or 4' });
+    }
+
+    const statusNum = typeof status === 'string' ? parseInt(status, 10) : status;
+    const statusText = getStatusText(status);
+
+    const xForwardedFor = req.headers['x-forwarded-for'];
+    const xRealIP = req.headers['x-real-ip'];
+    let ipAddress = (req as any).ip || (req as any).connection?.remoteAddress || 'unknown';
+    
+    if (Array.isArray(xForwardedFor)) {
+      ipAddress = xForwardedFor[0];
+    } else if (typeof xForwardedFor === 'string') {
+      ipAddress = xForwardedFor.split(',')[0].trim();
+    } else if (xRealIP) {
+      ipAddress = xRealIP as string;
+    }
+    
+    ipAddress = ipAddress.replace(/^::ffff:/, '');
+
+    const userAgent = req.headers['user-agent'] || 'unknown';
+
+    await SurveyRedirectLogs.create({
+      pid: pidStr,
+      uid: uidStr,
+      status: statusNum,
+      statusText,
+      ipAddress,
+      userAgent,
+      createdAt: new Date()
+    });
+
+    const redirectUrl = REDIRECT_URLS[statusNum as keyof typeof REDIRECT_URLS] || REDIRECT_URLS[2];
+
+    console.log(`Redirect logged: PID=${pidStr}, UID=${uidStr}, Status=${statusNum} (${statusText}), IP=${ipAddress}`);
+
+    return res.redirect(redirectUrl);
+  } catch (error) {
+    console.error("Redirect Error:", error);
+    return res.status(500).send("Redirect failed");
+  }
+});
+
+// ---------- Redirect Analytics ----------
+app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 50, pid, status } = req.query;
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    const filter: any = {};
+    if (pid) filter.pid = String(pid);
+    if (status) filter.status = parseInt(status as string);
+
+    const [logs, total] = await Promise.all([
+      SurveyRedirectLogs.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      SurveyRedirectLogs.countDocuments(filter)
+    ]);
+
+    const statusCounts = await SurveyRedirectLogs.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } }
+    ]);
+
+    res.json({
+      logs: logs.map(log => ({
+        ...log,
+        id: log._id,
+        _id: undefined
+      })),
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum)
+      },
+      statusCounts: statusCounts.reduce((acc, item) => {
+        acc[item._id] = item.count;
+        return acc;
+      }, {} as Record<number, number>)
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to load redirect logs' });
   }
 });
 

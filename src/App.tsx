@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ToastProvider } from '@/hooks/useToast';
 import { AdminRoute, UserRoute } from '@/components/auth/ProtectedRoute';
-import { LandingPage, AuthPage, DashboardPage, SurveyPage, RewardsPage, InternalSurveyPage, ServicesPage, ServiceDetailPage, BlogPage, AboutPage, BlogDetailPage, CountryDetailPage, CountryHeroSection } from '@/pages';
+import { LandingPage, AuthPage, DashboardPage, SurveyPage, RewardsPage, InternalSurveyPage, ServicesPage, ServiceDetailPage, BlogPage, AboutPage, BlogDetailPage, CountryDetailPage, CountryHeroSection, SuccessPage, TerminatedPage, QuotaFullPage, SecurityBlockPage } from '@/pages';
 import SurveyResult from '@/pages/SurveyResult';
 import { WhatsAppFloat } from '@/components/ui/playful';
 import PreScreenerPage from '@/pages/PreScreenerPage';
@@ -31,6 +31,10 @@ function AppContent() {
         <Route path="/blog/:id" element={<BlogDetailPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/country/:country" element={<CountryDetailPage />} />
+        <Route path="/success" element={<SuccessPage />} />
+        <Route path="/terminated" element={<TerminatedPage />} />
+        <Route path="/quota-full" element={<QuotaFullPage />} />
+        <Route path="/security-block" element={<SecurityBlockPage />} />
 
         {/* User Routes */}
         <Route
