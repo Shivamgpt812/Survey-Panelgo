@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Plus,
   Star,
@@ -75,6 +75,7 @@ const emptyAnalytics = {
 
 const AdminPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, logout, token } = useAuth();
   const { addToast } = useToast();
 
@@ -87,7 +88,10 @@ const AdminPage: React.FC = () => {
   const [activityLogs, setActivityLogs] = useState<ActivityLogEntry[]>([]);
   const [responses, setResponses] = useState<SurveyResponseRecord[]>([]);
   const [templateList, setTemplateList] = useState<PreScreenerQuestion[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'surveys' | 'create' | 'vendors' | 'edit' | 'logs' | 'survey-logs' | 'redirect-analytics'>('dashboard');
+  
+  // Get initial tab from URL parameter, default to 'dashboard'
+  const initialTab = (searchParams.get('tab') as any) || 'dashboard';
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'surveys' | 'create' | 'vendors' | 'edit' | 'logs' | 'survey-logs' | 'redirect-analytics'>(initialTab);
   const [editingSurveyId, setEditingSurveyId] = useState<string | null>(null);
 
   const loadDashboardData = useCallback(async () => {

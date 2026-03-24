@@ -40,19 +40,24 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
     navigate('/auth');
   };
 
-  const handleNavigation = (path: string) => {
-    navigate(path);
+  const handleNavigation = (path: string, tab?: string) => {
+    if (tab) {
+      // For admin tabs, navigate to /admin with tab parameter
+      navigate(`${path}?tab=${tab}`);
+    } else {
+      navigate(path);
+    }
     setIsMobileMenuOpen(false);
   };
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
-    { id: 'surveys', label: 'All Surveys', icon: FileText, path: '/admin' },
-    { id: 'create', label: 'Create Survey', icon: Plus, path: '/admin' },
-    { id: 'vendors', label: 'Vendors', icon: Store, path: '/admin' },
-    { id: 'logs', label: 'Activity Logs', icon: ClipboardList, path: '/admin' },
-    { id: 'survey-logs', label: 'Survey Logs', icon: Activity, path: '/admin' },
-    { id: 'redirect-analytics', label: 'Redirect Analytics', icon: BarChart3, path: '/admin' },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin', tab: 'dashboard' },
+    { id: 'surveys', label: 'All Surveys', icon: FileText, path: '/admin', tab: 'surveys' },
+    { id: 'create', label: 'Create Survey', icon: Plus, path: '/admin', tab: 'create' },
+    { id: 'vendors', label: 'Vendors', icon: Store, path: '/admin', tab: 'vendors' },
+    { id: 'logs', label: 'Activity Logs', icon: ClipboardList, path: '/admin', tab: 'logs' },
+    { id: 'survey-logs', label: 'Survey Logs', icon: Activity, path: '/admin', tab: 'survey-logs' },
+    { id: 'redirect-analytics', label: 'Redirect Analytics', icon: BarChart3, path: '/admin', tab: 'redirect-analytics' },
     { id: 'admin-panel', label: 'Admin Panel', icon: LayoutDashboard, path: '/admin-panel' },
   ];
 
@@ -96,7 +101,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
             {navItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => handleNavigation(item.path)}
+                onClick={() => handleNavigation(item.path, item.tab)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-jakarta font-medium transition-all ${
                   item.id === 'admin-panel' 
                     ? 'bg-violet text-white shadow-hard'
@@ -171,7 +176,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
               {navItems.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => handleNavigation(item.path)}
+                  onClick={() => handleNavigation(item.path, item.tab)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-jakarta font-medium transition-all ${
                     item.id === 'admin-panel' 
                       ? 'bg-violet text-white shadow-hard'
