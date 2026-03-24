@@ -498,7 +498,7 @@ const LandingPage: React.FC = () => {
             <PlayfulButton variant="secondary" size="sm" onClick={() => navigate('/auth')}>
               Sign In
             </PlayfulButton>
-            <PlayfulButton variant="primary" size="sm" onClick={() => navigate('/auth')}>
+            <PlayfulButton variant="primary" size="sm" onClick={() => navigate('/auth?mode=signup')}>
               Join Our Panel
             </PlayfulButton>
           </div>
@@ -545,7 +545,7 @@ const LandingPage: React.FC = () => {
                 <PlayfulButton variant="secondary" size="sm" onClick={() => { navigate('/auth'); setIsMobileMenuOpen(false); }}>
                   Sign In
                 </PlayfulButton>
-                <PlayfulButton variant="primary" size="sm" onClick={() => { navigate('/auth'); setIsMobileMenuOpen(false); }}>
+                <PlayfulButton variant="primary" size="sm" onClick={() => { navigate('/auth?mode=signup'); setIsMobileMenuOpen(false); }}>
                   Join Our Panel
                 </PlayfulButton>
               </div>
@@ -623,14 +623,14 @@ const LandingPage: React.FC = () => {
               </div>
 
               {/* Animated Description */}
-              <div className="relative overflow-hidden h-16">
+              <div className="relative overflow-hidden h-auto sm:h-16">
                 <div
                   className="flex transition-transform duration-500 ease-in-out"
                   style={{ transform: `translateX(-${activeTab * 100}%)` }}
                 >
                   {heroTabs.map((tab) => (
                     <div key={tab.id} className="w-full flex-shrink-0">
-                      <p className="font-jakarta text-lg text-navy-light max-w-xl mx-auto lg:mx-0">
+                      <p className="font-jakarta text-base sm:text-lg text-navy-light max-w-xl mx-auto lg:mx-0">
                         {tab.description}
                       </p>
                     </div>

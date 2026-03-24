@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
@@ -9,9 +9,10 @@ import { useToast } from '@/hooks/useToast';
 
 const AuthPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, register } = useAuth();
   const { addToast } = useToast();
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'signup');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
