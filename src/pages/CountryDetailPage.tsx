@@ -617,7 +617,7 @@ const CountryDetailPage: React.FC = () => {
               Sign In
             </PlayfulButton>
             <PlayfulButton variant="primary" size="sm" onClick={() => navigate('/auth')}>
-              Join Free
+              Join Our Panel
             </PlayfulButton>
           </div>
         </div>

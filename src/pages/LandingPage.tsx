@@ -36,13 +36,13 @@ import { DecorativeBlob, DotGrid, FloatingIcons, IconCircle } from '@/components
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { useToast } from '@/hooks/useToast';
 
-// Hero tabs data from Blanc Research with corresponding images
+// Hero tabs data from Survey PanelGo with corresponding images
 const heroTabs = [
   {
     id: 'insights',
     title: 'Insights',
     subtitle: 'that power your next move',
-    description: 'At Blanc Research, we bring a rigorous approach to quantitative methodologies designed to decode complex markets and empower organizations worldwide.',
+    description: 'At Survey PanelGo, we bring a rigorous approach to quantitative methodologies designed to decode complex markets and empower organizations worldwide.',
     features: ['Custom-built methodologies', 'Deep industry familiarity', 'Agile, client-first approach'],
     ctaText: 'Explore Our Services',
     stat: '300+',
@@ -499,7 +499,7 @@ const LandingPage: React.FC = () => {
               Sign In
             </PlayfulButton>
             <PlayfulButton variant="primary" size="sm" onClick={() => navigate('/auth')}>
-              Join Free
+              Join Our Panel
             </PlayfulButton>
           </div>
 
@@ -546,7 +546,7 @@ const LandingPage: React.FC = () => {
                   Sign In
                 </PlayfulButton>
                 <PlayfulButton variant="primary" size="sm" onClick={() => { navigate('/auth'); setIsMobileMenuOpen(false); }}>
-                  Join Free
+                  Join Our Panel
                 </PlayfulButton>
               </div>
             </div>
@@ -1257,7 +1257,7 @@ const LandingPage: React.FC = () => {
                   </li>
                   <li>
                     <button type="button" onClick={() => navigate('/auth')} className="hover:text-violet transition-colors text-left">
-                      Join free
+                      Join Our Panel
                     </button>
                   </li>
                 </ul>

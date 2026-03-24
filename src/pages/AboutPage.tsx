@@ -117,7 +117,7 @@ const stats = [
 ];
 
 const milestones = [
-  { year: '2009', title: 'Founded', description: 'Started with a vision to transform market research' },
+  { year: '2022', title: 'Founded', description: 'Started with a vision to transform market research' },
   { year: '2012', title: 'Global Expansion', description: 'Expanded operations to 10 countries' },
   { year: '2015', title: 'Digital Innovation', description: 'Launched our first online research platform' },
   { year: '2018', title: 'AI Integration', description: 'Incorporated machine learning into our research methodology' },
@@ -173,7 +173,7 @@ const AboutPage: React.FC = () => {
               Sign In
             </PlayfulButton>
             <PlayfulButton variant="primary" size="sm" onClick={() => navigate('/auth')}>
-              Join Free
+              Join Our Panel
             </PlayfulButton>
           </div>
         </div>
@@ -249,7 +249,7 @@ const AboutPage: React.FC = () => {
                 <div>
                   <h2 className="font-outfit font-bold text-3xl text-navy mb-6">Our Story</h2>
                   <p className="font-jakarta text-navy-light mb-6 leading-relaxed">
-                    Founded in 2009, Survey Panel Go began with a simple mission: to bridge the gap between businesses 
+                    Founded in 2022, Survey Panel Go began with a simple mission: to bridge the gap between businesses 
                     and their customers through meaningful research insights. What started as a small team of passionate 
                     researchers has grown into a global network of experts serving hundreds of brands across multiple continents.
                   </p>
