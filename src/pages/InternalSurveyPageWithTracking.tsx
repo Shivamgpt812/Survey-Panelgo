@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Coins, Check, AlertCircle } from 'lucide-react';
 import { PlayfulButton, PlayfulCard, PlayfulBadge, PlayfulProgress } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid } from '@/components/decorations';
@@ -13,6 +13,7 @@ import confetti from 'canvas-confetti';
 const InternalSurveyPageWithTracking: React.FC = () => {
   const navigate = useNavigate();
   const { surveyId } = useParams<{ surveyId: string }>();
+  const [searchParams] = useSearchParams();
   const { addToast } = useToast();
 
   const BACKEND_URL = "https://survey-panelgo.onrender.com";
@@ -53,21 +54,27 @@ const InternalSurveyPageWithTracking: React.FC = () => {
     try {
       setIsSubmitting(true);
       
-      // Ensure UID exists
-      let uid = localStorage.getItem('surveypanelgo_uid');
+      // Read all required data from URL parameters
+      const uid = searchParams.get('uid');
+      const vendorId = searchParams.get('vendor');
+      const pid = searchParams.get('pid') || surveyId;
+      
+      // Ensure UID exists (should be in URL from VendorEntryPage)
       if (!uid) {
-        // Generate UID if missing
-        const timestamp = Date.now().toString(36);
-        const randomStr = Math.random().toString(36).substring(2, 15);
-        uid = `${timestamp}_${randomStr}`;
-        localStorage.setItem('surveypanelgo_uid', uid);
+        console.error("UID is missing from URL!");
+        addToast('Missing unique identifier. Please use the survey link provided.', 'error');
+        return;
       }
       
-      // Submit the internal survey completion with UID (no auth token required)
+      // Debug logging
+      console.log("Submitting survey with:", { uid, surveyId, vendorId, pid });
+      
+      // Submit the internal survey completion with data from URL (no auth token required)
       await apiPost('/api/internal-complete', { 
         surveyId, 
-        uid,
-        vendorId: new URLSearchParams(window.location.search).get('vendorId') || undefined
+        uid,        // from URL
+        vendorId,   // from URL
+        pid,        // from URL
       });
       
       // Complete tracking with 'completed' status
@@ -84,8 +91,7 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       addToast('🎉 Survey completed successfully!', 'success');
       
       // MANDATORY: Add final redirect to /api/redirect with proper params
-      const pid = survey.id;
-      // Use persistent UID (already generated above)
+      // Use pid from URL (already defined above)
       
       if (pid && uid) {
         console.log("Redirecting with:", { pid, uid, status: 1 });
@@ -102,20 +108,19 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       
       // FAIL CASE: If tracking fails, still try to complete with terminated status
       try {
-        // Ensure UID exists for error case too
-        let uid = localStorage.getItem('surveypanelgo_uid');
+        // Use same data from URL for error case too
+        const uid = searchParams.get('uid');
+        const pid = searchParams.get('pid') || surveyId;
+        
         if (!uid) {
-          const timestamp = Date.now().toString(36);
-          const randomStr = Math.random().toString(36).substring(2, 15);
-          uid = `${timestamp}_${randomStr}`;
-          localStorage.setItem('surveypanelgo_uid', uid);
+          console.error("UID is missing from URL in error case!");
+          addToast('Missing unique identifier. Please use the survey link provided.', 'error');
+          return;
         }
         
         await completeTracking('terminated');
         
-        // Add redirect for terminated case using UID
-        const pid = survey?.id || survey?.pid;
-        
+        // Add redirect for terminated case using UID from URL
         if (pid && uid) {
           console.log("Redirecting with:", { pid, uid, status: 2 });
           window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=2`;

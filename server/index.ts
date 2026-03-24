@@ -570,6 +570,54 @@ app.post('/api/internal-complete', async (req, res) => {
   }
 });
 
+// Generate survey link with UID
+app.post('/api/generate-survey-link', async (req, res) => {
+  try {
+    const { surveyId, vendorId } = req.body as {
+      surveyId?: string;
+      vendorId?: string;
+    };
+    
+    if (!surveyId || !mongoose.isValidObjectId(surveyId)) {
+      res.status(400).json({ error: 'Invalid survey ID' });
+      return;
+    }
+    
+    // Verify survey exists
+    const survey = await Survey.findById(surveyId);
+    if (!survey) {
+      res.status(404).json({ error: 'Survey not found' });
+      return;
+    }
+    
+    // Generate unique UID
+    const timestamp = Date.now().toString(36);
+    const randomStr = Math.random().toString(36).substring(2, 15);
+    const uid = `${timestamp}_${randomStr}`;
+    
+    // Build survey link with all required parameters
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const link = new URL(`${baseUrl}/start`);
+    link.searchParams.set('survey', surveyId);
+    link.searchParams.set('uid', uid);
+    link.searchParams.set('pid', surveyId);
+    
+    if (vendorId) {
+      link.searchParams.set('vendor', vendorId);
+    }
+    
+    res.json({ 
+      surveyLink: link.toString(),
+      uid,
+      pid: surveyId,
+      vendorId: vendorId || undefined
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to generate survey link' });
+  }
+});
+
 app.get('/api/my-responses', requireAuth, async (req: AuthedRequest, res) => {
   try {
     const list = await Response.find({ userId: req.user!._id }).sort({ createdAt: -1 });

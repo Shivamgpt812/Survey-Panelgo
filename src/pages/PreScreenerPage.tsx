@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Coins,
@@ -35,6 +35,7 @@ import confetti from 'canvas-confetti';
 const PreScreenerPage: React.FC = () => {
   const navigate = useNavigate();
   const { surveyId } = useParams<{ surveyId: string }>();
+  const [searchParams] = useSearchParams();
   const { addToast } = useToast();
   const { user } = useAuth();
 
@@ -67,20 +68,20 @@ const PreScreenerPage: React.FC = () => {
       .finally(() => setLoadingSurvey(false));
   }, [surveyId]);
 
-  // Load vendor session on mount
+  // Load vendor data from URL parameters on mount
   useEffect(() => {
-    const storedVendorId = getVendorSession();
+    const urlVendorId = searchParams.get('vendor');
     const isVendorFlow = sessionStorage.getItem('surveypanelgo_vendor_flow') === 'true';
     
-    if (storedVendorId) {
-      setVendorId(storedVendorId);
+    if (urlVendorId) {
+      setVendorId(urlVendorId);
       setIsVendorFlow(isVendorFlow);
       void apiGet<{ vendors: Vendor[] }>('/api/vendors').then(({ vendors }) => {
-        const vendorData = vendors.find((v) => v.id === storedVendorId);
+        const vendorData = vendors.find((v) => v.id === urlVendorId);
         setVendor(vendorData);
       });
     }
-  }, []);
+  }, [searchParams]);
 
   // Start tracking for non-vendor users when survey loads
   useEffect(() => {
@@ -106,8 +107,8 @@ const PreScreenerPage: React.FC = () => {
             {
               surveyId: survey.id,
               vendorId,
-              // Use logged-in user ID if available, otherwise use persistent UID
-              userId: user?.id || localStorage.getItem('surveypanelgo_uid'),
+              // Use logged-in user ID if available, otherwise use UID from URL
+              userId: user?.id || searchParams.get('uid'),
               status: 'complete',
             },
             getStoredToken()
@@ -231,8 +232,8 @@ const PreScreenerPage: React.FC = () => {
           {
             surveyId: survey.id,
             vendorId: vendorId || undefined,
-            // Use logged-in user ID if available, otherwise use persistent UID
-            userId: user?.id || localStorage.getItem('surveypanelgo_uid'),
+            // Use logged-in user ID if available, otherwise use UID from URL
+            userId: user?.id || searchParams.get('uid'),
             status: 'terminate',
             preScreenerAnswers: answers,
             failureReason: validation.message || 'Did not meet pre-screener requirements',
@@ -275,8 +276,8 @@ const PreScreenerPage: React.FC = () => {
           {
             surveyId: survey!.id,
             vendorId: vendorId || undefined,
-            // Use logged-in user ID if available, otherwise use persistent UID
-            userId: user?.id || localStorage.getItem('surveypanelgo_uid') || undefined,
+            // Use logged-in user ID if available, otherwise use UID from URL
+            userId: user?.id || searchParams.get('uid') || undefined,
             status: 'complete',
             preScreenerAnswers: answers,
           },
