@@ -641,12 +641,12 @@ const AdminPage: React.FC = () => {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
                 {statCards.map((stat, index) => (
                   <PlayfulCard
                     key={index}
                     variant={stat.href ? 'static' : 'default'}
-                    className={`p-3 sm:p-4 md:p-5 ${stat.href ? 'cursor-pointer hover:shadow-hard-lg hover:-translate-y-0.5 transition-all' : ''}`}
+                    className={`p-2.5 sm:p-3 md:p-4 lg:p-5 ${stat.href ? 'cursor-pointer hover:shadow-hard-lg hover:-translate-y-0.5 transition-all' : ''}`}
                     onClick={stat.href ? () => navigate(stat.href) : undefined}
                     role={stat.href ? 'button' : undefined}
                     tabIndex={stat.href ? 0 : undefined}
@@ -670,8 +670,8 @@ const AdminPage: React.FC = () => {
                           <p className="font-jakarta text-xs text-violet mt-1 font-medium">View →</p>
                         )}
                       </div>
-                      <IconCircle variant={stat.variant} size="sm" className="shrink-0 ml-1 sm:ml-2">
-                        <stat.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <IconCircle variant={stat.variant} size="sm" className="shrink-0 ml-0.5 sm:ml-1 md:ml-2">
+                        <stat.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                       </IconCircle>
                     </div>
                   </PlayfulCard>
