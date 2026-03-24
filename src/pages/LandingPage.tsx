@@ -604,14 +604,14 @@ const LandingPage: React.FC = () => {
               </div>
 
               {/* Animated Content Switching */}
-              <div className="relative overflow-hidden">
+              <div className="relative overflow-hidden min-h-[120px] sm:min-h-0">
                 <div
                   className="flex transition-transform duration-500 ease-in-out"
                   style={{ transform: `translateX(-${activeTab * 100}%)` }}
                 >
                   {heroTabs.map((tab) => (
                     <div key={tab.id} className="w-full flex-shrink-0">
-                      <h1 className="font-outfit font-extrabold text-4xl sm:text-5xl lg:text-6xl text-navy leading-[1.1]">
+                      <h1 className="font-outfit font-extrabold text-3xl sm:text-5xl lg:text-6xl text-navy leading-[1.2] sm:leading-[1.1]">
                         {tab.title}{' '}
                         <span className="relative inline-block">
                           {tab.subtitle}
