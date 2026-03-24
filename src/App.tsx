@@ -64,30 +64,9 @@ function AppContent() {
             </UserRoute>
           }
         />
-        <Route
-          path="/survey/:surveyId"
-          element={
-            <UserRoute>
-              <SurveyPage />
-            </UserRoute>
-          }
-        />
-        <Route
-          path="/survey/:surveyId/precheck"
-          element={
-            <UserRoute>
-              <PreScreenerPage />
-            </UserRoute>
-          }
-        />
-        <Route
-          path="/survey/:surveyId/take"
-          element={
-            <UserRoute>
-              <InternalSurveyPage />
-            </UserRoute>
-          }
-        />
+        <Route path="/survey/:surveyId" element={<SurveyPage />} />
+        <Route path="/survey/:surveyId/precheck" element={<PreScreenerPage />} />
+        <Route path="/survey/:surveyId/take" element={<InternalSurveyPage />} />
 
         {/* Admin Routes */}
         <Route

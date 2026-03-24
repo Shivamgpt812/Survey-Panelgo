@@ -51,24 +51,13 @@ const VendorEntryPage: React.FC = () => {
           }
         }
 
-        const authData = localStorage.getItem('surveypanelgo_auth');
-        if (!authData) {
-          // For vendor surveys, allow proceeding without login
-          if (vendorId) {
-            sessionStorage.setItem('surveypanelgo_redirect', `/survey/${surveyId}/precheck`);
-            sessionStorage.setItem('surveypanelgo_vendor_flow', 'true');
-            addToast('You can complete this survey without logging in', 'info');
-            navigate(`/survey/${surveyId}/precheck`);
-            return;
-          } else {
-            sessionStorage.setItem('surveypanelgo_redirect', `/survey/${surveyId}/precheck`);
-            addToast('Please login to continue', 'info');
-            navigate('/auth');
-            return;
-          }
+        // Allow proceeding without login for all surveys
+        sessionStorage.setItem('surveypanelgo_redirect', `/survey/${surveyId}/precheck`);
+        if (vendorId) {
+          sessionStorage.setItem('surveypanelgo_vendor_flow', 'true');
         }
-
         navigate(`/survey/${surveyId}/precheck`);
+        return;
       } catch {
         if (!cancelled) {
           addToast('Invalid survey link', 'error');
