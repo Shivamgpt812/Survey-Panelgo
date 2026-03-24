@@ -624,12 +624,12 @@ const AdminPage: React.FC = () => {
           {/* DASHBOARD TAB */}
           {activeTab === 'dashboard' && (
             <div className="space-y-8">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <h1 className="font-outfit font-bold text-3xl text-navy mb-2">Dashboard Overview</h1>
                   <p className="font-jakarta text-navy-light">Welcome back, {user?.name?.split(' ')[0]}!</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                   <PlayfulButton variant="secondary" size="sm" onClick={handleExportCSV} leftIcon={<Download className="w-4 h-4" />}>
                     Export CSV
                   </PlayfulButton>
@@ -640,7 +640,7 @@ const AdminPage: React.FC = () => {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {statCards.map((stat, index) => (
                   <PlayfulCard
                     key={index}
@@ -678,7 +678,7 @@ const AdminPage: React.FC = () => {
               </div>
 
               {/* Analytics Chart Section */}
-              <div className="grid lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Real-time Survey Timeline */}
                 <PlayfulCard className="p-6">
                   <h2 className="font-outfit font-bold text-xl text-navy mb-4 flex items-center gap-2">
@@ -728,7 +728,7 @@ const AdminPage: React.FC = () => {
                     <BarChart3 className="w-5 h-5" />
                     Response Distribution
                   </h2>
-                  <div className="flex flex-col md:flex-row items-center gap-4">
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
                     <div className="h-[200px] w-full md:w-1/2">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
@@ -865,18 +865,18 @@ const AdminPage: React.FC = () => {
           {/* SURVEYS LIST TAB */}
           {activeTab === 'surveys' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <h1 className="font-outfit font-bold text-3xl text-navy mb-2">All Surveys</h1>
                   <p className="font-jakarta text-navy-light">Manage your surveys</p>
                 </div>
-                <PlayfulButton variant="primary" onClick={() => setActiveTab('create')}>
+                <PlayfulButton variant="primary" onClick={() => setActiveTab('create')} className="w-full sm:w-auto">
                   <Plus className="w-4 h-4 mr-2" />
                   Create New
                 </PlayfulButton>
               </div>
 
-              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {surveys.map((survey) => (
                   <PlayfulCard key={survey.id} className="p-5">
                     <div className="flex items-start justify-between mb-3">
@@ -1349,7 +1349,7 @@ const AdminPage: React.FC = () => {
           {/* EDIT SURVEY TAB */}
           {activeTab === 'edit' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <h1 className="font-outfit font-bold text-3xl text-navy mb-2">Edit Survey</h1>
                   <p className="font-jakarta text-navy-light">Modify your survey details</p>
@@ -1362,6 +1362,7 @@ const AdminPage: React.FC = () => {
                     setActiveTab('surveys');
                   }}
                   leftIcon={<X className="w-4 h-4" />}
+                  className="w-full sm:w-auto"
                 >
                   Cancel Edit
                 </PlayfulButton>
@@ -1788,7 +1789,7 @@ const AdminPage: React.FC = () => {
               {/* Vendor List */}
               <div>
                 <h2 className="font-outfit font-bold text-xl text-navy mb-4">All Vendors</h2>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {vendors.map((vendor) => {
                     const stats = vendorAnalytics[vendor.id] || { completes: 0, terminates: 0, quotaFull: 0 };
                     return (
@@ -1809,20 +1810,26 @@ const AdminPage: React.FC = () => {
                         </div>
 
                         <div className="space-y-2 mb-4">
-                          <div className="flex items-center gap-2 text-sm">
-                            <CheckCircle className="w-4 h-4 text-green-600" />
-                            <span className="font-jakarta text-navy-light">Complete:</span>
-                            <span className="font-mono text-xs text-navy truncate">{vendor.redirectLinks.complete}</span>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm">
+                            <div className="flex items-center gap-2 shrink-0">
+                              <CheckCircle className="w-4 h-4 text-green-600" />
+                              <span className="font-jakarta text-navy-light">Complete:</span>
+                            </div>
+                            <span className="font-mono text-xs text-navy break-all">{vendor.redirectLinks.complete}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <XCircle className="w-4 h-4 text-pink-600" />
-                            <span className="font-jakarta text-navy-light">Terminate:</span>
-                            <span className="font-mono text-xs text-navy truncate">{vendor.redirectLinks.terminate}</span>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm">
+                            <div className="flex items-center gap-2 shrink-0">
+                              <XCircle className="w-4 h-4 text-pink-600" />
+                              <span className="font-jakarta text-navy-light">Terminate:</span>
+                            </div>
+                            <span className="font-mono text-xs text-navy break-all">{vendor.redirectLinks.terminate}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                            <span className="font-jakarta text-navy-light">Quota Full:</span>
-                            <span className="font-mono text-xs text-navy truncate">{vendor.redirectLinks.quotaFull}</span>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm">
+                            <div className="flex items-center gap-2 shrink-0">
+                              <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                              <span className="font-jakarta text-navy-light">Quota Full:</span>
+                            </div>
+                            <span className="font-mono text-xs text-navy break-all">{vendor.redirectLinks.quotaFull}</span>
                           </div>
                         </div>
 
@@ -1851,19 +1858,19 @@ const AdminPage: React.FC = () => {
           {/* LOGS TAB */}
           {activeTab === 'logs' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <h1 className="font-outfit font-bold text-3xl text-navy mb-2">Activity Logs</h1>
                   <p className="font-jakarta text-navy-light">Real-time system activities and user interactions</p>
                 </div>
-                <PlayfulButton variant="secondary" size="sm" onClick={loadDashboardData} leftIcon={<Activity className="w-4 h-4" />}>
+                <PlayfulButton variant="secondary" size="sm" onClick={loadDashboardData} leftIcon={<Activity className="w-4 h-4" />} className="w-full sm:w-auto">
                   Refresh Logs
                 </PlayfulButton>
               </div>
 
               <PlayfulCard className="overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left">
+                  <table className="w-full text-left min-w-[500px]">
                     <thead>
                       <tr className="bg-periwinkle/30 border-b-2 border-navy/10">
                         <th className="px-6 py-4 font-outfit font-bold text-navy uppercase tracking-wider text-xs">Event</th>
