@@ -708,10 +708,14 @@ app.get('/api/redirect', async (req, res) => {
     console.log("Redirect HIT:", { pid, uid, status });
 
     // Validate params
-    if (!pid || !uid || !status) {
+    if (!uid || !status) {
       console.error("Missing params:", { pid, uid, status });
       return res.redirect("https://surveypanelgo.netlify.app/error");
     }
+
+    // Auto generate PID if not provided
+    const finalPid = pid || "AUTO_" + Date.now();
+    console.log("Final PID:", finalPid);
 
     // Convert status to number
     const statusCode = Number(status);
@@ -728,7 +732,7 @@ app.get('/api/redirect', async (req, res) => {
     // Save to DB
     try {
       await SurveyRedirectLogs.create({
-        pid,
+        pid: finalPid,
         uid,
         status: statusCode,
         statusText,
@@ -755,16 +759,16 @@ app.get('/api/redirect', async (req, res) => {
     const timestamp = new Date().toISOString();
 
     // Log redirect data for debugging
-    console.log("Redirect Data:", { pid, uid, status, ip, timestamp });
+    console.log("Redirect Data:", { finalPid, uid, status, ip, timestamp });
 
     const redirectPages = {
-      1: `/survey-result/success?pid=${pid}&uid=${uid}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      2: `/survey-result/terminated?pid=${pid}&uid=${uid}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      3: `/survey-result/quota-full?pid=${pid}&uid=${uid}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      4: `/survey-result/security?pid=${pid}&uid=${uid}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
+      1: `/survey-result/success?pid=${finalPid}&uid=${uid}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      2: `/survey-result/terminated?pid=${finalPid}&uid=${uid}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      3: `/survey-result/quota-full?pid=${finalPid}&uid=${uid}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      4: `/survey-result/security?pid=${finalPid}&uid=${uid}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
     };
 
-    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${pid}&uid=${uid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
+    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${uid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
     const finalUrl = `${BASE_URL}${finalPath}`;
 
     console.log("Redirecting to:", finalUrl);
