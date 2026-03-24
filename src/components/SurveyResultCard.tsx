@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Menu, X } from 'lucide-react';
 import { PlayfulButton } from '@/components/ui/playful';
@@ -42,16 +42,16 @@ export default function SurveyResultCard() {
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-8">
-            <a href="#features" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              How it works
-            </a>
-            <a href="#services" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
+            <Link to="/about" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
+              About
+            </Link>
+            <Link to="/services" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
               Services
-            </a>
-            <a href="#industries" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              Industries
-            </a>
-            <a href="#contact" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
+            </Link>
+            <Link to="/blog" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
+              Blog
+            </Link>
+            <a href="/#contact" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
               Contact
             </a>
           </div>
@@ -80,16 +80,16 @@ export default function SurveyResultCard() {
         {isMobileMenuOpen && (
           <div className="lg:hidden absolute top-full left-0 right-0 bg-white border-b-2 border-navy/10 shadow-lg">
             <div className="flex flex-col p-4 space-y-4">
-              <a href="#features" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                How it works
-              </a>
-              <a href="#services" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+              <Link to="/about" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+                About
+              </Link>
+              <Link to="/services" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                 Services
-              </a>
-              <a href="#industries" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Industries
-              </a>
-              <a href="#contact" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+              </Link>
+              <Link to="/blog" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+                Blog
+              </Link>
+              <a href="/#contact" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                 Contact
               </a>
               <div className="flex flex-col gap-3 pt-4 border-t border-navy/10">
