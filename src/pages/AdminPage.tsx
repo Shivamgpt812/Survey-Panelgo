@@ -1873,53 +1873,94 @@ const AdminPage: React.FC = () => {
                 </PlayfulButton>
               </div>
 
-              <PlayfulCard className="overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left min-w-[500px]">
-                    <thead>
-                      <tr className="bg-periwinkle/30 border-b-2 border-navy/10">
-                        <th className="px-6 py-4 font-outfit font-bold text-navy uppercase tracking-wider text-xs">Event</th>
-                        <th className="px-6 py-4 font-outfit font-bold text-navy uppercase tracking-wider text-xs">Type</th>
-                        <th className="px-6 py-4 font-outfit font-bold text-navy uppercase tracking-wider text-xs">Time</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-navy/5">
-                      {activityLogs.length === 0 ? (
-                        <tr>
-                          <td colSpan={3} className="px-6 py-10 text-center text-navy-light font-jakarta italic">
-                            No logs found in the last batch.
-                          </td>
+              {/* Mobile Card View */}
+              <div className="lg:hidden space-y-3">
+                {activityLogs.length === 0 ? (
+                  <PlayfulCard className="p-6 text-center">
+                    <p className="font-jakarta text-navy-light italic">No logs found in the last batch.</p>
+                  </PlayfulCard>
+                ) : (
+                  activityLogs.map((log) => (
+                    <PlayfulCard key={log.id} className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className={`w-3 h-3 mt-1.5 rounded-full shrink-0 ${log.type === 'success' ? 'bg-green' :
+                          log.type === 'error' ? 'bg-pink' :
+                            log.type === 'warning' ? 'bg-yellow' : 'bg-violet'
+                          }`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-jakarta text-sm text-navy font-medium mb-2">{log.message}</p>
+                          <div className="flex items-center justify-between">
+                            <PlayfulBadge
+                              variant={
+                                log.type === 'success' ? 'green' :
+                                  log.type === 'error' ? 'pink' :
+                                    log.type === 'warning' ? 'yellow' : 'violet'
+                              }
+                              size="sm"
+                            >
+                              {log.type}
+                            </PlayfulBadge>
+                            <span className="font-mono text-xs text-navy-light">
+                              {new Date(log.timestamp).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </PlayfulCard>
+                  ))
+                )}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden lg:block">
+                <PlayfulCard className="overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left min-w-[500px]">
+                      <thead>
+                        <tr className="bg-periwinkle/30 border-b-2 border-navy/10">
+                          <th className="px-6 py-4 font-outfit font-bold text-navy uppercase tracking-wider text-xs">Event</th>
+                          <th className="px-6 py-4 font-outfit font-bold text-navy uppercase tracking-wider text-xs">Type</th>
+                          <th className="px-6 py-4 font-outfit font-bold text-navy uppercase tracking-wider text-xs">Time</th>
                         </tr>
-                      ) : (
-                        activityLogs.map((log) => (
-                          <tr key={log.id} className="hover:bg-periwinkle/10 transition-colors">
-                            <td className="px-6 py-4">
-                              <p className="font-jakarta text-sm text-navy font-medium">{log.message}</p>
-                            </td>
-                            <td className="px-6 py-4">
-                              <PlayfulBadge
-                                variant={
-                                  log.type === 'success' ? 'green' :
-                                    log.type === 'error' ? 'pink' :
-                                      log.type === 'warning' ? 'yellow' : 'violet'
-                                }
-                                size="sm"
-                              >
-                                {log.type}
-                              </PlayfulBadge>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className="font-mono text-xs text-navy-light">
-                                {new Date(log.timestamp).toLocaleString()}
-                              </span>
+                      </thead>
+                      <tbody className="divide-y divide-navy/5">
+                        {activityLogs.length === 0 ? (
+                          <tr>
+                            <td colSpan={3} className="px-6 py-10 text-center text-navy-light font-jakarta italic">
+                              No logs found in the last batch.
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </PlayfulCard>
+                        ) : (
+                          activityLogs.map((log) => (
+                            <tr key={log.id} className="hover:bg-periwinkle/10 transition-colors">
+                              <td className="px-6 py-4">
+                                <p className="font-jakarta text-sm text-navy font-medium">{log.message}</p>
+                              </td>
+                              <td className="px-6 py-4">
+                                <PlayfulBadge
+                                  variant={
+                                    log.type === 'success' ? 'green' :
+                                      log.type === 'error' ? 'pink' :
+                                        log.type === 'warning' ? 'yellow' : 'violet'
+                                  }
+                                  size="sm"
+                                >
+                                  {log.type}
+                                </PlayfulBadge>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="font-mono text-xs text-navy-light">
+                                  {new Date(log.timestamp).toLocaleString()}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </PlayfulCard>
+              </div>
             </div>
           )}
 
