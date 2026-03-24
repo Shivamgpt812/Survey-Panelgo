@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { ArrowLeft, Coins, Check, AlertCircle, Shield, PartyPopper } from 'lucide-react';
 import { PlayfulButton, PlayfulCard, PlayfulBadge, PlayfulProgress } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
@@ -12,7 +12,6 @@ import { useSurveyTracker } from '@/components/SurveyTracker';
 import confetti from 'canvas-confetti';
 
 const InternalSurveyPageWithTracking: React.FC = () => {
-  const navigate = useNavigate();
   const { surveyId } = useParams<{ surveyId: string }>();
   const { addToast } = useToast();
   const { refreshUser } = useAuth();
@@ -49,6 +48,21 @@ const InternalSurveyPageWithTracking: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
 
+  // FORCE REDIRECT FUNCTION (CRITICAL)
+  const redirectToBackend = (statusCode: number) => {
+    const auth = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
+
+    const pid = surveyId;
+    const uid = auth?.id || auth?._id || "guest_user";
+    const vendorId = survey?.vendorId || "";
+
+    const url = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=${statusCode}&vendorId=${vendorId}`;
+
+    console.log("FINAL REDIRECT URL:", url);
+
+    window.location.href = url;
+  };
+
   const handleComplete = async () => {
     if (!survey || !trackingData) return;
 
@@ -72,40 +86,14 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       await refreshUser();
       addToast('🎉 Survey completed successfully!', 'success');
       
-      // MANDATORY: Add final redirect to /api/redirect with proper params
-      const user = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
-      const pid = survey.id;
-      const uid = user?.id || user?._id;
-      
-      if (pid && uid) {
-        console.log("Redirecting with:", { pid, uid, status: 1, vendorId: survey?.vendorId });
-        window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=1&vendorId=${survey?.vendorId || ""}`;
-      } else {
-        console.error("Missing pid or uid for redirect");
-      }
+      // IMMEDIATE REDIRECT (CRITICAL)
+      redirectToBackend(1);
       
     } catch (error) {
       console.error('Failed to complete survey:', error);
       
-      // FAIL CASE: If tracking fails, still try to complete with terminated status
-      try {
-        await completeTracking('terminated');
-        
-        // Add redirect for terminated case
-        const user = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
-        const pid = survey?.id;
-        const uid = user?.id || user?._id;
-        
-        if (pid && uid) {
-          console.log("Redirecting with:", { pid, uid, status: 2, vendorId: survey?.vendorId });
-          window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=2&vendorId=${survey?.vendorId || ""}`;
-        } else {
-          console.error("Missing pid or uid for redirect");
-        }
-      } catch (trackingError) {
-        console.error('Tracking also failed:', trackingError);
-        addToast('Survey completed but tracking failed', 'warning');
-      }
+      // FAIL CASE: IMMEDIATE REDIRECT TO TERMINATED
+      redirectToBackend(2);
     } finally {
       setIsSubmitting(false);
     }
@@ -119,9 +107,10 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       addToast('Survey terminated', 'info');
     } catch (error) {
       console.error('Failed to terminate tracking:', error);
-      // Fallback navigation
-      navigate('/dashboard');
     }
+    
+    // ALWAYS REDIRECT TO TERMINATED
+    redirectToBackend(2);
   };
 
   if (loading || trackingLoading) {
@@ -139,7 +128,6 @@ const InternalSurveyPageWithTracking: React.FC = () => {
           <AlertCircle className="w-16 h-16 text-navy-light mx-auto mb-4" />
           <h2 className="font-outfit font-bold text-2xl text-navy mb-2">Survey Not Found</h2>
           <p className="font-jakarta text-navy-light mb-6">The survey you're looking for doesn't exist.</p>
-          <PlayfulButton onClick={() => navigate('/dashboard')}>Back to Dashboard</PlayfulButton>
         </PlayfulCard>
       </div>
     );
@@ -160,9 +148,6 @@ const InternalSurveyPageWithTracking: React.FC = () => {
             <Coins className="w-5 h-5 text-yellow-500" />
             <span className="font-outfit font-bold text-xl text-navy">+{survey.pointsReward}</span>
           </div>
-          <PlayfulButton onClick={() => navigate('/dashboard')}>
-            Back to Dashboard
-          </PlayfulButton>
         </PlayfulCard>
       </div>
     );
