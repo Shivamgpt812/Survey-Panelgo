@@ -83,7 +83,15 @@ const VendorEntryPage: React.FC = () => {
         if (vendorId) {
           sessionStorage.setItem('surveypanelgo_vendor_flow', 'true');
         }
-        navigate(`/survey/${surveyId}/precheck`);
+        
+        // Navigate with ALL query parameters preserved
+        const precheckParams = new URLSearchParams();
+        precheckParams.set('survey', surveyId);
+        if (uid) precheckParams.set('uid', uid);
+        if (pid) precheckParams.set('pid', pid);
+        if (vendorId) precheckParams.set('vendor', vendorId);
+        
+        navigate(`/survey/${surveyId}/precheck?${precheckParams.toString()}`);
         return;
       } catch {
         if (!cancelled) {

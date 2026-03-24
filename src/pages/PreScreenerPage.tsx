@@ -7,15 +7,13 @@ import {
   AlertCircle,
   X,
   ExternalLink,
-  Shield,
   PartyPopper,
 } from 'lucide-react';
 import { PlayfulButton, PlayfulCard, PlayfulBadge, PlayfulProgress } from '@/components/ui/playful';
-import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
+import { DecorativeBlob, DotGrid } from '@/components/decorations';
 import type { Survey, Vendor } from '@/types';
 import { validatePreScreener, type PreScreenerAnswer } from '@/lib/preScreenerValidation';
 import { apiGet, apiPost } from '@/lib/api';
-import { getVendorSession } from '@/lib/vendorSession';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { useToast } from '@/hooks/useToast';
 import { getStoredToken, useAuth } from '@/hooks/useAuth';
@@ -45,7 +43,6 @@ const PreScreenerPage: React.FC = () => {
   // Check for vendor session
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [vendor, setVendor] = useState<Vendor | undefined>(undefined);
-  const [isVendorFlow, setIsVendorFlow] = useState(false);
 
   const [answers, setAnswers] = useState<PreScreenerAnswer[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
@@ -120,7 +117,18 @@ const PreScreenerPage: React.FC = () => {
         return;
       }
       if (!survey.isExternal) {
-        navigate(`/survey/${survey.id}/take`, { replace: true });
+        // Navigate with ALL query parameters preserved
+        const takeParams = new URLSearchParams();
+        takeParams.set('survey', survey.id);
+        const urlUid = searchParams.get('uid');
+        const urlPid = searchParams.get('pid') || survey.id;
+        const urlVendorId = searchParams.get('vendor');
+        
+        if (urlUid) takeParams.set('uid', urlUid);
+        if (urlPid) takeParams.set('pid', urlPid);
+        if (urlVendorId) takeParams.set('vendor', urlVendorId);
+        
+        navigate(`/survey/${survey.id}/take?${takeParams.toString()}`, { replace: true });
         return;
       }
       if (survey.link) {
@@ -300,43 +308,6 @@ const PreScreenerPage: React.FC = () => {
         origin: { y: 0.6 },
         colors: ['#7B61FF', '#FFD6E8', '#FFF2B2', '#D6F5E3'],
       });
-      setTimeout(() => {
-        if (!survey!.isExternal) {
-          console.log('Vendor internal survey - navigating to internal survey:', `/survey/${survey!.id}/take`);
-          navigate(`/survey/${survey!.id}/take${vendorId ? `?vendorId=${vendorId}` : ''}`);
-        } else if (vendor) {
-          console.log('Vendor external survey - redirecting to vendor complete URL:', vendor.redirectLinks.complete);
-          window.location.href = vendor.redirectLinks.complete;
-        } else {
-          console.log('Opening external survey link:', survey?.link);
-          window.open(survey?.link, '_blank');
-          navigate('/dashboard');
-        }
-      }, 3000);
-    } else {
-      console.log('Non-vendor flow detected');
-      await recordStart();
-      setShowCelebration(true);
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#7B61FF', '#FFD6E8', '#FFF2B2', '#D6F5E3'],
-      });
-      setTimeout(() => {
-        if (!survey!.isExternal) {
-          console.log('Navigating to internal survey:', `/survey/${survey!.id}/take`);
-          navigate(`/survey/${survey!.id}/take${vendorId ? `?vendorId=${vendorId}` : ''}`);
-        } else if (survey!.link) {
-          console.log('Opening external survey link:', survey!.link);
-          window.open(survey!.link, '_blank');
-          navigate('/dashboard');
-        } else {
-          console.log('No survey link, going to dashboard');
-          navigate('/dashboard');
-        }
-      }, 3000);
-    }
   };
 
   const handleVendorTerminateRedirect = () => {
@@ -360,13 +331,13 @@ const PreScreenerPage: React.FC = () => {
         <PlayfulCard className="relative z-10 w-full max-w-md p-8 text-center animate-bounce-in">
           <div className="flex justify-center mb-6">
             <div className="relative">
-              <IconCircle variant="yellow" size="xl" className="animate-pulse-soft">
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center animate-pulse-soft">
                 <PartyPopper className="w-10 h-10" />
-              </IconCircle>
+              </div>
               <div className="absolute -top-2 -right-2">
-                <IconCircle variant="violet" size="sm">
+                <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center">
                   <Coins className="w-4 h-4" />
-                </IconCircle>
+                </div>
               </div>
             </div>
           </div>
@@ -410,9 +381,9 @@ const PreScreenerPage: React.FC = () => {
 
         <PlayfulCard className="relative z-10 w-full max-w-md p-8 text-center animate-bounce-in">
           <div className="flex justify-center mb-6">
-            <IconCircle variant="green" size="xl">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
               <Check className="w-10 h-10" />
-            </IconCircle>
+            </div>
           </div>
 
           <h2 className="font-outfit font-bold text-2xl md:text-3xl text-navy mb-3">
@@ -466,9 +437,9 @@ const PreScreenerPage: React.FC = () => {
 
         <PlayfulCard className="relative z-10 w-full max-w-md p-8 text-center animate-bounce-in">
           <div className="flex justify-center mb-6">
-            <IconCircle variant="pink" size="xl">
+            <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center">
               <X className="w-10 h-10" />
-            </IconCircle>
+            </div>
           </div>
 
           <h2 className="font-outfit font-bold text-2xl md:text-3xl text-navy mb-3">
@@ -579,10 +550,10 @@ const PreScreenerPage: React.FC = () => {
         <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <IconCircle variant="violet" size="sm">
-                <Shield className="w-4 h-4" />
-              </IconCircle>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-4 h-4" />
+              </div>
               <PlayfulBadge variant="violet" size="sm">
                 Pre-Screener
               </PlayfulBadge>
@@ -699,15 +670,13 @@ const PreScreenerPage: React.FC = () => {
 
           {/* Info */}
           <div className="mt-6 flex items-start gap-3 p-4 bg-white/50 border-2 border-navy/10 rounded-2xl">
-            <IconCircle variant="yellow" size="sm">
+            <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
               <AlertCircle className="w-4 h-4" />
-            </IconCircle>
-            <div>
-              <p className="font-jakarta text-sm text-navy">
-                <span className="font-semibold">Why pre-screening?</span> We want to make sure you're a good fit for
-                this survey. This helps us provide better surveys and rewards for everyone!
-              </p>
             </div>
+            <p className="font-jakarta text-sm text-navy">
+              <span className="font-semibold">Why pre-screening?</span> We want to make sure you're a good fit for
+              this survey. This helps us provide better surveys and rewards for everyone!
+            </p>
           </div>
         </div>
       </main>
