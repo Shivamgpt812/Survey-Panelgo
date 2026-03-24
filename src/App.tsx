@@ -13,6 +13,7 @@ import { WhatsAppFloat } from '@/components/ui/playful';
 import PreScreenerPage from '@/pages/PreScreenerPage';
 import AdminPage from '@/pages/AdminPage';
 import AdminUsersPage from '@/pages/AdminUsersPage';
+import AdminPanel from '@/pages/AdminPanel';
 import VendorEntryPage from '@/pages/VendorEntryPage';
 import './App.css';
 
@@ -102,6 +103,14 @@ function AppContent() {
           element={
             <AdminRoute>
               <AdminUsersPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin-panel"
+          element={
+            <AdminRoute>
+              <AdminPanel />
             </AdminRoute>
           }
         />

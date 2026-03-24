@@ -23,15 +23,7 @@ import {
   type AuthedRequest,
 } from './middleware/optionalAuth.js';
 
-// Import new redirect routes
-const redirectRoutes = require('./routes/redirectRoutes');
-const adminRedirectRoutes = require('./routes/adminRedirectRoutes');
-
 const app = express();
-
-// Enable proxy support
-app.set('trust proxy', true);
-
 const allowedOrigins = [
   'http://localhost:5173',
   'https://surveypanelgo.netlify.app',
@@ -917,10 +909,6 @@ app.get('/api/export/responses.csv', requireAdmin, async (_req, res) => {
     res.status(500).send('Export failed');
   }
 });
-
-// ---------- NEW Redirect Tracking Routes ----------
-app.use('/survey', redirectRoutes);
-app.use('/admin', adminRedirectRoutes);
 
 // ---------- Frontend Static Serving (MUST BE LAST) ----------
 app.use(express.static('dist'));
