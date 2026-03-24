@@ -746,13 +746,13 @@ app.get('/api/redirect', async (req, res) => {
     const BASE_URL = "https://surveypanelgo.netlify.app";
 
     const redirectPages = {
-      1: "/survey-result/success",
-      2: "/survey-result/terminated",
-      3: "/survey-result/quota-full",
-      4: "/survey-result/security"
+      1: `/survey-result/success?pid=${pid}&uid=${uid}&status=1`,
+      2: `/survey-result/terminated?pid=${pid}&uid=${uid}&status=2`,
+      3: `/survey-result/quota-full?pid=${pid}&uid=${uid}&status=3`,
+      4: `/survey-result/security?pid=${pid}&uid=${uid}&status=4`
     };
 
-    const finalPath = redirectPages[statusCode] || "/survey-result";
+    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${pid}&uid=${uid}&status=${statusCode}`;
     const finalUrl = BASE_URL + finalPath;
 
     console.log("Redirecting to:", finalUrl);
