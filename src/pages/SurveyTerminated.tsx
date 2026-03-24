@@ -8,6 +8,8 @@ export default function SurveyTerminated() {
   const pid = params.get("pid");
   const uid = params.get("uid");
   const status = params.get("status");
+  const ip = params.get("ip");
+  const time = params.get("time");
 
   const statusMap: Record<string, string> = {
     "1": "Completed",
@@ -16,79 +18,40 @@ export default function SurveyTerminated() {
     "4": "Security Terminated"
   };
 
-  const statusText = statusMap[status || ""] || "Unknown";
-
   return (
-    <div style={{
-      padding: "40px",
-      fontFamily: "sans-serif",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      minHeight: "100vh",
-      backgroundColor: "#f8fafc"
-    }}>
-      <h1 style={{ color: "#ef4444", marginBottom: "30px" }}>❌ Survey Terminated</h1>
+    <div style={{ padding: "40px", textAlign: "center" }}>
+      <h1 style={{ color: "#ef4444" }}>
+        {status ? statusMap[status] : "Survey Result"}
+      </h1>
 
       <div style={{
-        marginTop: "20px",
-        padding: "30px",
-        border: "1px solid #ddd",
+        margin: "20px auto",
+        padding: "20px",
+        maxWidth: "400px",
         borderRadius: "10px",
-        maxWidth: "500px",
-        width: "100%",
-        backgroundColor: "white",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+        boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+        background: "#fff"
       }}>
-        <h2 style={{ marginBottom: "20px", color: "#1f2937" }}>Tracking Details</h2>
-        
-        <div style={{ marginBottom: "15px" }}>
-          <p style={{ margin: "8px 0", fontSize: "16px" }}>
-            <strong style={{ color: "#6b7280" }}>PID:</strong> 
-            <span style={{ marginLeft: "10px", color: "#1f2937", fontFamily: "monospace" }}>
-              {pid || "N/A"}
-            </span>
-          </p>
-        </div>
+        <h2>Tracking Details</h2>
 
-        <div style={{ marginBottom: "15px" }}>
-          <p style={{ margin: "8px 0", fontSize: "16px" }}>
-            <strong style={{ color: "#6b7280" }}>UID:</strong> 
-            <span style={{ marginLeft: "10px", color: "#1f2937", fontFamily: "monospace" }}>
-              {uid || "N/A"}
-            </span>
-          </p>
-        </div>
-
-        <div style={{ marginBottom: "15px" }}>
-          <p style={{ margin: "8px 0", fontSize: "16px" }}>
-            <strong style={{ color: "#6b7280" }}>Status:</strong> 
-            <span style={{ 
-              marginLeft: "10px", 
-              color: status === "1" ? "#10b981" : "#ef4444",
-              fontWeight: "bold"
-            }}>
-              {statusText}
-            </span>
-          </p>
-        </div>
+        <p><strong>PID:</strong> {pid || "N/A"}</p>
+        <p><strong>UID:</strong> {uid || "N/A"}</p>
+        <p><strong>Status:</strong> {status ? statusMap[status] : "Unknown"}</p>
+        <p><strong>IP Address:</strong> {ip || "N/A"}</p>
+        <p><strong>Time:</strong> {time ? new Date(time).toLocaleString() : "N/A"}</p>
       </div>
 
-      <button 
+      <button
+        onClick={() => (window.location.href = "/")}
         style={{
-          marginTop: "30px",
-          padding: "12px 24px",
-          backgroundColor: "#3b82f6",
-          color: "white",
+          marginTop: "20px",
+          padding: "10px 20px",
+          background: "#3b82f6",
+          color: "#fff",
           border: "none",
-          borderRadius: "8px",
-          fontSize: "16px",
-          cursor: "pointer",
-          transition: "background-color 0.2s"
+          borderRadius: "6px",
+          cursor: "pointer"
         }}
-        onClick={() => window.location.href = "/"}
-        onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#2563eb"}
-        onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#3b82f6"}
       >
         Go Back to Dashboard
       </button>
