@@ -32,8 +32,9 @@ function AppContent() {
         <Route path="/survey-result/terminated" element={<SurveyTerminated />} />
         <Route path="/survey-result/quota-full" element={<SurveyQuota />} />
         <Route path="/survey-result/security" element={<SurveySecurity />} />
-        {/* Dynamic route MUST be last */}
-        <Route path="/survey-result/:clickId" element={<SurveyResult />} />
+        {/* Test route */}
+        <Route path="/test" element={<h1 style={{ color: "black" }}>TEST ROUTE WORKS</h1>} />
+        {/* Dynamic route temporarily removed for testing */}
         <Route path="/services" element={<ServicesPage />} />
         <Route path="/services/:serviceId" element={<ServiceDetailPage />} />
         <Route path="/blog" element={<BlogPage />} />
@@ -114,20 +115,6 @@ function AppContent() {
 }
 
 function App() {
-  useEffect(() => {
-    console.log("Warming up backend...");
-    const wakeBackend = async () => {
-      try {
-        await fetch("https://survey-panelgo.onrender.com/api/health");
-        console.log("Backend warmed up 🔥");
-      } catch (error) {
-        console.log("Backend waking up...");
-      }
-    };
-
-    wakeBackend();
-  }, []);
-
   return (
     <AuthProvider>
       <ToastProvider>
