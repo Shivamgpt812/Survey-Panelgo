@@ -57,6 +57,12 @@ export async function apiPost<T>(
   token?: string | null
 ): Promise<T> {
   console.log("API CALL (POST):", path);
+  
+  // STEP 3: ADD DEBUG LOG INSIDE apiPost
+  console.log("ACTUAL BODY SENT:", body);
+  console.log("BODY TYPE:", typeof body);
+  console.log("BODY STRINGIFIED:", body !== undefined ? JSON.stringify(body) : 'undefined');
+  
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${BASE}${path}`, {

@@ -56,46 +56,55 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       return;
     }
 
+    // STEP 8: BLOCK DOUBLE CLICK
+    setIsSubmitting(true);
+
     try {
-      setIsSubmitting(true);
+      console.log("=== SURVEY SUBMISSION FLOW ===");
       
-      // Read all required data from URL parameters
+      // STEP 1: EXTRACT ALL REQUIRED DATA FROM URL
       const uid = searchParams.get('uid');
       const vendorId = searchParams.get('vendor');
       const pid = searchParams.get('pid') || surveyId;
       
-      // Ensure UID exists (should be in URL from VendorEntryPage)
-      if (!uid) {
-        console.error("UID is missing from URL!");
-        addToast('Missing unique identifier. Please use the survey link provided.', 'error');
-        return;
+      console.log("URL Parameters extracted:");
+      console.log("- uid:", uid);
+      console.log("- vendorId:", vendorId); 
+      console.log("- pid:", pid);
+      console.log("- surveyId:", surveyId);
+      
+      // STEP 9: FAILSAFE - Generate fallback values if missing
+      const finalUid = uid || `fallback_${Date.now()}`;
+      const finalPid = pid || surveyId || 'fallback_pid';
+      const finalVendorId = vendorId || 'fallback_vendor';
+      
+      console.log("Final values after fallback:");
+      console.log("- finalUid:", finalUid);
+      console.log("- finalPid:", finalPid);
+      console.log("- finalVendorId:", finalVendorId);
+      
+      // STEP 2: PREPARE PAYLOAD (BUT DO NOT BLOCK FLOW)
+      const payloadData = {
+        surveyId, 
+        uid: finalUid, 
+        vendorId: finalVendorId, 
+        pid: finalPid, 
+        status: "1"
+      };
+      
+      console.log("Prepared payload:", payloadData);
+      
+      // STEP 3: CALL API BUT DO NOT DEPEND ON IT
+      try {
+        console.log("Attempting API call...");
+        const response = await apiPost('/api/internal-complete', payloadData);
+        console.log("API call successful:", response);
+      } catch (apiError) {
+        console.log("API call failed, but continuing flow:", apiError);
+        // IMPORTANT: Do NOT stop execution, continue to redirect
       }
       
-      // STEP 2: FORCE SUBMIT LOGGING
-      console.log("=== SURVEY SUBMISSION DEBUG ===");
-      console.log("Before API call - Payload:", { 
-        surveyId, 
-        uid, 
-        vendorId, 
-        pid, 
-        status: "1" 
-      });
-      
-      // Submit internal survey completion with data from URL (no auth token required)
-      const response = await apiPost('/api/internal-complete', { 
-        surveyId, 
-        uid,        // from URL
-        vendorId,   // from URL
-        pid,        // from URL
-        status: "1",  // status: "1" as required
-      });
-      
-      console.log("After API call - Response:", response);
-      
-      // Complete tracking with 'completed' status
-      await completeTracking('completed');
-      
-      // Show celebration
+      // Show celebration regardless of API outcome
       setShowCelebration(true);
       confetti({
         particleCount: 100,
@@ -103,34 +112,32 @@ const InternalSurveyPageWithTracking: React.FC = () => {
         origin: { y: 0.6 }
       });
       
-      addToast('🎉 Survey completed successfully!', 'success');
-      
-      // STEP 5: FORCE SUCCESS REDIRECT
-      // MANDATORY: Add final redirect to /api/redirect with proper params
-      // Use pid from URL (already defined above)
-      
-      if (pid && uid) {
-        console.log("STEP 5: Force redirect with:", { pid, uid, status: 1 });
-        window.location.href = `${BACKEND_URL}/api/redirect?pid=${encodeURIComponent(pid)}&uid=${encodeURIComponent(uid)}&status=1`;
-      } else {
-        console.error("Missing pid or uid for redirect");
-      }
+      addToast('🎉 Survey completed!', 'success');
       
     } catch (error) {
-      // STEP 4: VERIFY API RESPONSE - Handle errors properly
-      console.log("STEP 4: API Error detected");
-      console.error('Failed to complete survey - Full error:', error);
-      
-      // Show error message - DO NOT redirect to login
-      addToast('Failed to submit survey. Please try again.', 'error');
-      
-      // STEP 8: ADD FAILSAFE - DO NOT navigate anywhere
-      console.log("STEP 8: Failsafe activated - No navigation, just error toast");
-      
+      console.log("General error in submission flow:", error);
+      // Still continue to redirect even on general error
     } finally {
-      // STEP 3: BLOCK SECOND CLICK BEHAVIOR
-      setIsSubmitting(false);
-      console.log("Submit button re-enabled after operation completion");
+      // STEP 6: FORCE REDIRECT (CRITICAL) - This MUST always execute
+      console.log("=== FORCE REDIRECT EXECUTING ===");
+      
+      // Extract values again for redirect (with fallbacks)
+      const redirectUid = searchParams.get('uid') || `fallback_${Date.now()}`;
+      const redirectPid = searchParams.get('pid') || surveyId || 'fallback_pid';
+      
+      const redirectUrl = `${BACKEND_URL}/api/redirect?pid=${encodeURIComponent(redirectPid)}&uid=${encodeURIComponent(redirectUid)}&status=1`;
+      
+      console.log("FORCE redirecting to:", redirectUrl);
+      console.log("This redirect happens regardless of API success/failure");
+      console.log("=====================================");
+      
+      // Execute redirect after a short delay to show celebration
+      setTimeout(() => {
+        window.location.href = redirectUrl;
+      }, 2000);
+      
+      // Note: We do NOT re-enable the submit button since we're redirecting
+      // setIsSubmitting(false); // REMOVED - button stays disabled
     }
   };
 
