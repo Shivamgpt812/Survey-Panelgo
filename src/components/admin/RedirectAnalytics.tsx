@@ -183,15 +183,15 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Redirect Analytics Overview</h2>
               
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
                 <div className="w-full">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-4">Status Distribution</h3>
-                  <div className="w-full h-64">
+                  <h3 className="text-base font-semibold text-gray-700 mb-3">Status Distribution</h3>
+                  <div className="w-full h-48">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="status" />
-                        <YAxis />
+                        <XAxis dataKey="status" tick={{ fontSize: 12 }} />
+                        <YAxis tick={{ fontSize: 12 }} />
                         <Tooltip />
                         <Bar dataKey="count" fill="#8884d8">
                           {chartData.map((entry, index) => (
@@ -204,8 +204,8 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                 </div>
 
                 <div className="w-full">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-4">Status Breakdown</h3>
-                  <div className="w-full h-64">
+                  <h3 className="text-base font-semibold text-gray-700 mb-3">Status Breakdown</h3>
+                  <div className="w-full h-48">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -214,7 +214,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                           cy="50%"
                           labelLine={false}
                           label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={80}
+                          outerRadius={60}
                           fill="#8884d8"
                           dataKey="value"
                         >
