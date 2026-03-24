@@ -64,73 +64,31 @@ const InternalSurveyPageWithTracking: React.FC = () => {
   };
 
   const handleComplete = async () => {
-    // MOVE REDIRECT TO TOP (CRITICAL)
-    const redirectNow = (statusCode: number) => {
-      const pid = surveyId;
-      const uid = "guest_user"; // no auth required
-      const vendorId = survey?.vendorId || "";
+    const pid = surveyId;
+    const uid = "guest_user";
+    const vendorId = survey?.vendorId || "";
 
-      const url = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=${statusCode}&vendorId=${vendorId}`;
+    const url = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=1&vendorId=${vendorId}`;
 
-      console.log("🚀 FINAL REDIRECT:", url);
+    console.log("🚀 FINAL REDIRECT:", url);
 
-      window.location.href = url;
-    };
+    window.open(url, "_self");
 
-    // CALL REDIRECT IMMEDIATELY
-    redirectNow(1);
-
-    // OPTIONAL (KEEP FOR FUTURE)
-    setTimeout(() => {
-      try {
-        // Submit internal survey completion
-        apiPost('/api/internal-complete', { surveyId }, getStoredToken());
-        
-        // Complete tracking with 'completed' status
-        completeTracking('completed');
-        
-        // Show celebration and refresh user data
-        setShowCelebration(true);
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 }
-        });
-        
-        refreshUser();
-        addToast('🎉 Survey completed successfully!', 'success');
-      } catch (e) {
-        console.log("Background tracking failed");
-      }
-    }, 0);
+    return; // 🔥 VERY IMPORTANT - stops execution
   };
 
   const handleTerminate = async () => {
-    // MOVE REDIRECT TO TOP (CRITICAL)
-    const redirectNow = (statusCode: number) => {
-      const pid = surveyId;
-      const uid = "guest_user"; // no auth required
-      const vendorId = survey?.vendorId || "";
+    const pid = surveyId;
+    const uid = "guest_user";
+    const vendorId = survey?.vendorId || "";
 
-      const url = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=${statusCode}&vendorId=${vendorId}`;
+    const url = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=2&vendorId=${vendorId}`;
 
-      console.log("🚀 FINAL REDIRECT TERMINATE:", url);
+    console.log("🚀 FINAL REDIRECT TERMINATE:", url);
 
-      window.location.href = url;
-    };
+    window.open(url, "_self");
 
-    // CALL REDIRECT IMMEDIATELY
-    redirectNow(2);
-
-    // OPTIONAL (KEEP FOR FUTURE)
-    setTimeout(() => {
-      try {
-        completeTracking('terminated');
-        addToast('Survey terminated', 'info');
-      } catch (e) {
-        console.log("Background tracking failed");
-      }
-    }, 0);
+    return; // 🔥 VERY IMPORTANT - stops execution
   };
 
   if (loading || trackingLoading) {
