@@ -69,12 +69,13 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       // Debug logging
       console.log("Submitting survey with:", { uid, surveyId, vendorId, pid });
       
-      // Submit the internal survey completion with data from URL (no auth token required)
+      // Submit internal survey completion with data from URL (no auth token required)
       await apiPost('/api/internal-complete', { 
         surveyId, 
         uid,        // from URL
         vendorId,   // from URL
         pid,        // from URL
+        status: "1",  // status: "1" as required
       });
       
       // Complete tracking with 'completed' status
@@ -95,7 +96,7 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       
       if (pid && uid) {
         console.log("Redirecting with:", { pid, uid, status: 1 });
-        window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=1`;
+        window.location.href = `${BACKEND_URL}/api/redirect?pid=${encodeURIComponent(pid)}&uid=${encodeURIComponent(uid)}&status=1`;
       } else {
         console.error("Missing pid or uid for redirect");
       }
@@ -123,7 +124,7 @@ const InternalSurveyPageWithTracking: React.FC = () => {
         // Add redirect for terminated case using UID from URL
         if (pid && uid) {
           console.log("Redirecting with:", { pid, uid, status: 2 });
-          window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=2`;
+          window.location.href = `${BACKEND_URL}/api/redirect?pid=${encodeURIComponent(pid)}&uid=${encodeURIComponent(uid)}&status=2`;
         } else {
           console.error("Missing pid or uid for redirect");
         }
