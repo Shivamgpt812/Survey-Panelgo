@@ -641,12 +641,12 @@ const AdminPage: React.FC = () => {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {statCards.map((stat, index) => (
                   <PlayfulCard
                     key={index}
                     variant={stat.href ? 'static' : 'default'}
-                    className={`p-4 sm:p-5 ${stat.href ? 'cursor-pointer hover:shadow-hard-lg hover:-translate-y-0.5 transition-all' : ''}`}
+                    className={`p-3 sm:p-4 md:p-5 ${stat.href ? 'cursor-pointer hover:shadow-hard-lg hover:-translate-y-0.5 transition-all' : ''}`}
                     onClick={stat.href ? () => navigate(stat.href) : undefined}
                     role={stat.href ? 'button' : undefined}
                     tabIndex={stat.href ? 0 : undefined}
@@ -664,14 +664,14 @@ const AdminPage: React.FC = () => {
                   >
                     <div className="flex items-start justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="font-jakarta text-xs sm:text-sm text-navy-light mb-1 truncate">{stat.label}</p>
-                        <p className="font-outfit font-bold text-2xl sm:text-3xl text-navy">{stat.value}</p>
+                        <p className="font-jakarta text-xs text-navy-light mb-1 truncate leading-tight">{stat.label}</p>
+                        <p className="font-outfit font-bold text-xl sm:text-2xl md:text-3xl text-navy leading-tight">{stat.value}</p>
                         {stat.href && (
-                          <p className="font-jakarta text-xs text-violet mt-1 sm:mt-2 font-medium">View list →</p>
+                          <p className="font-jakarta text-xs text-violet mt-1 font-medium">View →</p>
                         )}
                       </div>
-                      <IconCircle variant={stat.variant} size="sm" className="shrink-0 ml-2">
-                        <stat.icon className="w-4 h-4" />
+                      <IconCircle variant={stat.variant} size="sm" className="shrink-0 ml-1 sm:ml-2">
+                        <stat.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </IconCircle>
                     </div>
                   </PlayfulCard>
@@ -686,7 +686,7 @@ const AdminPage: React.FC = () => {
                     <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span className="truncate">Survey Completions (Last 7 Days)</span>
                   </h2>
-                  <div className="h-[200px] sm:h-[250px] w-full">
+                  <div className="h-[150px] sm:h-[200px] md:h-[250px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={timelineData}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -730,7 +730,7 @@ const AdminPage: React.FC = () => {
                     <span className="truncate">Response Distribution</span>
                   </h2>
                   <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <div className="h-[150px] sm:h-[200px] w-full">
+                    <div className="h-[120px] sm:h-[150px] md:h-[200px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
@@ -784,7 +784,7 @@ const AdminPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="h-[200px] sm:h-[300px] w-full">
+                  <div className="h-[150px] sm:h-[200px] md:h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={vendorStatsData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
