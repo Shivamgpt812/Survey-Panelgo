@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Coins, Check, AlertCircle, Shield, PartyPopper } from 'lucide-react';
+import { ArrowLeft, Coins, Check, AlertCircle } from 'lucide-react';
 import { PlayfulButton, PlayfulCard, PlayfulBadge, PlayfulProgress } from '@/components/ui/playful';
-import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
-import type { Survey, User } from '@/types';
+import { DecorativeBlob, DotGrid } from '@/components/decorations';
+import type { Survey } from '@/types';
 import { apiGet, apiPost } from '@/lib/api';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { useToast } from '@/hooks/useToast';
-import { getStoredToken, useAuth } from '@/hooks/useAuth';
 import { useSurveyTracker } from '@/components/SurveyTracker';
 import confetti from 'canvas-confetti';
 
@@ -15,7 +14,6 @@ const InternalSurveyPageWithTracking: React.FC = () => {
   const navigate = useNavigate();
   const { surveyId } = useParams<{ surveyId: string }>();
   const { addToast } = useToast();
-  const { refreshUser } = useAuth();
 
   const BACKEND_URL = "https://survey-panelgo.onrender.com";
 
@@ -30,7 +28,7 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       setLoading(false);
       return;
     }
-    void apiGet<{ survey: Survey }>(`/api/surveys/${surveyId}`, getStoredToken())
+    void apiGet<{ survey: Survey }>(`/api/surveys/${surveyId}`)
       .then((d) => setSurvey(d.survey))
       .catch(() => setSurvey(undefined))
       .finally(() => setLoading(false));
@@ -55,13 +53,27 @@ const InternalSurveyPageWithTracking: React.FC = () => {
     try {
       setIsSubmitting(true);
       
-      // Submit the internal survey completion
-      await apiPost('/api/internal-complete', { surveyId }, getStoredToken());
+      // Ensure UID exists
+      let uid = localStorage.getItem('surveypanelgo_uid');
+      if (!uid) {
+        // Generate UID if missing
+        const timestamp = Date.now().toString(36);
+        const randomStr = Math.random().toString(36).substring(2, 15);
+        uid = `${timestamp}_${randomStr}`;
+        localStorage.setItem('surveypanelgo_uid', uid);
+      }
+      
+      // Submit the internal survey completion with UID (no auth token required)
+      await apiPost('/api/internal-complete', { 
+        surveyId, 
+        uid,
+        vendorId: new URLSearchParams(window.location.search).get('vendorId') || undefined
+      });
       
       // Complete tracking with 'completed' status
       await completeTracking('completed');
       
-      // Show celebration and refresh user data
+      // Show celebration
       setShowCelebration(true);
       confetti({
         particleCount: 100,
@@ -69,14 +81,11 @@ const InternalSurveyPageWithTracking: React.FC = () => {
         origin: { y: 0.6 }
       });
       
-      await refreshUser();
       addToast('🎉 Survey completed successfully!', 'success');
       
       // MANDATORY: Add final redirect to /api/redirect with proper params
-      const user = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
       const pid = survey.id;
-      // Use logged-in user ID if available, otherwise use persistent UID
-      const uid = user?.id || user?._id || localStorage.getItem('surveypanelgo_uid');
+      // Use persistent UID (already generated above)
       
       if (pid && uid) {
         console.log("Redirecting with:", { pid, uid, status: 1 });
@@ -88,15 +97,24 @@ const InternalSurveyPageWithTracking: React.FC = () => {
     } catch (error) {
       console.error('Failed to complete survey:', error);
       
+      // Show error message - DO NOT redirect to login
+      addToast('Failed to submit survey. Please try again.', 'error');
+      
       // FAIL CASE: If tracking fails, still try to complete with terminated status
       try {
+        // Ensure UID exists for error case too
+        let uid = localStorage.getItem('surveypanelgo_uid');
+        if (!uid) {
+          const timestamp = Date.now().toString(36);
+          const randomStr = Math.random().toString(36).substring(2, 15);
+          uid = `${timestamp}_${randomStr}`;
+          localStorage.setItem('surveypanelgo_uid', uid);
+        }
+        
         await completeTracking('terminated');
         
-        // Add redirect for terminated case
-        const user = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
+        // Add redirect for terminated case using UID
         const pid = survey?.id || survey?.pid;
-        // Use logged-in user ID if available, otherwise use persistent UID
-        const uid = user?.id || user?._id || localStorage.getItem('surveypanelgo_uid');
         
         if (pid && uid) {
           console.log("Redirecting with:", { pid, uid, status: 2 });
@@ -106,7 +124,7 @@ const InternalSurveyPageWithTracking: React.FC = () => {
         }
       } catch (trackingError) {
         console.error('Tracking also failed:', trackingError);
-        addToast('Survey completed but tracking failed', 'warning');
+        addToast('Survey submission failed. Please refresh and try again.', 'error');
       }
     } finally {
       setIsSubmitting(false);
@@ -121,8 +139,8 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       addToast('Survey terminated', 'info');
     } catch (error) {
       console.error('Failed to terminate tracking:', error);
-      // Fallback navigation
-      navigate('/dashboard');
+      // Show error message - DO NOT redirect to login
+      addToast('Failed to terminate survey. Please try again.', 'error');
     }
   };
 
@@ -141,7 +159,7 @@ const InternalSurveyPageWithTracking: React.FC = () => {
           <AlertCircle className="w-16 h-16 text-navy-light mx-auto mb-4" />
           <h2 className="font-outfit font-bold text-2xl text-navy mb-2">Survey Not Found</h2>
           <p className="font-jakarta text-navy-light mb-6">The survey you're looking for doesn't exist.</p>
-          <PlayfulButton onClick={() => navigate('/dashboard')}>Back to Dashboard</PlayfulButton>
+          <PlayfulButton onClick={() => navigate('/')}>Back to Home</PlayfulButton>
         </PlayfulCard>
       </div>
     );
