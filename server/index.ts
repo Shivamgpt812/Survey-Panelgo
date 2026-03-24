@@ -333,16 +333,19 @@ app.get('/api/responses', requireAdmin, async (_req, res) => {
   }
 });
 
-app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
+app.post('/api/responses', async (req, res) => {
   try {
-    const { surveyId, status, vendorId, preScreenerAnswers, failureReason } = req.body as {
+    const { surveyId, status, vendorId, preScreenerAnswers, failureReason, uid } = req.body as {
       surveyId?: string;
       status?: 'complete' | 'terminate' | 'quota_full';
       vendorId?: string;
       preScreenerAnswers?: { questionId: string; value: string | number | boolean }[];
       failureReason?: string;
+      uid?: string;
     };
-    const userId = req.user?.id; // May be undefined for vendor flow without login
+    
+    // Use UID from request if provided, otherwise try to get from authenticated user
+    const userId = uid || (req as any).user?.id;
 
     if (!surveyId || !status) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -354,7 +357,7 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
     }
     const sid = survey._id.toString();
 
-    // Only check for duplicates if user is logged in
+    // Only check for duplicates if userId is available
     if (userId && status === 'complete') {
       console.log('=== DUPLICATE CHECK DEBUG ===');
       console.log('User ID:', userId);
@@ -438,7 +441,7 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
     }
 
     const uname =
-      req.user && 'name' in req.user ? (req.user as { name?: string }).name : 'A respondent';
+      (req as any).user && 'name' in (req as any).user ? (req as any).user.name : 'A respondent';
     if (status === 'complete') {
       await ActivityLog.create({
         message: `${uname} recorded response (complete) for: ${survey.title}`,
@@ -449,12 +452,14 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
       const ageInfo = userInfo.age ? ` (age: ${userInfo.age})` : '';
       const failureInfo = failureReason ? ` - Reason: ${failureReason}` : '';
       await ActivityLog.create({
-        message: `${uname} did not qualify for: ${survey.title}${ageInfo}${failureInfo}${vendorId ? ' (vendor flow)' : ''}`,
+        message: `${uname} recorded response (terminate) for: ${survey.title}${ageInfo}${failureInfo}`,
         type: 'warning',
       });
     } else if (status === 'quota_full') {
+      const userInfo = preScreenerAnswers ? extractUserInfo(preScreenerAnswers) : {};
+      const ageInfo = userInfo.age ? ` (age: ${userInfo.age})` : '';
       await ActivityLog.create({
-        message: `Quota full for: ${survey.title}`,
+        message: `${uname} recorded response (quota full) for: ${survey.title}${ageInfo}`,
         type: 'warning',
       });
     }
@@ -466,16 +471,15 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
   }
 });
 
-app.post('/api/internal-complete', requireAuth, async (req: AuthedRequest, res) => {
+app.post('/api/internal-complete', async (req, res) => {
   try {
-    const user = await User.findById(req.user!._id);
-    if (!user) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-    const { surveyId, vendorId } = req.body as { surveyId?: string; vendorId?: string };
+    const { surveyId, vendorId, uid } = req.body as { surveyId?: string; vendorId?: string; uid?: string };
     if (!surveyId || !mongoose.isValidObjectId(surveyId)) {
       res.status(400).json({ error: 'Invalid survey' });
+      return;
+    }
+    if (!uid) {
+      res.status(400).json({ error: 'UID is required' });
       return;
     }
     const survey = await Survey.findById(surveyId);
@@ -483,8 +487,7 @@ app.post('/api/internal-complete', requireAuth, async (req: AuthedRequest, res) 
       res.status(404).json({ error: 'Survey not found' });
       return;
     }
-    const isAdmin = req.user?.role === 'admin';
-    if (survey.status !== 'active' && !isAdmin) {
+    if (survey.status !== 'active') {
       res.status(404).json({ error: 'Survey not found' });
       return;
     }
@@ -494,7 +497,6 @@ app.post('/api/internal-complete', requireAuth, async (req: AuthedRequest, res) 
     }
 
     const sid = survey._id.toString();
-    const uid = user._id.toString();
     console.log('=== INTERNAL COMPLETION DEBUG ===');
     console.log('User ID:', uid);
     console.log('Survey ID:', sid);
@@ -528,7 +530,7 @@ app.post('/api/internal-complete', requireAuth, async (req: AuthedRequest, res) 
 
     await Response.create({
       surveyId: survey._id.toString(),
-      userId: user._id.toString(),
+      userId: uid,  // Use UID instead of user._id
       vendorId: vendorId || undefined,
       status: 'complete',
     });
@@ -547,17 +549,21 @@ app.post('/api/internal-complete', requireAuth, async (req: AuthedRequest, res) 
         console.error('Failed to update vendor completion tracking:', vendorError);
       }
     }
-    user.points += survey.pointsReward;
-    user.surveysCompleted += 1;
-    await user.save();
 
-    await ActivityLog.create({
-      message: `${user.name} completed internal survey: ${survey.title}`,
-      type: 'success',
-    });
+    // Only update user points if user exists (for logged-in users)
+    const user = await User.findById(uid);
+    if (user) {
+      user.points += survey.pointsReward;
+      user.surveysCompleted += 1;
+      await user.save();
 
-    const fresh = await User.findById(user._id);
-    res.json({ user: fresh ? userJson(fresh) : userJson(user) });
+      await ActivityLog.create({
+        message: `${user.name} completed internal survey: ${survey.title}`,
+        type: 'success',
+      });
+    }
+
+    res.json({ success: true, message: 'Survey completed successfully' });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to complete survey' });
