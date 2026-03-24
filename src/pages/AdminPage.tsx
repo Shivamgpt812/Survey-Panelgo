@@ -642,17 +642,24 @@ const AdminPage: React.FC = () => {
                   { id: 'logs', label: 'Activity Logs', icon: ClipboardList },
                   { id: 'survey-logs', label: 'Survey Logs', icon: Activity },
                   { id: 'redirect-analytics', label: 'Redirect Analytics', icon: BarChart3 },
+                  { id: 'admin-panel', label: 'Admin Panel', icon: LayoutDashboard, isExternal: true },
                 ].map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => {
-                      setActiveTab(tab.id as any);
+                      if (tab.isExternal) {
+                        navigate('/admin-panel');
+                      } else {
+                        setActiveTab(tab.id as any);
+                      }
                       setMobileSidebarOpen(false);
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-jakarta font-medium transition-all ${
-                      activeTab === tab.id 
-                        ? 'bg-violet text-white shadow-hard'
-                        : 'text-navy hover:bg-periwinkle'
+                      tab.id === 'admin-panel' 
+                        ? 'text-navy hover:bg-periwinkle'
+                        : activeTab === tab.id 
+                          ? 'bg-violet text-white shadow-hard'
+                          : 'text-navy hover:bg-periwinkle'
                     }`}
                   >
                     <tab.icon className="w-5 h-5" />
