@@ -656,6 +656,7 @@ const PreScreenerPage: React.FC = () => {
                   </div>
                 )}
               </div>
+              )}
 
               {/* Navigation */}
               <div className="flex items-center justify-between pt-4">
