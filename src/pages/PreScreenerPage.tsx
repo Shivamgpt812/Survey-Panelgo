@@ -91,6 +91,9 @@ const PreScreenerPage: React.FC = () => {
   }, [survey, surveyId, vendor, trackingData]);
 
   const preScreenerQuestions = survey?.preScreener || [];
+  const currentQuestion = preScreenerQuestions[currentStep] || null;
+  const progress = preScreenerQuestions.length > 0 ? ((currentStep + 1) / preScreenerQuestions.length) * 100 : 0;
+  const isLastQuestion = preScreenerQuestions.length > 0 ? currentStep === preScreenerQuestions.length - 1 : false;
 
   useEffect(() => {
     if (!survey || loadingSurvey) return;
@@ -186,11 +189,12 @@ const PreScreenerPage: React.FC = () => {
     );
   }
 
-  const currentQuestion = preScreenerQuestions[currentStep];
-  const progress = ((currentStep + 1) / preScreenerQuestions.length) * 100;
-  const isLastQuestion = currentStep === preScreenerQuestions.length - 1;
-
   const handleAnswer = (value: string | number | boolean) => {
+    if (!currentQuestion) {
+      console.error('Cannot handle answer - currentQuestion is null');
+      return;
+    }
+    
     const newAnswer: PreScreenerAnswer = {
       questionId: currentQuestion.id,
       value,
@@ -208,6 +212,11 @@ const PreScreenerPage: React.FC = () => {
   };
 
   const getCurrentAnswer = (): string | number | boolean | null => {
+    if (!currentQuestion) {
+      console.error('Cannot get answer - currentQuestion is null');
+      return null;
+    }
+    
     const answer = answers.find((a) => a.questionId === currentQuestion.id);
     return answer?.value ?? null;
   };
@@ -586,14 +595,16 @@ const PreScreenerPage: React.FC = () => {
               {/* Question */}
               <div>
                 <h2 className="font-outfit font-bold text-xl md:text-2xl text-navy">
-                  {currentQuestion.question}
+                  {currentQuestion?.question || 'Loading question...'}
                 </h2>
-                <span className="inline-block mt-2 font-mono text-xs text-violet">* Required</span>
+                {currentQuestion && <span className="inline-block mt-2 font-mono text-xs text-violet">* Required</span>}
               </div>
 
               {/* Answer Input */}
-              <div className="space-y-3">
-                {currentQuestion.type === 'number' && (
+              
+              {currentQuestion && (
+                <div className="space-y-3">
+                  {currentQuestion.type === 'number' && (
                   <input
                     type="number"
                     value={(getCurrentAnswer() as string) || ''}
