@@ -63,80 +63,62 @@ const InternalSurveyPageWithTracking: React.FC = () => {
     window.location.href = url;
   };
 
-  const handleComplete = async () => {
-    // FIX UID (CRITICAL)
+  const handleComplete = () => {
     const auth = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
-    const uid = auth?.id || auth?._id;
-
-    // ADD SAFETY FALLBACK
-    if (!uid) {
-      console.error("No UID found");
-      return alert("Session error. Please login once.");
-    }
-
-    // ADD DOUBLE CLICK PREVENTION
-    if (isSubmitting) return;
-    setIsSubmitting(true);
+    const uid = auth?.id || auth?._id || "guest";
 
     const pid = surveyId;
     const vendorId = survey?.vendorId || "";
 
     const url = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=1&vendorId=${vendorId}`;
 
-    console.log("🚀 FINAL REDIRECT:", url);
+    console.log("🚀 REDIRECT FIRST:", url);
 
-    // KEEP API CALL BUT NON-BLOCKING
-    try {
-      await apiPost('/api/internal-complete', { surveyId }, getStoredToken());
-      await completeTracking('completed');
-      setShowCelebration(true);
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-      refreshUser();
-      addToast('🎉 Survey completed successfully!', 'success');
-    } catch (e) {
-      console.log("API failed, continuing redirect");
-    }
-
-    // REDIRECT AFTER TRY (IMPORTANT)
+    // ✅ STEP 1: REDIRECT IMMEDIATELY (CRITICAL)
     window.location.href = url;
+
+    // ✅ STEP 2: RUN APIS IN BACKGROUND (NON-BLOCKING)
+    setTimeout(() => {
+      try {
+        apiPost('/api/internal-complete', { surveyId }, getStoredToken());
+        completeTracking('completed');
+        setShowCelebration(true);
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+        refreshUser();
+        addToast('🎉 Survey completed successfully!', 'success');
+      } catch (e) {
+        console.log("Background API failed, but redirect already happened");
+      }
+    }, 0);
   };
 
-  const handleTerminate = async () => {
-    // FIX UID (CRITICAL)
+  const handleTerminate = () => {
     const auth = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
-    const uid = auth?.id || auth?._id;
-
-    // ADD SAFETY FALLBACK
-    if (!uid) {
-      console.error("No UID found");
-      return alert("Session error. Please login once.");
-    }
-
-    // ADD DOUBLE CLICK PREVENTION
-    if (isSubmitting) return;
-    setIsSubmitting(true);
+    const uid = auth?.id || auth?._id || "guest";
 
     const pid = surveyId;
     const vendorId = survey?.vendorId || "";
 
     const url = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=2&vendorId=${vendorId}`;
 
-    console.log("🚀 FINAL REDIRECT TERMINATE:", url);
+    console.log("🚀 REDIRECT FIRST TERMINATE:", url);
 
-    // KEEP API CALL BUT NON-BLOCKING
-    try {
-      await completeTracking('terminated');
-      addToast('Survey terminated', 'info');
-    } catch (e) {
-      console.log("API failed, continuing redirect");
-    }
-
-    // REDIRECT AFTER TRY (IMPORTANT)
+    // ✅ STEP 1: REDIRECT IMMEDIATELY (CRITICAL)
     window.location.href = url;
+
+    // ✅ STEP 2: RUN APIS IN BACKGROUND (NON-BLOCKING)
+    setTimeout(() => {
+      try {
+        completeTracking('terminated');
+        addToast('Survey terminated', 'info');
+      } catch (e) {
+        console.log("Background API failed, but redirect already happened");
+      }
+    }, 0);
   };
 
   if (loading || trackingLoading) {
