@@ -28,11 +28,12 @@ function AppContent() {
         <Route path="/global" element={<CountryHeroSection />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/start" element={<VendorEntryPage />} />
-        <Route path="/survey-result/:clickId" element={<SurveyResult />} />
         <Route path="/survey-result/success" element={<SurveySuccess />} />
         <Route path="/survey-result/terminated" element={<SurveyTerminated />} />
         <Route path="/survey-result/quota-full" element={<SurveyQuota />} />
         <Route path="/survey-result/security" element={<SurveySecurity />} />
+        {/* Dynamic route MUST be last */}
+        <Route path="/survey-result/:clickId" element={<SurveyResult />} />
         <Route path="/services" element={<ServicesPage />} />
         <Route path="/services/:serviceId" element={<ServiceDetailPage />} />
         <Route path="/blog" element={<BlogPage />} />
