@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
+import path from 'path';
 import { connectDb } from './db.js';
 import { signToken } from './lib/auth.js';
 import { User } from './models/User.js';
@@ -702,6 +703,7 @@ app.get('/api/survey-tracking', requireAdmin, async (_req: any, res) => {
 // ---------- Survey Redirect Tracking ----------
 app.get('/api/redirect', async (req, res) => {
   try {
+    console.log("Redirect route hit:", req.query);
     const { pid, uid, status } = req.query;
 
     if (!pid || !uid || !status) {
@@ -804,6 +806,13 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
   }
 });
 
+// ---------- Frontend Static Serving ----------
+app.use(express.static('dist'));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.resolve('dist/index.html'));
+});
+
 // ---------- Analytics & activity ----------
 app.get('/api/analytics', requireAdmin, async (_req, res) => {
   try {
@@ -898,6 +907,7 @@ if (!MONGODB_URI) {
 
 void connectDb(MONGODB_URI).then(() => {
   console.log("MongoDB connected successfully ✅");
+  console.log("Server running...");
   app.listen(PORT, () => {
     console.log(`API listening on port ${PORT}`);
   });

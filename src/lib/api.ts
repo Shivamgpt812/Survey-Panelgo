@@ -2,8 +2,21 @@ const BASE = "https://survey-panelgo.onrender.com";
 
 async function parseError(res: Response): Promise<string> {
   try {
-    const j = (await res.json()) as { error?: string };
-    return j.error || res.statusText;
+    const text = await res.text();
+    console.log('Raw response:', text);
+    
+    // Check if response is HTML (indicates routing issue)
+    if (text.includes('<!doctype') || text.includes('<html')) {
+      return 'Server returned HTML instead of JSON - routing issue detected';
+    }
+    
+    // Try to parse as JSON
+    try {
+      const j = JSON.parse(text) as { error?: string };
+      return j.error || res.statusText;
+    } catch {
+      return text || res.statusText;
+    }
   } catch {
     return res.statusText;
   }
@@ -13,7 +26,19 @@ export async function apiGet<T>(path: string, token?: string | null): Promise<T>
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${BASE}${path}`, { headers });
-  if (!res.ok) throw new Error(await parseError(res));
+  
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+  
+  // Additional safety check before parsing JSON
+  const contentType = res.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await res.text();
+    console.log('Unexpected content type:', contentType, 'Response:', text);
+    throw new Error(`Expected JSON but got ${contentType}. Response: ${text.substring(0, 200)}...`);
+  }
+  
   return res.json() as Promise<T>;
 }
 
