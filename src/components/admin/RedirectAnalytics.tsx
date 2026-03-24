@@ -1,28 +1,5 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { PlayfulCard, PlayfulBadge } from '@/components/ui/playful';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { 
-  Search, 
-  Globe, 
-  User, 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle,
-  Clock,
-  RefreshCw,
-  Copy,
-  Play
-} from 'lucide-react';
 
 const BACKEND_URL = "https://survey-panelgo.onrender.com";
 
@@ -48,64 +25,6 @@ interface RedirectAnalyticsProps {
   className?: string;
 }
 
-const statusLabels = {
-  1: 'Completed',
-  2: 'Terminated',
-  3: 'Quota Full',
-  4: 'Security Terminated',
-};
-
-const statusColors = {
-  1: '#10b981', // green
-  2: '#ef4444', // red
-  3: '#f59e0b', // yellow
-  4: '#6b7280', // gray
-};
-
-const getStatusIcon = (status: number) => {
-  switch (status) {
-    case 1: return <CheckCircle className="h-4 w-4 text-green" />;
-    case 2: return <XCircle className="h-4 w-4 text-pink" />;
-    case 3: return <AlertCircle className="h-4 w-4 text-yellow" />;
-    case 4: return <XCircle className="h-4 w-4 text-gray" />;
-    default: return <AlertCircle className="h-4 w-4 text-navy-light" />;
-  }
-};
-
-const getStatusBadge = (status: number) => {
-  const colors = {
-    1: 'bg-green border-navy',
-    2: 'bg-pink border-navy',
-    3: 'bg-yellow border-navy',
-    4: 'bg-gray border-navy',
-  };
-  
-  return (
-    <PlayfulBadge className={colors[status as keyof typeof colors] || 'bg-lavender border-navy'}>
-      {statusLabels[status as keyof typeof statusLabels] || 'Unknown'}
-    </PlayfulBadge>
-  );
-};
-
-const formatDate = (timestamp: string) => {
-  return new Date(timestamp).toLocaleString();
-};
-
-const handleReplay = (log: RedirectLog) => {
-  const statusCode = log.status || statusMap[log.statusText];
-  window.open(
-    `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`,
-    "_blank"
-  );
-};
-
-const handleCopyLink = (log: RedirectLog) => {
-  const statusCode = log.status || statusMap[log.statusText];
-  const url = `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`;
-  navigator.clipboard.writeText(url);
-  alert("Link copied!");
-};
-
 export default function RedirectAnalytics({ className }: RedirectAnalyticsProps) {
   const [logs, setLogs] = useState<RedirectLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,19 +35,62 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  const statusColors = {
+    1: '#10b981', // green
+    2: '#ef4444', // red
+    3: '#f59e0b', // yellow
+    4: '#6b7280', // gray
+  };
+
+  const statusLabels = {
+    1: 'Completed',
+    2: 'Terminated',
+    3: 'Quota Full',
+    4: 'Security Terminated',
+  };
+
   const fetchLogs = async () => {
+    const token = localStorage.getItem('surveypanelgo_token');
+    if (!token) {
+      setError('Not authenticated');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      const response = await fetch(`${BACKEND_URL}/api/redirect-logs?page=${currentPage}&limit=10${filterPid ? `&pid=${filterPid}` : ''}${filterStatus ? `&status=${filterStatus}` : ''}`);
-      
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: '50',
+      });
+
+      if (filterPid) params.append('pid', filterPid);
+      if (filterStatus) params.append('status', filterStatus);
+
+      const url = `https://survey-panelgo.onrender.com/api/redirect-logs?${params}`;
+      console.log("API CALL (GET):", url);
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
       if (!response.ok) {
-        throw new Error('Failed to fetch logs');
+        throw new Error('Failed to fetch redirect logs');
       }
-      
+
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Invalid API response:", text);
+        throw new Error("API did not return JSON");
+      }
+
       const data = await response.json();
-      setLogs(data.logs || []);
-      setTotalPages(data.totalPages || 1);
-      setStatusCounts(data.statusCounts || {});
+      setLogs(data.logs);
+      setStatusCounts(data.statusCounts);
+      setTotalPages(data.pagination.pages);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -152,282 +114,234 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
     fill: item.fill,
   }));
 
-  if (loading && logs.length === 0) {
+  if (loading) {
     return (
-      <div className="space-y-6">
-        <PlayfulCard className="p-6">
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet mr-3"></div>
-            <span className="text-navy-light font-jakarta">Loading redirect analytics...</span>
+      <div className={`bg-white rounded-lg shadow p-6 ${className}`}>
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-32 bg-gray-200 rounded mb-4"></div>
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-8 bg-gray-200 rounded"></div>
+            ))}
           </div>
-        </PlayfulCard>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={`bg-white rounded-lg shadow p-6 ${className}`}>
+        <div className="text-red-600">Error: {error}</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-outfit font-bold text-3xl text-navy mb-2">Redirect Analytics</h1>
-          <p className="font-jakarta text-navy-light">View all survey redirect records with tracking data</p>
+    <div className={`space-y-6 ${className}`}>
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Redirect Analytics</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">Status Distribution</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="status" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill="#8884d8">
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">Status Breakdown</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-        <Button onClick={fetchLogs} variant="outline" size="sm" className="w-full sm:w-auto">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <PlayfulCard className="p-6">
-          <h3 className="text-lg font-semibold text-navy mb-4">Status Distribution</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="status" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="count" fill="#8884d8">
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </PlayfulCard>
-
-        <PlayfulCard className="p-6">
-          <h3 className="text-lg font-semibold text-navy mb-4">Status Breakdown</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {pieData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </PlayfulCard>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-navy-light h-4 w-4" />
-          <Input
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <input
+            type="text"
             placeholder="Filter by PID..."
             value={filterPid}
             onChange={(e) => {
               setFilterPid(e.target.value);
               setCurrentPage(1);
             }}
-            className="pl-10 border-2 border-navy rounded-2xl focus:border-violet"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
+          
+          <select
+            value={filterStatus}
+            onChange={(e) => {
+              setFilterStatus(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">All Statuses</option>
+            <option value="1">Completed</option>
+            <option value="2">Terminated</option>
+            <option value="3">Quota Full</option>
+            <option value="4">Security Terminated</option>
+          </select>
         </div>
-        
-        <select
-          value={filterStatus}
-          onChange={(e) => {
-            setFilterStatus(e.target.value);
-            setCurrentPage(1);
-          }}
-          className="px-4 py-2 border-2 border-navy rounded-2xl focus:ring-2 focus:ring-violet focus:border-transparent"
-        >
-          <option value="">All Statuses</option>
-          <option value="1">Completed</option>
-          <option value="2">Terminated</option>
-          <option value="3">Quota Full</option>
-          <option value="4">Security Terminated</option>
-        </select>
-      </div>
 
-      {error ? (
-        <PlayfulCard className="p-6 text-center">
-          <AlertCircle className="h-12 w-12 text-pink mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-navy mb-2">Error</h3>
-          <p className="font-jakarta text-navy-light mb-4">{error}</p>
-          <Button onClick={fetchLogs}>Try Again</Button>
-        </PlayfulCard>
-      ) : logs.length === 0 ? (
-        <PlayfulCard className="p-6 text-center">
-          <div className="bg-periwinkle/30 rounded-full p-3 w-12 h-12 mx-auto mb-4">
-            <Search className="h-6 w-6 text-navy-light" />
-          </div>
-          <h3 className="text-lg font-medium text-navy mb-2">
-            {filterPid || filterStatus ? 'No matching records found' : 'No redirect logs available'}
-          </h3>
-          <p className="font-jakarta text-navy-light">
-            {filterPid || filterStatus 
-              ? 'Try adjusting your search terms'
-              : 'Redirect records will appear here once users complete surveys'
-            }
-          </p>
-        </PlayfulCard>
-      ) : (
-        <>
-          {/* Mobile Card View */}
-          <div className="lg:hidden space-y-3">
-            {logs.map((log) => (
-              <PlayfulCard key={log.id} className="p-4">
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(log.status)}
-                      {getStatusBadge(log.status)}
-                    </div>
-                    <div className="flex items-center gap-1 text-navy-light">
-                      <Clock className="h-3 w-3" />
-                      <span className="text-xs font-mono">{formatDate(log.createdAt)}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="font-jakarta font-medium text-navy-light min-w-[60px]">PID:</span>
-                      <span className="font-mono text-navy break-all">{log.pid}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-navy-light shrink-0" />
-                      <span className="font-mono text-navy break-all">{log.uid}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Globe className="h-4 w-4 text-navy-light shrink-0" />
-                      <span className="font-mono text-navy break-all">{log.ipAddress}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleReplay(log)}
-                      className="flex-1"
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Timestamp
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  PID
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  UID
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  IP Address
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {logs.map((log) => (
+                <tr 
+                  key={log.id}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => {
+                    const statusCode = log.status || statusMap[log.statusText];
+                    window.open(
+                      `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`,
+                      "_blank"
+                    );
+                  }}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {new Date(log.createdAt).toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {log.pid}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {log.uid}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full text-white`}
+                      style={{ backgroundColor: statusColors[log.status as keyof typeof statusColors] }}
                     >
-                      <Play className="h-3 w-3 mr-1" />
+                      {log.statusText}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {log.ipAddress}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const statusCode = log.status || statusMap[log.statusText];
+                        window.open(
+                          `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`,
+                          "_blank"
+                        );
+                      }}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        border: "none",
+                        background: "#7C83FD",
+                        color: "white",
+                        cursor: "pointer",
+                        marginRight: "8px"
+                      }}
+                    >
                       Replay
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleCopyLink(log)}
-                      className="flex-1"
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const statusCode = log.status || statusMap[log.statusText];
+                        const url = `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`;
+                        navigator.clipboard.writeText(url);
+                        alert("Link copied!");
+                      }}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        border: "none",
+                        background: "#10b981",
+                        color: "white",
+                        cursor: "pointer"
+                      }}
                     >
-                      <Copy className="h-3 w-3 mr-1" />
-                      Copy
-                    </Button>
-                  </div>
-                </div>
-              </PlayfulCard>
-            ))}
-          </div>
+                      Copy Link
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-          {/* Desktop Table View */}
-          <div className="hidden lg:block">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>PID</TableHead>
-                    <TableHead>UID</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>IP Address</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {logs.map((log) => (
-                    <TableRow 
-                      key={log.id}
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => handleReplay(log)}
-                    >
-                      <TableCell className="font-mono text-sm">
-                        {formatDate(log.createdAt)}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {log.pid}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {log.uid}
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(log.status)}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {log.ipAddress}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleReplay(log);
-                            }}
-                          >
-                            <Play className="h-3 w-3 mr-1" />
-                            Replay
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCopyLink(log);
-                            }}
-                          >
-                            <Copy className="h-3 w-3 mr-1" />
-                            Copy
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center space-x-2 mt-6">
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded"
+            >
+              Previous
+            </button>
+            
+            <span className="text-sm text-gray-600">
+              Page {currentPage} of {totalPages}
+            </span>
+            
+            <button
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded"
+            >
+              Next
+            </button>
           </div>
-
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center space-x-2 mt-6">
-              <Button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                variant="outline"
-                size="sm"
-              >
-                Previous
-              </Button>
-              
-              <span className="text-sm text-navy-light">
-                Page {currentPage} of {totalPages}
-              </span>
-              
-              <Button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                variant="outline"
-                size="sm"
-              >
-                Next
-              </Button>
-            </div>
-          )}
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }
