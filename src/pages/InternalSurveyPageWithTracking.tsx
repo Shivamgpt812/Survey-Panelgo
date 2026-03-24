@@ -64,31 +64,79 @@ const InternalSurveyPageWithTracking: React.FC = () => {
   };
 
   const handleComplete = async () => {
+    // FIX UID (CRITICAL)
+    const auth = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
+    const uid = auth?.id || auth?._id;
+
+    // ADD SAFETY FALLBACK
+    if (!uid) {
+      console.error("No UID found");
+      return alert("Session error. Please login once.");
+    }
+
+    // ADD DOUBLE CLICK PREVENTION
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     const pid = surveyId;
-    const uid = "guest_user";
     const vendorId = survey?.vendorId || "";
 
     const url = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=1&vendorId=${vendorId}`;
 
     console.log("🚀 FINAL REDIRECT:", url);
 
-    window.open(url, "_self");
+    // KEEP API CALL BUT NON-BLOCKING
+    try {
+      await apiPost('/api/internal-complete', { surveyId }, getStoredToken());
+      await completeTracking('completed');
+      setShowCelebration(true);
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+      refreshUser();
+      addToast('🎉 Survey completed successfully!', 'success');
+    } catch (e) {
+      console.log("API failed, continuing redirect");
+    }
 
-    return; // 🔥 VERY IMPORTANT - stops execution
+    // REDIRECT AFTER TRY (IMPORTANT)
+    window.location.href = url;
   };
 
   const handleTerminate = async () => {
+    // FIX UID (CRITICAL)
+    const auth = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
+    const uid = auth?.id || auth?._id;
+
+    // ADD SAFETY FALLBACK
+    if (!uid) {
+      console.error("No UID found");
+      return alert("Session error. Please login once.");
+    }
+
+    // ADD DOUBLE CLICK PREVENTION
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     const pid = surveyId;
-    const uid = "guest_user";
     const vendorId = survey?.vendorId || "";
 
     const url = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=2&vendorId=${vendorId}`;
 
     console.log("🚀 FINAL REDIRECT TERMINATE:", url);
 
-    window.open(url, "_self");
+    // KEEP API CALL BUT NON-BLOCKING
+    try {
+      await completeTracking('terminated');
+      addToast('Survey terminated', 'info');
+    } catch (e) {
+      console.log("API failed, continuing redirect");
+    }
 
-    return; // 🔥 VERY IMPORTANT - stops execution
+    // REDIRECT AFTER TRY (IMPORTANT)
+    window.location.href = url;
   };
 
   if (loading || trackingLoading) {
