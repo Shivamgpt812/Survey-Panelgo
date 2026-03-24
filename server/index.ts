@@ -333,19 +333,16 @@ app.get('/api/responses', requireAdmin, async (_req, res) => {
   }
 });
 
-app.post('/api/responses', async (req, res) => {
+app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
   try {
-    const { surveyId, status, vendorId, preScreenerAnswers, failureReason, uid } = req.body as {
+    const { surveyId, status, vendorId, preScreenerAnswers, failureReason } = req.body as {
       surveyId?: string;
       status?: 'complete' | 'terminate' | 'quota_full';
       vendorId?: string;
       preScreenerAnswers?: { questionId: string; value: string | number | boolean }[];
       failureReason?: string;
-      uid?: string;
     };
-    
-    // Use UID from request if provided, otherwise try to get from authenticated user
-    const userId = uid || (req as any).user?.id;
+    const userId = req.user?.id; // May be undefined for vendor flow without login
 
     if (!surveyId || !status) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -357,7 +354,7 @@ app.post('/api/responses', async (req, res) => {
     }
     const sid = survey._id.toString();
 
-    // Only check for duplicates if userId is available
+    // Only check for duplicates if user is logged in
     if (userId && status === 'complete') {
       console.log('=== DUPLICATE CHECK DEBUG ===');
       console.log('User ID:', userId);
@@ -441,7 +438,7 @@ app.post('/api/responses', async (req, res) => {
     }
 
     const uname =
-      (req as any).user && 'name' in (req as any).user ? (req as any).user.name : 'A respondent';
+      req.user && 'name' in req.user ? (req.user as { name?: string }).name : 'A respondent';
     if (status === 'complete') {
       await ActivityLog.create({
         message: `${uname} recorded response (complete) for: ${survey.title}`,
@@ -452,14 +449,12 @@ app.post('/api/responses', async (req, res) => {
       const ageInfo = userInfo.age ? ` (age: ${userInfo.age})` : '';
       const failureInfo = failureReason ? ` - Reason: ${failureReason}` : '';
       await ActivityLog.create({
-        message: `${uname} recorded response (terminate) for: ${survey.title}${ageInfo}${failureInfo}`,
+        message: `${uname} did not qualify for: ${survey.title}${ageInfo}${failureInfo}${vendorId ? ' (vendor flow)' : ''}`,
         type: 'warning',
       });
     } else if (status === 'quota_full') {
-      const userInfo = preScreenerAnswers ? extractUserInfo(preScreenerAnswers) : {};
-      const ageInfo = userInfo.age ? ` (age: ${userInfo.age})` : '';
       await ActivityLog.create({
-        message: `${uname} recorded response (quota full) for: ${survey.title}${ageInfo}`,
+        message: `Quota full for: ${survey.title}`,
         type: 'warning',
       });
     }
@@ -471,32 +466,25 @@ app.post('/api/responses', async (req, res) => {
   }
 });
 
-app.post('/api/internal-complete', async (req, res) => {
+app.post('/api/internal-complete', requireAuth, async (req: AuthedRequest, res) => {
   try {
-    const { surveyId, vendorId, uid, pid, status } = req.body as { 
-      surveyId?: string; 
-      vendorId?: string; 
-      uid?: string; 
-      pid?: string;
-      status?: string;
-    };
-    
-    // STEP 1: REMOVE REQUIRED VALIDATION - Only validate required frontend fields
+    const user = await User.findById(req.user!._id);
+    if (!user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    const { surveyId, vendorId } = req.body as { surveyId?: string; vendorId?: string };
     if (!surveyId || !mongoose.isValidObjectId(surveyId)) {
       res.status(400).json({ error: 'Invalid survey' });
       return;
     }
-    if (!uid) {
-      res.status(400).json({ error: 'UID is required' });
-      return;
-    }
-    
     const survey = await Survey.findById(surveyId);
     if (!survey) {
       res.status(404).json({ error: 'Survey not found' });
       return;
     }
-    if (survey.status !== 'active') {
+    const isAdmin = req.user?.role === 'admin';
+    if (survey.status !== 'active' && !isAdmin) {
       res.status(404).json({ error: 'Survey not found' });
       return;
     }
@@ -506,31 +494,12 @@ app.post('/api/internal-complete', async (req, res) => {
     }
 
     const sid = survey._id.toString();
-    
-    // STEP 2: GENERATE IP INTERNALLY
-    const getIpAddress = (req: any) => {
-      return req.headers['x-forwarded-for'] || 
-             req.headers['cf-connecting-ip'] || 
-             req.ip || 
-             req.connection?.remoteAddress || 
-             req.socket?.remoteAddress || 
-             'unknown';
-    };
-    
-    const ipAddress = getIpAddress(req);
-    
-    // STEP 3: GENERATE TIMESTAMP INTERNALLY
-    const timestamp = new Date().toISOString();
-    
+    const uid = user._id.toString();
     console.log('=== INTERNAL COMPLETION DEBUG ===');
-    console.log('Frontend fields - Survey ID:', sid);
-    console.log('Frontend fields - UID:', uid);
-    console.log('Frontend fields - Vendor ID:', vendorId);
-    console.log('Frontend fields - PID:', pid);
-    console.log('Frontend fields - Status:', status);
-    console.log('Generated IP:', ipAddress);
-    console.log('Generated Timestamp:', timestamp);
-    console.log('=====================================');
+    console.log('User ID:', uid);
+    console.log('Survey ID:', sid);
+    console.log('Vendor ID:', vendorId);
+    console.log('Vendor ID type:', typeof vendorId);
     
     // First, let's see all existing responses for this user+survey
     const allExisting = await Response.find({ 
@@ -539,6 +508,9 @@ app.post('/api/internal-complete', async (req, res) => {
       status: 'complete'
     });
     console.log('All existing completions for this user+survey:', allExisting.length);
+    allExisting.forEach(r => {
+      console.log('- Response vendorId:', r.vendorId, 'type:', typeof r.vendorId);
+    });
     
     const existing = await Response.findOne({ 
       surveyId: sid, 
@@ -554,110 +526,41 @@ app.post('/api/internal-complete', async (req, res) => {
       return;
     }
 
-    // STEP 4: STORE THESE VALUES - Attach to submission data
     await Response.create({
       surveyId: survey._id.toString(),
-      userId: uid,  // Use UID instead of user._id
+      userId: user._id.toString(),
       vendorId: vendorId || undefined,
       status: 'complete',
-      ipAddress,  // Generated internally
-      timestamp,  // Generated internally
-      pid,        // From frontend
     });
 
-    console.log('Internal completion response created with IP:', ipAddress, 'timestamp:', timestamp, 'vendorId:', vendorId, 'for survey:', survey._id.toString());
+    console.log('Internal completion response created with vendorId:', vendorId, 'for survey:', survey._id.toString());
 
     // Update vendor completion tracking if this is a vendor completion
     if (vendorId) {
       try {
         await Vendor.findByIdAndUpdate(vendorId, {
           $addToSet: { completedSurveys: survey._id },
-            $inc: { totalCompletions: 1 }
+          $inc: { totalCompletions: 1 }
         });
         console.log(`Vendor completion tracked: ${vendorId} for survey ${survey._id}`);
       } catch (vendorError) {
         console.error('Failed to update vendor completion tracking:', vendorError);
       }
     }
+    user.points += survey.pointsReward;
+    user.surveysCompleted += 1;
+    await user.save();
 
-    // Only update user points if user exists (for logged-in users)
-    const user = await User.findById(uid);
-    if (user) {
-      user.points += survey.pointsReward;
-      user.surveysCompleted += 1;
-      await user.save();
-
-      await ActivityLog.create({
-        message: `${user.name} completed internal survey: ${survey.title}`,
-        type: 'success',
-      });
-    }
-
-    // STEP 5: KEEP ONLY REQUIRED FRONTEND FIELDS - Success response
-    res.json({ 
-      success: true, 
-      message: 'Survey completed successfully',
-      data: {
-        surveyId: sid,
-        uid,
-        vendorId,
-        pid,
-        status,
-        ipAddress,  // For debugging
-        timestamp,  // For debugging
-      }
+    await ActivityLog.create({
+      message: `${user.name} completed internal survey: ${survey.title}`,
+      type: 'success',
     });
-  } catch (e) {
-    console.error('Internal completion error:', e);
-    res.status(500).json({ error: 'Failed to complete survey' });
-  }
-});
 
-// Generate survey link with UID
-app.post('/api/generate-survey-link', async (req, res) => {
-  try {
-    const { surveyId, vendorId } = req.body as {
-      surveyId?: string;
-      vendorId?: string;
-    };
-    
-    if (!surveyId || !mongoose.isValidObjectId(surveyId)) {
-      res.status(400).json({ error: 'Invalid survey ID' });
-      return;
-    }
-    
-    // Verify survey exists
-    const survey = await Survey.findById(surveyId);
-    if (!survey) {
-      res.status(404).json({ error: 'Survey not found' });
-      return;
-    }
-    
-    // Generate unique UID
-    const timestamp = Date.now().toString(36);
-    const randomStr = Math.random().toString(36).substring(2, 15);
-    const uid = `${timestamp}_${randomStr}`;
-    
-    // Build survey link with all required parameters
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const link = new URL(`${baseUrl}/start`);
-    link.searchParams.set('survey', surveyId);
-    link.searchParams.set('uid', uid);
-    link.searchParams.set('pid', surveyId);
-    
-    if (vendorId) {
-      link.searchParams.set('vendor', vendorId);
-    }
-    
-    res.json({ 
-      surveyLink: link.toString(),
-      uid,
-      pid: surveyId,
-      vendorId: vendorId || undefined
-    });
+    const fresh = await User.findById(user._id);
+    res.json({ user: fresh ? userJson(fresh) : userJson(user) });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: 'Failed to generate survey link' });
+    res.status(500).json({ error: 'Failed to complete survey' });
   }
 });
 

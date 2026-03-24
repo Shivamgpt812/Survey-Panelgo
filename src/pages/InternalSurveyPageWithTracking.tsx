@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Coins, Check, AlertCircle } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Coins, Check, AlertCircle, Shield, PartyPopper } from 'lucide-react';
 import { PlayfulButton, PlayfulCard, PlayfulBadge, PlayfulProgress } from '@/components/ui/playful';
-import { DecorativeBlob, DotGrid } from '@/components/decorations';
-import type { Survey } from '@/types';
+import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
+import type { Survey, User } from '@/types';
 import { apiGet, apiPost } from '@/lib/api';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { useToast } from '@/hooks/useToast';
+import { getStoredToken, useAuth } from '@/hooks/useAuth';
 import { useSurveyTracker } from '@/components/SurveyTracker';
 import confetti from 'canvas-confetti';
 
 const InternalSurveyPageWithTracking: React.FC = () => {
   const navigate = useNavigate();
   const { surveyId } = useParams<{ surveyId: string }>();
-  const [searchParams] = useSearchParams();
   const { addToast } = useToast();
+  const { refreshUser } = useAuth();
 
   const BACKEND_URL = "https://survey-panelgo.onrender.com";
 
@@ -29,7 +30,7 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       setLoading(false);
       return;
     }
-    void apiGet<{ survey: Survey }>(`/api/surveys/${surveyId}`)
+    void apiGet<{ survey: Survey }>(`/api/surveys/${surveyId}`, getStoredToken())
       .then((d) => setSurvey(d.survey))
       .catch(() => setSurvey(undefined))
       .finally(() => setLoading(false));
@@ -51,60 +52,16 @@ const InternalSurveyPageWithTracking: React.FC = () => {
   const handleComplete = async () => {
     if (!survey || !trackingData) return;
 
-    if (isSubmitting) {
-      console.log("Submit already in progress, blocking duplicate call");
-      return;
-    }
-
-    // BLOCK DOUBLE CLICK
-    setIsSubmitting(true);
-
     try {
-      console.log("=== SURVEY SUBMISSION FLOW ===");
+      setIsSubmitting(true);
       
-      // EXTRACT ALL REQUIRED DATA FROM URL
-      const uid = searchParams.get('uid');
-      const vendorId = searchParams.get('vendor');
-      const pid = searchParams.get('pid') || surveyId;
+      // Submit the internal survey completion
+      await apiPost('/api/internal-complete', { surveyId }, getStoredToken());
       
-      console.log("URL Parameters extracted:");
-      console.log("- uid:", uid);
-      console.log("- vendorId:", vendorId); 
-      console.log("- pid:", pid);
-      console.log("- surveyId:", surveyId);
+      // Complete tracking with 'completed' status
+      await completeTracking('completed');
       
-      // FAILSAFE - Generate fallback values if missing
-      const finalUid = uid || `fallback_${Date.now()}`;
-      const finalPid = pid || surveyId || 'fallback_pid';
-      const finalVendorId = vendorId || 'fallback_vendor';
-      
-      console.log("Final values after fallback:");
-      console.log("- finalUid:", finalUid);
-      console.log("- finalPid:", finalPid);
-      console.log("- finalVendorId:", finalVendorId);
-      
-      // PREPARE PAYLOAD (BUT DO NOT BLOCK FLOW)
-      const payloadData = {
-        surveyId, 
-        uid: finalUid, 
-        vendorId: finalVendorId, 
-        pid: finalPid, 
-        status: "1"
-      };
-      
-      console.log("Prepared payload:", payloadData);
-      
-      // CALL API BUT DO NOT DEPEND ON IT
-      try {
-        console.log("Attempting API call...");
-        const response = await apiPost('/api/internal-complete', payloadData);
-        console.log("API call successful:", response);
-      } catch (apiError) {
-        console.log("API call failed, but continuing flow:", apiError);
-        // IMPORTANT: Do NOT stop execution, continue to redirect
-      }
-      
-      // Show celebration regardless of API outcome (optional UI)
+      // Show celebration and refresh user data
       setShowCelebration(true);
       confetti({
         particleCount: 100,
@@ -112,31 +69,46 @@ const InternalSurveyPageWithTracking: React.FC = () => {
         origin: { y: 0.6 }
       });
       
-      addToast('🎉 Survey completed!', 'success');
+      await refreshUser();
+      addToast('🎉 Survey completed successfully!', 'success');
+      
+      // MANDATORY: Add final redirect to /api/redirect with proper params
+      const user = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
+      const pid = survey.id;
+      const uid = user?.id || user?._id;
+      
+      if (pid && uid) {
+        console.log("Redirecting with:", { pid, uid, status: 1 });
+        window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=1`;
+      } else {
+        console.error("Missing pid or uid for redirect");
+      }
       
     } catch (error) {
-      console.log("General error in submission flow:", error);
-      // Still continue to redirect even on general error
+      console.error('Failed to complete survey:', error);
+      
+      // FAIL CASE: If tracking fails, still try to complete with terminated status
+      try {
+        await completeTracking('terminated');
+        
+        // Add redirect for terminated case
+        const user = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
+        const pid = survey?.id || survey?.pid;
+        const uid = user?.id || user?._id;
+        
+        if (pid && uid) {
+          console.log("Redirecting with:", { pid, uid, status: 2 });
+          window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=2`;
+        } else {
+          console.error("Missing pid or uid for redirect");
+        }
+      } catch (trackingError) {
+        console.error('Tracking also failed:', trackingError);
+        addToast('Survey completed but tracking failed', 'warning');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // PLACE REDIRECT AS LAST EXECUTION - IMMEDIATELY
-    console.log("=== IMMEDIATE REDIRECT EXECUTING ===");
-    
-    // Extract values again for redirect (with fallbacks)
-    const redirectUid = searchParams.get('uid') || `fallback_${Date.now()}`;
-    const redirectPid = searchParams.get('pid') || surveyId || 'fallback_pid';
-    
-    const redirectUrl = `${BACKEND_URL}/api/redirect?pid=${encodeURIComponent(redirectPid)}&uid=${encodeURIComponent(redirectUid)}&status=1`;
-    
-    console.log("IMMEDIATE redirecting to:", redirectUrl);
-    console.log("This redirect happens immediately, no delay");
-    console.log("=====================================");
-    
-    // REDIRECT IMMEDIATELY - No setTimeout, no waiting
-    window.location.href = redirectUrl;
-    
-    // IMPORTANT: Nothing should run after redirect
-    // No re-renders, no second click, no fallback logic
   };
 
   const handleTerminate = async () => {
@@ -147,8 +119,8 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       addToast('Survey terminated', 'info');
     } catch (error) {
       console.error('Failed to terminate tracking:', error);
-      // Show error message - DO NOT redirect to login
-      addToast('Failed to terminate survey. Please try again.', 'error');
+      // Fallback navigation
+      navigate('/dashboard');
     }
   };
 
@@ -167,7 +139,7 @@ const InternalSurveyPageWithTracking: React.FC = () => {
           <AlertCircle className="w-16 h-16 text-navy-light mx-auto mb-4" />
           <h2 className="font-outfit font-bold text-2xl text-navy mb-2">Survey Not Found</h2>
           <p className="font-jakarta text-navy-light mb-6">The survey you're looking for doesn't exist.</p>
-          <PlayfulButton onClick={() => navigate('/')}>Back to Home</PlayfulButton>
+          <PlayfulButton onClick={() => navigate('/dashboard')}>Back to Dashboard</PlayfulButton>
         </PlayfulCard>
       </div>
     );

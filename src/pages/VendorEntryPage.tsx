@@ -14,8 +14,6 @@ const VendorEntryPage: React.FC = () => {
   const { addToast } = useToast();
   const surveyId = searchParams.get('survey');
   const vendorId = searchParams.get('vendor');
-  const urlUid = searchParams.get('uid');
-  const pid = searchParams.get('pid');
 
   useEffect(() => {
     let cancelled = false;
@@ -24,24 +22,6 @@ const VendorEntryPage: React.FC = () => {
       if (!surveyId) {
         addToast('Invalid survey link', 'error');
         navigate('/');
-        return;
-      }
-
-      // Generate UID if not present in URL
-      let uid = urlUid;
-      if (!uid) {
-        const timestamp = Date.now().toString(36);
-        const randomStr = Math.random().toString(36).substring(2, 15);
-        uid = `${timestamp}_${randomStr}`;
-        
-        // Create new URL with UID and redirect
-        const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.set('uid', uid);
-        if (!pid && surveyId) {
-          currentUrl.searchParams.set('pid', surveyId);
-        }
-        
-        window.location.href = currentUrl.toString();
         return;
       }
 
@@ -71,28 +51,24 @@ const VendorEntryPage: React.FC = () => {
           }
         }
 
-        // Store all required identifiers in sessionStorage for later use
-        sessionStorage.setItem('surveypanelgo_uid', uid);
-        sessionStorage.setItem('surveypanelgo_pid', pid || surveyId);
-        if (vendorId) {
-          sessionStorage.setItem('surveypanelgo_vendorId', vendorId);
+        const authData = localStorage.getItem('surveypanelgo_auth');
+        if (!authData) {
+          // For vendor surveys, allow proceeding without login
+          if (vendorId) {
+            sessionStorage.setItem('surveypanelgo_redirect', `/survey/${surveyId}/precheck`);
+            sessionStorage.setItem('surveypanelgo_vendor_flow', 'true');
+            addToast('You can complete this survey without logging in', 'info');
+            navigate(`/survey/${surveyId}/precheck`);
+            return;
+          } else {
+            sessionStorage.setItem('surveypanelgo_redirect', `/survey/${surveyId}/precheck`);
+            addToast('Please login to continue', 'info');
+            navigate('/auth');
+            return;
+          }
         }
-        
-        // Allow proceeding without login for all surveys
-        sessionStorage.setItem('surveypanelgo_redirect', `/survey/${surveyId}/precheck`);
-        if (vendorId) {
-          sessionStorage.setItem('surveypanelgo_vendor_flow', 'true');
-        }
-        
-        // Navigate with ALL query parameters preserved
-        const precheckParams = new URLSearchParams();
-        precheckParams.set('survey', surveyId);
-        if (uid) precheckParams.set('uid', uid);
-        if (pid) precheckParams.set('pid', pid);
-        if (vendorId) precheckParams.set('vendor', vendorId);
-        
-        navigate(`/survey/${surveyId}/precheck?${precheckParams.toString()}`);
-        return;
+
+        navigate(`/survey/${surveyId}/precheck`);
       } catch {
         if (!cancelled) {
           addToast('Invalid survey link', 'error');
