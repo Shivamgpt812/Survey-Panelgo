@@ -56,13 +56,13 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       return;
     }
 
-    // STEP 8: BLOCK DOUBLE CLICK
+    // BLOCK DOUBLE CLICK
     setIsSubmitting(true);
 
     try {
       console.log("=== SURVEY SUBMISSION FLOW ===");
       
-      // STEP 1: EXTRACT ALL REQUIRED DATA FROM URL
+      // EXTRACT ALL REQUIRED DATA FROM URL
       const uid = searchParams.get('uid');
       const vendorId = searchParams.get('vendor');
       const pid = searchParams.get('pid') || surveyId;
@@ -73,7 +73,7 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       console.log("- pid:", pid);
       console.log("- surveyId:", surveyId);
       
-      // STEP 9: FAILSAFE - Generate fallback values if missing
+      // FAILSAFE - Generate fallback values if missing
       const finalUid = uid || `fallback_${Date.now()}`;
       const finalPid = pid || surveyId || 'fallback_pid';
       const finalVendorId = vendorId || 'fallback_vendor';
@@ -83,7 +83,7 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       console.log("- finalPid:", finalPid);
       console.log("- finalVendorId:", finalVendorId);
       
-      // STEP 2: PREPARE PAYLOAD (BUT DO NOT BLOCK FLOW)
+      // PREPARE PAYLOAD (BUT DO NOT BLOCK FLOW)
       const payloadData = {
         surveyId, 
         uid: finalUid, 
@@ -94,7 +94,7 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       
       console.log("Prepared payload:", payloadData);
       
-      // STEP 3: CALL API BUT DO NOT DEPEND ON IT
+      // CALL API BUT DO NOT DEPEND ON IT
       try {
         console.log("Attempting API call...");
         const response = await apiPost('/api/internal-complete', payloadData);
@@ -104,7 +104,7 @@ const InternalSurveyPageWithTracking: React.FC = () => {
         // IMPORTANT: Do NOT stop execution, continue to redirect
       }
       
-      // Show celebration regardless of API outcome
+      // Show celebration regardless of API outcome (optional UI)
       setShowCelebration(true);
       confetti({
         particleCount: 100,
@@ -117,28 +117,26 @@ const InternalSurveyPageWithTracking: React.FC = () => {
     } catch (error) {
       console.log("General error in submission flow:", error);
       // Still continue to redirect even on general error
-    } finally {
-      // STEP 6: FORCE REDIRECT (CRITICAL) - This MUST always execute
-      console.log("=== FORCE REDIRECT EXECUTING ===");
-      
-      // Extract values again for redirect (with fallbacks)
-      const redirectUid = searchParams.get('uid') || `fallback_${Date.now()}`;
-      const redirectPid = searchParams.get('pid') || surveyId || 'fallback_pid';
-      
-      const redirectUrl = `${BACKEND_URL}/api/redirect?pid=${encodeURIComponent(redirectPid)}&uid=${encodeURIComponent(redirectUid)}&status=1`;
-      
-      console.log("FORCE redirecting to:", redirectUrl);
-      console.log("This redirect happens regardless of API success/failure");
-      console.log("=====================================");
-      
-      // Execute redirect after a short delay to show celebration
-      setTimeout(() => {
-        window.location.href = redirectUrl;
-      }, 2000);
-      
-      // Note: We do NOT re-enable the submit button since we're redirecting
-      // setIsSubmitting(false); // REMOVED - button stays disabled
     }
+
+    // PLACE REDIRECT AS LAST EXECUTION - IMMEDIATELY
+    console.log("=== IMMEDIATE REDIRECT EXECUTING ===");
+    
+    // Extract values again for redirect (with fallbacks)
+    const redirectUid = searchParams.get('uid') || `fallback_${Date.now()}`;
+    const redirectPid = searchParams.get('pid') || surveyId || 'fallback_pid';
+    
+    const redirectUrl = `${BACKEND_URL}/api/redirect?pid=${encodeURIComponent(redirectPid)}&uid=${encodeURIComponent(redirectUid)}&status=1`;
+    
+    console.log("IMMEDIATE redirecting to:", redirectUrl);
+    console.log("This redirect happens immediately, no delay");
+    console.log("=====================================");
+    
+    // REDIRECT IMMEDIATELY - No setTimeout, no waiting
+    window.location.href = redirectUrl;
+    
+    // IMPORTANT: Nothing should run after redirect
+    // No re-renders, no second click, no fallback logic
   };
 
   const handleTerminate = async () => {
