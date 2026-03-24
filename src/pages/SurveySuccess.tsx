@@ -8,6 +8,8 @@ export default function SurveySuccess() {
   const pid = params.get("pid");
   const uid = params.get("uid");
   const status = params.get("status");
+  const ip = params.get("ip");
+  const time = params.get("time");
 
   const statusMap: Record<string, string> = {
     "1": "Completed",
@@ -69,6 +71,24 @@ export default function SurveySuccess() {
               fontWeight: "bold"
             }}>
               {statusText}
+            </span>
+          </p>
+        </div>
+
+        <div style={{ marginBottom: "15px" }}>
+          <p style={{ margin: "8px 0", fontSize: "16px" }}>
+            <strong style={{ color: "#6b7280" }}>IP Address:</strong> 
+            <span style={{ marginLeft: "10px", color: "#1f2937", fontFamily: "monospace" }}>
+              {ip || "N/A"}
+            </span>
+          </p>
+        </div>
+
+        <div style={{ marginBottom: "15px" }}>
+          <p style={{ margin: "8px 0", fontSize: "16px" }}>
+            <strong style={{ color: "#6b7280" }}>Time:</strong> 
+            <span style={{ marginLeft: "10px", color: "#1f2937", fontFamily: "monospace" }}>
+              {time ? new Date(time).toLocaleString() : "N/A"}
             </span>
           </p>
         </div>
