@@ -705,6 +705,9 @@ app.get('/api/redirect', async (req, res) => {
   try {
     const { pid, uid, status, vendorId } = req.query;
     
+    // ADD DEBUG LOG (IMPORTANT)
+    console.log("REDIRECT HIT:", req.query);
+    
     // Type casting for safety
     const pidStr = pid as string;
     const uidStr = uid as string;
