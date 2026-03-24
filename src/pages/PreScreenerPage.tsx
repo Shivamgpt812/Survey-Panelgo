@@ -43,6 +43,7 @@ const PreScreenerPage: React.FC = () => {
   // Check for vendor session
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [vendor, setVendor] = useState<Vendor | undefined>(undefined);
+  const [isVendorFlow, setIsVendorFlow] = useState(false);
 
   const [answers, setAnswers] = useState<PreScreenerAnswer[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
