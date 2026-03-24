@@ -600,23 +600,24 @@ const AdminPage: React.FC = () => {
           </div>
 
           {/* Mobile Nav */}
-          <div className="lg:hidden flex gap-2 mb-6 overflow-x-auto pb-2">
+          <div className="lg:hidden flex gap-1 mb-6 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
             {[
               { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
               { id: 'surveys', label: 'Surveys', icon: FileText },
               { id: 'create', label: 'Create', icon: Plus },
               { id: 'vendors', label: 'Vendors', icon: Store },
-              { id: 'logs', label: 'Activity Logs', icon: ClipboardList },
-              { id: 'survey-logs', label: 'Survey Logs', icon: Activity },
+              { id: 'logs', label: 'Logs', icon: ClipboardList },
+              { id: 'survey-logs', label: 'Survey', icon: Activity },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-4 py-2 border-2 border-navy rounded-pill font-jakarta font-medium whitespace-nowrap transition-all ${activeTab === tab.id ? 'bg-violet text-white shadow-hard' : 'bg-white text-navy'
+                className={`flex items-center gap-1.5 px-3 py-2 border-2 border-navy rounded-pill font-jakarta font-medium text-xs whitespace-nowrap transition-all shrink-0 ${activeTab === tab.id ? 'bg-violet text-white shadow-hard' : 'bg-white text-navy'
                   }`}
               >
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
+                <tab.icon className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.label.slice(0, 4)}</span>
               </button>
             ))}
           </div>
@@ -645,7 +646,7 @@ const AdminPage: React.FC = () => {
                   <PlayfulCard
                     key={index}
                     variant={stat.href ? 'static' : 'default'}
-                    className={`p-5 ${stat.href ? 'cursor-pointer hover:shadow-hard-lg hover:-translate-y-0.5 transition-all' : ''}`}
+                    className={`p-4 sm:p-5 ${stat.href ? 'cursor-pointer hover:shadow-hard-lg hover:-translate-y-0.5 transition-all' : ''}`}
                     onClick={stat.href ? () => navigate(stat.href) : undefined}
                     role={stat.href ? 'button' : undefined}
                     tabIndex={stat.href ? 0 : undefined}
@@ -662,15 +663,15 @@ const AdminPage: React.FC = () => {
                     aria-label={stat.href ? `${stat.label}: open user list` : undefined}
                   >
                     <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-jakarta text-sm text-navy-light mb-1">{stat.label}</p>
-                        <p className="font-outfit font-bold text-3xl text-navy">{stat.value}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-jakarta text-xs sm:text-sm text-navy-light mb-1 truncate">{stat.label}</p>
+                        <p className="font-outfit font-bold text-2xl sm:text-3xl text-navy">{stat.value}</p>
                         {stat.href && (
-                          <p className="font-jakarta text-xs text-violet mt-2 font-medium">View list →</p>
+                          <p className="font-jakarta text-xs text-violet mt-1 sm:mt-2 font-medium">View list →</p>
                         )}
                       </div>
-                      <IconCircle variant={stat.variant} size="md">
-                        <stat.icon className="w-5 h-5" />
+                      <IconCircle variant={stat.variant} size="sm" className="shrink-0 ml-2">
+                        <stat.icon className="w-4 h-4" />
                       </IconCircle>
                     </div>
                   </PlayfulCard>
@@ -680,12 +681,12 @@ const AdminPage: React.FC = () => {
               {/* Analytics Chart Section */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Real-time Survey Timeline */}
-                <PlayfulCard className="p-6">
-                  <h2 className="font-outfit font-bold text-xl text-navy mb-4 flex items-center gap-2">
-                    <Activity className="w-5 h-5" />
-                    Survey Completions (Last 7 Days)
+                <PlayfulCard className="p-4 sm:p-6">
+                  <h2 className="font-outfit font-bold text-lg sm:text-xl text-navy mb-3 sm:mb-4 flex items-center gap-2">
+                    <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="truncate">Survey Completions (Last 7 Days)</span>
                   </h2>
-                  <div className="h-[250px] w-full">
+                  <div className="h-[200px] sm:h-[250px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={timelineData}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -723,13 +724,13 @@ const AdminPage: React.FC = () => {
                 </PlayfulCard>
 
                 {/* Response Mix */}
-                <PlayfulCard className="p-6">
-                  <h2 className="font-outfit font-bold text-xl text-navy mb-4 flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5" />
-                    Response Distribution
+                <PlayfulCard className="p-4 sm:p-6">
+                  <h2 className="font-outfit font-bold text-lg sm:text-xl text-navy mb-3 sm:mb-4 flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="truncate">Response Distribution</span>
                   </h2>
                   <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <div className="h-[200px] w-full md:w-1/2">
+                    <div className="h-[150px] sm:h-[200px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
@@ -749,7 +750,7 @@ const AdminPage: React.FC = () => {
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="w-full md:w-1/2 space-y-3">
+                    <div className="w-full space-y-3">
                       {pieData.map((d) => (
                         <div key={d.name} className="flex items-center justify-between p-2 bg-periwinkle/30 border-2 border-navy/5 rounded-xl">
                           <div className="flex items-center gap-2">
@@ -764,24 +765,26 @@ const AdminPage: React.FC = () => {
                 </PlayfulCard>
 
                 {/* Vendor Performance Chart */}
-                <PlayfulCard className="p-6 lg:col-span-2">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="font-outfit font-bold text-xl text-navy flex items-center gap-2">
-                      <Store className="w-5 h-5" />
-                      Vendor Real-time Analytics
+                <PlayfulCard className="p-4 sm:p-6 lg:col-span-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-2">
+                    <h2 className="font-outfit font-bold text-lg sm:text-xl text-navy flex items-center gap-2">
+                      <Store className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="truncate">Vendor Real-time Analytics</span>
                     </h2>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4">
                       <div className="flex items-center gap-1.5">
                         <div className="w-3 h-3 bg-green rounded-full" />
-                        <span className="text-xs font-jakarta font-medium text-navy-light">Completes</span>
+                        <span className="text-xs font-jakarta font-medium text-navy-light hidden sm:inline">Completes</span>
+                        <span className="text-xs font-jakarta font-medium text-navy-light sm:hidden">C</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <div className="w-3 h-3 bg-pink rounded-full" />
-                        <span className="text-xs font-jakarta font-medium text-navy-light">Terminates</span>
+                        <span className="text-xs font-jakarta font-medium text-navy-light hidden sm:inline">Terminates</span>
+                        <span className="text-xs font-jakarta font-medium text-navy-light sm:hidden">T</span>
                       </div>
                     </div>
                   </div>
-                  <div className="h-[300px] w-full">
+                  <div className="h-[200px] sm:h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={vendorStatsData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -789,7 +792,10 @@ const AdminPage: React.FC = () => {
                           dataKey="name"
                           axisLine={false}
                           tickLine={false}
-                          tick={{ fill: '#64748B', fontSize: 12 }}
+                          tick={{ fill: '#64748B', fontSize: 10 }}
+                          angle={-45}
+                          textAnchor="end"
+                          height={60}
                         />
                         <YAxis
                           axisLine={false}
@@ -804,9 +810,9 @@ const AdminPage: React.FC = () => {
                             border: '2px solid #000',
                           }}
                         />
-                        <Bar dataKey="completes" fill="#4ADE80" radius={[4, 4, 0, 0]} barSize={40} />
-                        <Bar dataKey="terminates" fill="#F472B6" radius={[4, 4, 0, 0]} barSize={40} />
-                        <Bar dataKey="quotaFull" fill="#FACC15" radius={[4, 4, 0, 0]} barSize={40} />
+                        <Bar dataKey="completes" fill="#4ADE80" radius={[4, 4, 0, 0]} barSize={20} />
+                        <Bar dataKey="terminates" fill="#F472B6" radius={[4, 4, 0, 0]} barSize={20} />
+                        <Bar dataKey="quotaFull" fill="#FACC15" radius={[4, 4, 0, 0]} barSize={20} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
