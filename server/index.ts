@@ -703,58 +703,65 @@ app.get('/api/survey-tracking', requireAdmin, async (_req: any, res) => {
 // ---------- Survey Redirect Tracking ----------
 app.get('/api/redirect', async (req, res) => {
   try {
-    console.log("Redirect API HIT");
-    console.log("Redirect route hit:", req.query);
     const { pid, uid, status } = req.query;
 
+    console.log("Redirect HIT:", { pid, uid, status });
+
+    // Validate params
     if (!pid || !uid || !status) {
-      return res.status(400).json({ error: 'Missing required parameters: pid, uid, status' });
+      console.error("Missing params:", { pid, uid, status });
+      return res.redirect("https://surveypanelgo.netlify.app/error");
     }
 
-    const pidStr = String(pid).trim();
-    const uidStr = String(uid).trim();
-    
-    if (!isValidStatus(status)) {
-      return res.status(400).json({ error: 'Invalid status. Must be 1, 2, 3, or 4' });
+    // Convert status to number
+    const statusCode = Number(status);
+
+    const statusMap = {
+      1: "Completed",
+      2: "Terminated",
+      3: "Quota Full",
+      4: "Security Terminated"
+    };
+
+    const statusText = statusMap[statusCode] || "Unknown";
+
+    // Save to DB
+    try {
+      await SurveyRedirectLogs.create({
+        pid,
+        uid,
+        status: statusCode,
+        statusText,
+        ipAddress: req.headers["x-forwarded-for"] || req.socket.remoteAddress,
+        userAgent: req.headers["user-agent"],
+        createdAt: new Date()
+      });
+
+      console.log("Log saved successfully");
+    } catch (dbError) {
+      console.error("DB SAVE ERROR:", dbError);
     }
 
-    const statusNum = typeof status === 'string' ? parseInt(status, 10) : status;
-    const statusText = getStatusText(status);
+    // Redirect user to frontend (IMPORTANT)
+    const BASE_URL = "https://surveypanelgo.netlify.app";
 
-    const xForwardedFor = req.headers['x-forwarded-for'];
-    const xRealIP = req.headers['x-real-ip'];
-    let ipAddress = (req as any).ip || (req as any).connection?.remoteAddress || 'unknown';
-    
-    if (Array.isArray(xForwardedFor)) {
-      ipAddress = xForwardedFor[0];
-    } else if (typeof xForwardedFor === 'string') {
-      ipAddress = xForwardedFor.split(',')[0].trim();
-    } else if (xRealIP) {
-      ipAddress = xRealIP as string;
-    }
-    
-    ipAddress = ipAddress.replace(/^::ffff:/, '');
+    const redirectPages = {
+      1: "/survey-result/success",
+      2: "/survey-result/terminated",
+      3: "/survey-result/quota-full",
+      4: "/survey-result/security"
+    };
 
-    const userAgent = req.headers['user-agent'] || 'unknown';
+    const finalPath = redirectPages[statusCode] || "/survey-result";
+    const finalUrl = BASE_URL + finalPath;
 
-    await SurveyRedirectLogs.create({
-      pid: pidStr,
-      uid: uidStr,
-      status: statusNum,
-      statusText,
-      ipAddress,
-      userAgent,
-      createdAt: new Date()
-    });
+    console.log("Redirecting to:", finalUrl);
 
-    const redirectUrl = REDIRECT_URLS[statusNum as keyof typeof REDIRECT_URLS] || REDIRECT_URLS[2];
-
-    console.log(`Redirect logged: PID=${pidStr}, UID=${uidStr}, Status=${statusNum} (${statusText}), IP=${ipAddress}`);
-
-    return res.redirect(redirectUrl);
+    return res.redirect(finalUrl);
   } catch (error) {
-    console.error("Redirect Error:", error);
-    return res.status(500).send("Redirect failed");
+    console.error("REDIRECT CRASH:", error);
+
+    return res.redirect("https://surveypanelgo.netlify.app/error");
   }
 });
 

@@ -23,6 +23,8 @@ export function useSurveyTracker(surveyId: string) {
   } | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const BACKEND_URL = "https://survey-panelgo.onrender.com";
+
   const startTracking = async () => {
     if (!surveyId) return null;
 
@@ -71,7 +73,7 @@ export function useSurveyTracker(surveyId: string) {
       const statusCode = statusMap[status] || 2;
       
       console.log("Redirecting to API:", { pid, uid, status: statusCode });
-      window.location.href = `/api/redirect?pid=${pid}&uid=${uid}&status=${statusCode}`;
+      window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=${statusCode}`;
       
       return response;
     } catch (error) {

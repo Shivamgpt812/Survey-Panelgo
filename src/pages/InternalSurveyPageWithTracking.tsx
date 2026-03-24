@@ -17,6 +17,8 @@ const InternalSurveyPageWithTracking: React.FC = () => {
   const { addToast } = useToast();
   const { refreshUser } = useAuth();
 
+  const BACKEND_URL = "https://survey-panelgo.onrender.com";
+
   const [survey, setSurvey] = useState<Survey | undefined>(undefined);
   const [loading, setLoading] = useState(true);
 
@@ -72,12 +74,12 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       
       // MANDATORY: Add final redirect to /api/redirect with proper params
       const user = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
-      const pid = survey.id || survey.pid;
+      const pid = survey.id;
       const uid = user?.id || user?._id;
       
       if (pid && uid) {
         console.log("Redirecting with:", { pid, uid, status: 1 });
-        window.location.href = `/api/redirect?pid=${pid}&uid=${uid}&status=1`;
+        window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=1`;
       } else {
         console.error("Missing pid or uid for redirect");
       }
@@ -96,7 +98,7 @@ const InternalSurveyPageWithTracking: React.FC = () => {
         
         if (pid && uid) {
           console.log("Redirecting with:", { pid, uid, status: 2 });
-          window.location.href = `/api/redirect?pid=${pid}&uid=${uid}&status=2`;
+          window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=2`;
         } else {
           console.error("Missing pid or uid for redirect");
         }
