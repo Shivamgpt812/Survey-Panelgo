@@ -7,7 +7,6 @@ import {
   AlertCircle,
   X,
   ExternalLink,
-  PartyPopper,
 } from 'lucide-react';
 import { PlayfulButton, PlayfulCard, PlayfulBadge, PlayfulProgress } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid } from '@/components/decorations';
@@ -18,17 +17,16 @@ import { BrandLogo } from '@/components/brand/BrandLogo';
 import { useToast } from '@/hooks/useToast';
 import { getStoredToken, useAuth } from '@/hooks/useAuth';
 import { useSurveyTracker } from '@/components/SurveyTracker';
-import confetti from 'canvas-confetti';
 
 /**
  * Pre-Screener Page with Vendor Support
  * 
  * Extended functionality:
  * - Checks for vendor session
- * - Tracks responses (complete/terminate/quota)
- * - Redirects to vendor URLs when applicable
- * - Shows completion celebration
+ * - Tracks responses (started/terminate/quota)
+ * - Redirects to vendor URLs when applicable AFTER survey completion
  * - Logs activity
+ * - Preserves query parameters for survey start
  */
 const PreScreenerPage: React.FC = () => {
   const navigate = useNavigate();
@@ -49,7 +47,6 @@ const PreScreenerPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<'pending' | 'passed' | 'failed'>('pending');
   const [failureMessage, setFailureMessage] = useState('');
-  const [showCelebration, setShowCelebration] = useState(false);
 
   // Survey tracking integration for non-vendor users
   const { startTracking, completeTracking, trackingData } = useSurveyTracker(surveyId || '');
@@ -99,6 +96,7 @@ const PreScreenerPage: React.FC = () => {
 
     const run = async () => {
       if (vendorId && vendor) {
+        // For vendor flows without pre-screener, record start and proceed to survey
         try {
           await apiPost(
             '/api/responses',
@@ -107,16 +105,34 @@ const PreScreenerPage: React.FC = () => {
               vendorId,
               // Use logged-in user ID if available, otherwise use UID from URL
               userId: user?.id || searchParams.get('uid'),
-              status: 'complete',
+              status: 'started', // Changed from 'complete' to 'started'
             },
             getStoredToken()
           );
         } catch {
           /* ignore */
         }
-        window.location.href = vendor.redirectLinks.complete;
-        return;
+        // Proceed to survey like non-vendor flow
+        if (!survey.isExternal) {
+          const takeParams = new URLSearchParams();
+          takeParams.set('survey', survey.id);
+          const urlUid = searchParams.get('uid');
+          const urlPid = searchParams.get('pid') || survey.id;
+          const urlVendorId = searchParams.get('vendor');
+          
+          if (urlUid) takeParams.set('uid', urlUid);
+          if (urlPid) takeParams.set('pid', urlPid);
+          if (urlVendorId) takeParams.set('vendor', urlVendorId);
+          
+          navigate(`/survey/${survey.id}/take?${takeParams.toString()}`, { replace: true });
+          return;
+        } else if (survey.link) {
+          window.open(survey.link, '_blank');
+          return;
+        }
       }
+      
+      // Non-vendor flow or fallback
       if (!survey.isExternal) {
         // Navigate with ALL query parameters preserved
         const takeParams = new URLSearchParams();
@@ -304,10 +320,10 @@ const PreScreenerPage: React.FC = () => {
     console.log('Survey link:', survey?.link);
     console.log('Current vendorId:', vendorId);
     console.log('Current vendor:', vendor);
-    console.log('Vendor redirectLinks:', vendor?.redirectLinks);
     console.log('=====================================');
     
-    const recordStart = async () => {
+    // Record pre-screener completion (NOT final survey completion)
+    const recordPreScreenerCompletion = async () => {
       try {
         await apiPost(
           '/api/responses',
@@ -316,77 +332,32 @@ const PreScreenerPage: React.FC = () => {
             vendorId: vendorId || undefined,
             // Use logged-in user ID if available, otherwise use UID from URL
             userId: user?.id || searchParams.get('uid') || undefined,
-            status: 'complete',
+            status: 'started', // Changed from 'complete' to 'started'
             preScreenerAnswers: answers,
           },
           user ? getStoredToken() : undefined // No token for vendor flow without login
         );
-        console.log('Response recorded successfully');
+        console.log('Pre-screener completion recorded successfully');
       } catch (e) {
-        console.error('Failed to record response:', e);
+        console.error('Failed to record pre-screener completion:', e);
         addToast(e instanceof Error ? e.message : 'Could not record response', 'error');
       }
     };
 
-    if (vendorId) {
-      console.log('Vendor flow detected');
-      await recordStart();
-      
-      // Validate vendor object and redirect links
-      if (!vendor) {
-        console.error('Vendor object is missing');
-        addToast('Vendor information not found. Redirecting to dashboard...', 'error');
-        navigate('/dashboard');
-        return;
-      }
-      
-      if (!vendor.redirectLinks) {
-        console.error('Vendor redirectLinks are missing:', vendor);
-        addToast('Vendor redirect links not configured. Redirecting to dashboard...', 'error');
-        navigate('/dashboard');
-        return;
-      }
-      
-      const redirectUrl = vendor.redirectLinks.complete;
-      if (!redirectUrl || typeof redirectUrl !== 'string' || redirectUrl.trim() === '') {
-        console.error('Invalid redirect URL:', redirectUrl);
-        addToast('Invalid redirect URL. Redirecting to dashboard...', 'error');
-        navigate('/dashboard');
-        return;
-      }
-      
-      console.log('Redirecting to vendor URL:', redirectUrl);
-      
-      // Show celebration briefly, then redirect
-      setShowCelebration(true);
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#7B61FF', '#FFD6E8', '#FFF2B2', '#D6F5E3'],
-      });
-      
-      // Redirect after 2 seconds
-      setTimeout(() => {
-        try {
-          console.log('Executing redirect to:', redirectUrl);
-          window.location.href = redirectUrl;
-        } catch (error) {
-          console.error('Redirect failed:', error);
-          // Fallback to dashboard if redirect fails
-          navigate('/dashboard');
-        }
-      }, 2000);
-      
-      return;
-    }
+    // Record pre-screener completion regardless of vendor flow
+    await recordPreScreenerCompletion();
     
-    // Non-vendor flow: proceed normally
+    // Now start the actual survey based on survey type
     if (survey?.isExternal && survey.link) {
+      // External survey: open in new tab
+      console.log('Opening external survey:', survey.link);
       window.open(survey.link, '_blank');
     } else if (!survey?.isExternal) {
+      // Internal survey: navigate to take page with all query params preserved
       const takeParams = new URLSearchParams();
       takeParams.set('survey', survey!.id);
+      
+      // Preserve all important query parameters
       const urlUid = searchParams.get('uid');
       const urlPid = searchParams.get('pid') || survey!.id;
       const urlVendorId = searchParams.get('vendor');
@@ -395,11 +366,16 @@ const PreScreenerPage: React.FC = () => {
       if (urlPid) takeParams.set('pid', urlPid);
       if (urlVendorId) takeParams.set('vendor', urlVendorId);
       
-      navigate(`/survey/${survey!.id}/take?${takeParams.toString()}`, { replace: true });
+      const takeUrl = `/survey/${survey!.id}/take?${takeParams.toString()}`;
+      console.log('Navigating to internal survey:', takeUrl);
+      navigate(takeUrl, { replace: true });
       return;
+    } else {
+      // Fallback: no survey link or not external
+      console.error('Survey has no valid link or is not properly configured');
+      addToast('Survey configuration error. Please contact support.', 'error');
+      navigate('/dashboard');
     }
-    
-    navigate('/dashboard');
   };
 
   const handleVendorTerminateRedirect = () => {
@@ -436,59 +412,6 @@ const PreScreenerPage: React.FC = () => {
       navigate('/dashboard');
     }
   };
-
-  // Render celebration screen
-  if (showCelebration) {
-    return (
-      <div className="relative min-h-screen w-full overflow-hidden bg-periwinkle flex items-center justify-center p-4">
-        <DotGrid className="fixed inset-0" />
-        <DecorativeBlob variant="yellow" size="lg" className="left-[15%] top-[15%] opacity-50 animate-float" />
-        <DecorativeBlob variant="pink" size="lg" className="right-[15%] bottom-[15%] opacity-50 animate-float animation-delay-500" />
-        <DecorativeBlob variant="green" size="md" className="left-[10%] bottom-[20%] opacity-40 animate-float animation-delay-300" />
-        <DecorativeBlob variant="lavender" size="md" className="right-[10%] top-[20%] opacity-40 animate-float animation-delay-700" />
-
-        <PlayfulCard className="relative z-10 w-full max-w-md p-8 text-center animate-bounce-in">
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center animate-pulse-soft">
-                <PartyPopper className="w-10 h-10" />
-              </div>
-              <div className="absolute -top-2 -right-2">
-                <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center">
-                  <Coins className="w-4 h-4" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <h2 className="font-outfit font-bold text-3xl text-navy mb-3">
-            🎉 Congratulations!
-          </h2>
-
-          <p className="font-jakarta text-navy-light mb-6">
-            You're all set to earn{' '}
-            <span className="font-outfit font-bold text-violet">{survey.pointsReward} points</span>!
-          </p>
-
-          <div className="flex items-center justify-center gap-2 mb-6 p-4 bg-yellow/30 border-2 border-navy rounded-2xl">
-            <Coins className="w-6 h-6 text-violet" />
-            <span className="font-outfit font-bold text-2xl text-violet">+{survey.pointsReward}</span>
-            <span className="font-jakarta text-navy-light">points</span>
-          </div>
-
-          <div className="flex items-center justify-center gap-2">
-            <div className="w-3 h-3 bg-violet rounded-full animate-bounce" />
-            <div className="w-3 h-3 bg-pink rounded-full animate-bounce animation-delay-100" />
-            <div className="w-3 h-3 bg-yellow rounded-full animate-bounce animation-delay-200" />
-          </div>
-
-          <p className="font-jakarta text-sm text-navy-light mt-4">
-            Redirecting you to the survey...
-          </p>
-        </PlayfulCard>
-      </div>
-    );
-  }
 
   // Render result screen - PASSED
   if (result === 'passed') {
