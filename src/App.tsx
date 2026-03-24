@@ -33,7 +33,6 @@ function AppContent() {
         <Route path="/survey-result/terminated" element={<SurveyTerminated />} />
         <Route path="/survey-result/quota-full" element={<SurveyQuota />} />
         <Route path="/survey-result/security" element={<SurveySecurity />} />
-        <Route path="/survey/:surveyId" element={<SurveyPage />} />
         {/* Test route */}
         <Route path="/test" element={<h1 style={{ color: "black" }}>TEST ROUTE WORKS</h1>} />
         {/* Dynamic route temporarily removed for testing */}
@@ -62,6 +61,14 @@ function AppContent() {
           element={
             <UserRoute>
               <RewardsPage />
+            </UserRoute>
+          }
+        />
+        <Route
+          path="/survey/:surveyId"
+          element={
+            <UserRoute>
+              <SurveyPage />
             </UserRoute>
           }
         />

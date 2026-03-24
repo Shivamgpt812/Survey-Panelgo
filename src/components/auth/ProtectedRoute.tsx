@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { PlayfulCard, PlayfulButton } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
@@ -16,7 +16,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   allowedRoles = ['user', 'admin'],
 }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
-  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -27,11 +26,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         </div>
       </div>
     );
-  }
-
-  // Check if current path is a survey route - allow access without authentication
-  if (location.pathname.startsWith('/survey')) {
-    return <>{children}</>;
   }
 
   if (!isAuthenticated) {

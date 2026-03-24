@@ -4,7 +4,6 @@ import { startSurveyTracking, completeSurveyTracking } from '@/lib/api';
 
 interface SurveyTrackerProps {
   surveyId: string;
-  vendorId?: string;
   onTrackingStart?: (clickId: string, userId: string) => void;
   onTrackingComplete?: (clickId: string) => void;
   children?: (props: {
@@ -15,7 +14,7 @@ interface SurveyTrackerProps {
   }) => React.ReactNode;
 }
 
-export function useSurveyTracker(surveyId: string, vendorId?: string) {
+export function useSurveyTracker(surveyId: string) {
   const { token } = useAuth();
   const [trackingData, setTrackingData] = useState<{
     clickId: string;
@@ -73,8 +72,8 @@ export function useSurveyTracker(surveyId: string, vendorId?: string) {
       
       const statusCode = statusMap[status] || 2;
       
-      console.log("Redirecting to API:", { pid, uid, status: statusCode, vendorId });
-      window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=${statusCode}&vendorId=${vendorId || ""}`;
+      console.log("Redirecting to API:", { pid, uid, status: statusCode });
+      window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=${statusCode}`;
       
       return response;
     } catch (error) {
@@ -94,8 +93,8 @@ export function useSurveyTracker(surveyId: string, vendorId?: string) {
 }
 
 // Example wrapper component for easy integration
-export function SurveyTracker({ surveyId, vendorId, onTrackingStart, onTrackingComplete, children }: SurveyTrackerProps) {
-  const { startTracking, completeTracking, trackingData, loading } = useSurveyTracker(surveyId, vendorId);
+export function SurveyTracker({ surveyId, onTrackingStart, onTrackingComplete, children }: SurveyTrackerProps) {
+  const { startTracking, completeTracking, trackingData, loading } = useSurveyTracker(surveyId);
 
   useEffect(() => {
     if (trackingData && onTrackingStart) {

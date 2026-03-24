@@ -703,31 +703,22 @@ app.get('/api/survey-tracking', requireAdmin, async (_req: any, res) => {
 // ---------- Survey Redirect Tracking ----------
 app.get('/api/redirect', async (req, res) => {
   try {
-    const { pid, uid, status, vendorId } = req.query;
-    
-    // ADD DEBUG LOG (IMPORTANT)
-    console.log("REDIRECT HIT:", req.query);
-    
-    // Type casting for safety
-    const pidStr = pid as string;
-    const uidStr = uid as string;
-    const statusStr = status as string;
-    const vendorIdStr = vendorId as string;
+    const { pid, uid, status } = req.query;
 
-    console.log("Redirect HIT:", { pid: pidStr, uid: uidStr, status: statusStr, vendorId: vendorIdStr });
+    console.log("Redirect HIT:", { pid, uid, status });
 
     // Validate params
-    if (!uidStr || !statusStr) {
-      console.error("Missing params:", { pid: pidStr, uid: uidStr, status: statusStr });
+    if (!uid || !status) {
+      console.error("Missing params:", { pid, uid, status });
       return res.redirect("https://surveypanelgo.netlify.app/error");
     }
 
     // Auto generate PID if not provided
-    const finalPid = pidStr || "AUTO_" + Date.now();
+    const finalPid = pid || "AUTO_" + Date.now();
     console.log("Final PID:", finalPid);
 
     // Convert status to number
-    const statusCode = Number(statusStr);
+    const statusCode = Number(status);
 
     const statusMap = {
       1: "Completed",
@@ -742,51 +733,17 @@ app.get('/api/redirect', async (req, res) => {
     try {
       await SurveyRedirectLogs.create({
         pid: finalPid,
-        uid: uidStr,
+        uid,
         status: statusCode,
         statusText,
         ipAddress: req.headers["x-forwarded-for"] || req.socket.remoteAddress,
         userAgent: req.headers["user-agent"],
-        createdAt: new Date(),
-        vendorId: vendorIdStr || null
+        createdAt: new Date()
       });
 
       console.log("Log saved successfully");
     } catch (dbError) {
       console.error("DB SAVE ERROR:", dbError);
-    }
-
-    // VENDOR REDIRECT LOGIC (AFTER LOGGING)
-    if (vendorIdStr) {
-      const Vendor = require('./models/Vendor').Vendor;
-      
-      try {
-        const vendor = await Vendor.findById(vendorIdStr);
-
-        if (vendor) {
-          let vendorUrl = "";
-
-          if (Number(statusStr) === 1) {
-            vendorUrl = vendor.redirectLinks.complete;
-          } else if (Number(statusStr) === 2) {
-            vendorUrl = vendor.redirectLinks.terminate;
-          } else if (Number(statusStr) === 3) {
-            vendorUrl = vendor.redirectLinks.quotaFull;
-          }
-
-          // Replace placeholders safely
-          vendorUrl = vendorUrl
-            .replace("{pid}", finalPid)
-            .replace("{uid}", uidStr);
-
-          console.log("Redirecting to Vendor:", vendorUrl);
-
-          return res.redirect(vendorUrl);
-        }
-      } catch (vendorError) {
-        console.error("VENDOR ERROR:", vendorError);
-        // Fall through to frontend redirect if vendor lookup fails
-      }
     }
 
     // Redirect user to frontend (IMPORTANT)
@@ -802,16 +759,16 @@ app.get('/api/redirect', async (req, res) => {
     const timestamp = new Date().toISOString();
 
     // Log redirect data for debugging
-    console.log("Redirect Data:", { finalPid, uid: uidStr, status: statusStr, vendorId: vendorIdStr, redirect: vendorIdStr ? "VENDOR" : "INTERNAL", ip, timestamp });
+    console.log("Redirect Data:", { finalPid, uid, status, ip, timestamp });
 
     const redirectPages = {
-      1: `/survey-result/success?pid=${finalPid}&uid=${uidStr}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      2: `/survey-result/terminated?pid=${finalPid}&uid=${uidStr}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      3: `/survey-result/quota-full?pid=${finalPid}&uid=${uidStr}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      4: `/survey-result/security?pid=${finalPid}&uid=${uidStr}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
+      1: `/survey-result/success?pid=${finalPid}&uid=${uid}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      2: `/survey-result/terminated?pid=${finalPid}&uid=${uid}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      3: `/survey-result/quota-full?pid=${finalPid}&uid=${uid}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      4: `/survey-result/security?pid=${finalPid}&uid=${uid}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
     };
 
-    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${uidStr}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
+    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${uid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
     const finalUrl = `${BASE_URL}${finalPath}`;
 
     console.log("Redirecting to:", finalUrl);
