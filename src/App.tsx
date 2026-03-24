@@ -5,6 +5,10 @@ import { ToastProvider } from '@/hooks/useToast';
 import { AdminRoute, UserRoute } from '@/components/auth/ProtectedRoute';
 import { LandingPage, AuthPage, DashboardPage, SurveyPage, RewardsPage, InternalSurveyPage, ServicesPage, ServiceDetailPage, BlogPage, AboutPage, BlogDetailPage, CountryDetailPage, CountryHeroSection, SuccessPage, TerminatedPage, QuotaFullPage, SecurityBlockPage } from '@/pages';
 import SurveyResult from '@/pages/SurveyResult';
+import SurveySuccess from '@/pages/SurveySuccess';
+import SurveyTerminated from '@/pages/SurveyTerminated';
+import SurveyQuota from '@/pages/SurveyQuota';
+import SurveySecurity from '@/pages/SurveySecurity';
 import { WhatsAppFloat } from '@/components/ui/playful';
 import PreScreenerPage from '@/pages/PreScreenerPage';
 import AdminPage from '@/pages/AdminPage';
@@ -25,6 +29,10 @@ function AppContent() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/start" element={<VendorEntryPage />} />
         <Route path="/survey-result/:clickId" element={<SurveyResult />} />
+        <Route path="/survey-result/success" element={<SurveySuccess />} />
+        <Route path="/survey-result/terminated" element={<SurveyTerminated />} />
+        <Route path="/survey-result/quota-full" element={<SurveyQuota />} />
+        <Route path="/survey-result/security" element={<SurveySecurity />} />
         <Route path="/services" element={<ServicesPage />} />
         <Route path="/services/:serviceId" element={<ServiceDetailPage />} />
         <Route path="/blog" element={<BlogPage />} />
