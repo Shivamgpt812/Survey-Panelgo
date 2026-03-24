@@ -185,7 +185,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-3 w-full">
           <input
             type="text"
             placeholder="Filter by PID..."
@@ -194,7 +194,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
               setFilterPid(e.target.value);
               setCurrentPage(1);
             }}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full md:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           
           <select
@@ -203,7 +203,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
               setFilterStatus(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">All Statuses</option>
             <option value="1">Completed</option>
@@ -213,8 +213,8 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
           </select>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="overflow-x-auto w-full">
+          <table className="min-w-[700px] w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -254,10 +254,14 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                     {new Date(log.createdAt).toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {log.pid}
+                    <div className="truncate max-w-[120px]" title={log.pid}>
+                      {log.pid}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {log.uid}
+                    <div className="truncate max-w-[120px]" title={log.uid}>
+                      {log.uid}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
@@ -268,49 +272,52 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {log.ipAddress}
+                    <div className="truncate max-w-[120px]" title={log.ipAddress}>
+                      {log.ipAddress}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const statusCode = log.status || statusMap[log.statusText];
-                        window.open(
-                          `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`,
-                          "_blank"
-                        );
-                      }}
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: "6px",
-                        border: "none",
-                        background: "#7C83FD",
-                        color: "white",
-                        cursor: "pointer",
-                        marginRight: "8px"
-                      }}
-                    >
-                      Replay
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const statusCode = log.status || statusMap[log.statusText];
-                        const url = `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`;
-                        navigator.clipboard.writeText(url);
-                        alert("Link copied!");
-                      }}
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: "6px",
-                        border: "none",
-                        background: "#10b981",
-                        color: "white",
-                        cursor: "pointer"
-                      }}
-                    >
-                      Copy Link
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const statusCode = log.status || statusMap[log.statusText];
+                          window.open(
+                            `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`,
+                            "_blank"
+                          );
+                        }}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "6px",
+                          border: "none",
+                          background: "#7C83FD",
+                          color: "white",
+                          cursor: "pointer"
+                        }}
+                      >
+                        Replay
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const statusCode = log.status || statusMap[log.statusText];
+                          const url = `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`;
+                          navigator.clipboard.writeText(url);
+                          alert("Link copied!");
+                        }}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "6px",
+                          border: "none",
+                          background: "#10b981",
+                          color: "white",
+                          cursor: "pointer"
+                        }}
+                      >
+                        Copy Link
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
