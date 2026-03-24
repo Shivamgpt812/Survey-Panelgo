@@ -43,7 +43,6 @@ const PreScreenerPage: React.FC = () => {
   // Check for vendor session
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [vendor, setVendor] = useState<Vendor | undefined>(undefined);
-  const [isVendorFlow, setIsVendorFlow] = useState(false);
 
   const [answers, setAnswers] = useState<PreScreenerAnswer[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
@@ -69,11 +68,9 @@ const PreScreenerPage: React.FC = () => {
   // Load vendor data from URL parameters on mount
   useEffect(() => {
     const urlVendorId = searchParams.get('vendor');
-    const isVendorFlow = sessionStorage.getItem('surveypanelgo_vendor_flow') === 'true';
     
     if (urlVendorId) {
       setVendorId(urlVendorId);
-      setIsVendorFlow(isVendorFlow);
       void apiGet<{ vendors: Vendor[] }>('/api/vendors').then(({ vendors }) => {
         const vendorData = vendors.find((v) => v.id === urlVendorId);
         setVendor(vendorData);
@@ -148,13 +145,35 @@ const PreScreenerPage: React.FC = () => {
     if (result === 'failed') {
       const timer = setTimeout(() => {
         if (vendor) {
-          // Redirect to vendor terminate URL
-          window.location.href = vendor.redirectLinks.terminate;
+          // Vendor flow: validate and redirect to vendor terminate URL
+          if (!vendor.redirectLinks) {
+            console.error('Vendor redirectLinks are missing for auto-redirect');
+            navigate('/dashboard');
+            return;
+          }
+          
+          const terminateUrl = vendor.redirectLinks.terminate;
+          if (!terminateUrl || typeof terminateUrl !== 'string' || terminateUrl.trim() === '') {
+            console.error('Invalid terminate URL for auto-redirect:', terminateUrl);
+            navigate('/dashboard');
+            return;
+          }
+          
+          try {
+            console.log('Auto-redirecting to vendor terminate URL:', terminateUrl);
+            window.location.href = terminateUrl;
+          } catch (error) {
+            console.error('Auto-redirect failed:', error);
+            navigate('/dashboard');
+          }
         } else if (trackingData) {
-          // For non-vendor users, use tracking to redirect to result page
+          // Non-vendor flow: use tracking to redirect to result page
           completeTracking('terminated').catch(() => {
             navigate('/dashboard');
           });
+        } else {
+          // Fallback: redirect to dashboard
+          navigate('/dashboard');
         }
       }, 3000); // Auto-redirect after 3 seconds
       return () => clearTimeout(timer);
@@ -285,6 +304,7 @@ const PreScreenerPage: React.FC = () => {
     console.log('Survey link:', survey?.link);
     console.log('Current vendorId:', vendorId);
     console.log('Current vendor:', vendor);
+    console.log('Vendor redirectLinks:', vendor?.redirectLinks);
     console.log('=====================================');
     
     const recordStart = async () => {
@@ -311,6 +331,33 @@ const PreScreenerPage: React.FC = () => {
     if (vendorId) {
       console.log('Vendor flow detected');
       await recordStart();
+      
+      // Validate vendor object and redirect links
+      if (!vendor) {
+        console.error('Vendor object is missing');
+        addToast('Vendor information not found. Redirecting to dashboard...', 'error');
+        navigate('/dashboard');
+        return;
+      }
+      
+      if (!vendor.redirectLinks) {
+        console.error('Vendor redirectLinks are missing:', vendor);
+        addToast('Vendor redirect links not configured. Redirecting to dashboard...', 'error');
+        navigate('/dashboard');
+        return;
+      }
+      
+      const redirectUrl = vendor.redirectLinks.complete;
+      if (!redirectUrl || typeof redirectUrl !== 'string' || redirectUrl.trim() === '') {
+        console.error('Invalid redirect URL:', redirectUrl);
+        addToast('Invalid redirect URL. Redirecting to dashboard...', 'error');
+        navigate('/dashboard');
+        return;
+      }
+      
+      console.log('Redirecting to vendor URL:', redirectUrl);
+      
+      // Show celebration briefly, then redirect
       setShowCelebration(true);
       confetti({
         particleCount: 100,
@@ -318,12 +365,74 @@ const PreScreenerPage: React.FC = () => {
         origin: { y: 0.6 },
         colors: ['#7B61FF', '#FFD6E8', '#FFF2B2', '#D6F5E3'],
       });
+      
+      // Redirect after 2 seconds
+      setTimeout(() => {
+        try {
+          console.log('Executing redirect to:', redirectUrl);
+          window.location.href = redirectUrl;
+        } catch (error) {
+          console.error('Redirect failed:', error);
+          // Fallback to dashboard if redirect fails
+          navigate('/dashboard');
+        }
+      }, 2000);
+      
+      return;
+    }
+    
+    // Non-vendor flow: proceed normally
+    if (survey?.isExternal && survey.link) {
+      window.open(survey.link, '_blank');
+    } else if (!survey?.isExternal) {
+      const takeParams = new URLSearchParams();
+      takeParams.set('survey', survey!.id);
+      const urlUid = searchParams.get('uid');
+      const urlPid = searchParams.get('pid') || survey!.id;
+      const urlVendorId = searchParams.get('vendor');
+      
+      if (urlUid) takeParams.set('uid', urlUid);
+      if (urlPid) takeParams.set('pid', urlPid);
+      if (urlVendorId) takeParams.set('vendor', urlVendorId);
+      
+      navigate(`/survey/${survey!.id}/take?${takeParams.toString()}`, { replace: true });
+      return;
+    }
+    
+    navigate('/dashboard');
   };
 
   const handleVendorTerminateRedirect = () => {
-    if (vendor) {
-      window.location.href = vendor.redirectLinks.terminate;
-    } else {
+    console.log('=== VENDOR TERMINATE REDIRECT DEBUG ===');
+    console.log('Vendor object:', vendor);
+    console.log('Vendor redirectLinks:', vendor?.redirectLinks);
+    console.log('Terminate URL:', vendor?.redirectLinks?.terminate);
+    console.log('=====================================');
+    
+    if (!vendor) {
+      console.error('Vendor object is missing for terminate redirect');
+      navigate('/dashboard');
+      return;
+    }
+    
+    if (!vendor.redirectLinks) {
+      console.error('Vendor redirectLinks are missing for terminate redirect');
+      navigate('/dashboard');
+      return;
+    }
+    
+    const terminateUrl = vendor.redirectLinks.terminate;
+    if (!terminateUrl || typeof terminateUrl !== 'string' || terminateUrl.trim() === '') {
+      console.error('Invalid terminate URL:', terminateUrl);
+      navigate('/dashboard');
+      return;
+    }
+    
+    try {
+      console.log('Executing terminate redirect to:', terminateUrl);
+      window.location.href = terminateUrl;
+    } catch (error) {
+      console.error('Terminate redirect failed:', error);
       navigate('/dashboard');
     }
   };
@@ -696,6 +805,5 @@ const PreScreenerPage: React.FC = () => {
     </div>
   );
 };
-}
 
 export default PreScreenerPage;
