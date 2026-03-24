@@ -141,8 +141,8 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
   }
 
   return (
-    <div className={`w-full max-w-full overflow-hidden ${className}`}>
-      <div className="bg-white rounded-lg shadow">
+    <div className={`w-full ${className}`}>
+      <div className="bg-white rounded-lg shadow min-h-0">
         {/* Tab Navigation */}
         <div className="border-b border-gray-200 overflow-x-auto">
           <nav className="flex min-w-max -mb-px space-x-8 px-6" aria-label="Tabs">
@@ -177,16 +177,16 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
         </div>
 
         {/* Tab Content */}
-        <div className="p-6 max-h-[80vh] overflow-y-auto">
+        <div className="p-6">
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Redirect Analytics Overview</h2>
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
                 <div className="w-full">
                   <h3 className="text-lg font-semibold text-gray-700 mb-4">Status Distribution</h3>
-                  <div className="w-full h-[250px]">
+                  <div className="w-full h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -205,7 +205,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
 
                 <div className="w-full">
                   <h3 className="text-lg font-semibold text-gray-700 mb-4">Status Breakdown</h3>
-                  <div className="w-full h-[250px]">
+                  <div className="w-full h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -230,7 +230,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
               </div>
 
               {/* Filters */}
-              <div className="flex flex-col lg:flex-row gap-3 w-full">
+              <div className="flex flex-col xl:flex-row gap-3 w-full">
                 <input
                   type="text"
                   placeholder="Filter by PID..."
@@ -239,7 +239,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                     setFilterPid(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full lg:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full xl:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 
                 <select
@@ -248,7 +248,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                     setFilterStatus(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full lg:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full xl:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">All Statuses</option>
                   <option value="1">Completed</option>
@@ -259,26 +259,26 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
               </div>
 
               {/* Table */}
-              <div className="w-full overflow-x-auto">
-                <table className="min-w-[700px] w-full divide-y divide-gray-200">
+              <div className="w-full overflow-x-auto border border-gray-200 rounded-lg">
+                <table className="min-w-[800px] w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Timestamp
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         PID
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         UID
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         IP Address
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
@@ -296,20 +296,20 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                           );
                         }}
                       >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           {new Date(log.createdAt).toLocaleString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div className="truncate max-w-[120px]" title={log.pid}>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          <div className="truncate max-w-[100px]" title={log.pid}>
                             {log.pid}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div className="truncate max-w-[120px]" title={log.uid}>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          <div className="truncate max-w-[100px]" title={log.uid}>
                             {log.uid}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <span
                             className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full text-white`}
                             style={{ backgroundColor: statusColors[log.status as keyof typeof statusColors] }}
@@ -317,13 +317,13 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                             {log.statusText}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div className="truncate max-w-[120px]" title={log.ipAddress}>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          <div className="truncate max-w-[100px]" title={log.ipAddress}>
                             {log.ipAddress}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div className="flex flex-wrap gap-2">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          <div className="flex flex-wrap gap-1">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -334,12 +334,13 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                                 );
                               }}
                               style={{
-                                padding: "6px 12px",
-                                borderRadius: "6px",
+                                padding: "4px 8px",
+                                borderRadius: "4px",
                                 border: "none",
                                 background: "#7C83FD",
                                 color: "white",
-                                cursor: "pointer"
+                                cursor: "pointer",
+                                fontSize: "12px"
                               }}
                             >
                               Replay
@@ -353,15 +354,16 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                                 alert("Link copied!");
                               }}
                               style={{
-                                padding: "6px 12px",
-                                borderRadius: "6px",
+                                padding: "4px 8px",
+                                borderRadius: "4px",
                                 border: "none",
                                 background: "#10b981",
                                 color: "white",
-                                cursor: "pointer"
+                                cursor: "pointer",
+                                fontSize: "12px"
                               }}
                             >
-                              Copy Link
+                              Copy
                             </button>
                           </div>
                         </td>
