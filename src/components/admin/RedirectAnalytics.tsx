@@ -41,6 +41,13 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
   };
 
   const fetchLogs = async () => {
+    const token = localStorage.getItem('surveypanelgo_token');
+    if (!token) {
+      setError('Not authenticated');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -55,7 +62,8 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
       console.log("API CALL (GET):", url);
       const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
 
