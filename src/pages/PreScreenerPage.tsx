@@ -279,33 +279,32 @@ const PreScreenerPage: React.FC = () => {
       addToast('❌ Not eligible for this survey', 'error');
 
       // Always log the failed attempt, both for vendor and non-vendor users
-      try {
-        await apiPost(
-          '/api/responses',
-          {
-            surveyId: survey.id,
-            vendorId: vendorId || undefined,
-            // Use logged-in user ID if available, otherwise use UID from URL
-            userId: user?.id || searchParams.get('uid'),
-            status: 'terminate',
-            preScreenerAnswers: answers,
-            failureReason: validation.message || 'Did not meet pre-screener requirements',
-          },
-          getStoredToken()
-        );
-        
-        // For non-vendor users, also complete tracking to show result page
-        if (!vendor && trackingData) {
-          try {
-            await completeTracking('terminated');
-          } catch (trackingError) {
-            console.error('Tracking failed, but response was logged:', trackingError);
-            // Fallback to dashboard if tracking fails
-            navigate('/dashboard?status=terminated&survey=' + encodeURIComponent(survey?.title || 'survey'));
-          }
-        }
-      } catch (e) {
-        addToast(e instanceof Error ? e.message : 'Could not record response', 'error');
+      // STEP 6: REMOVE ALL FLOW-DEPENDENT APIs - Make this non-blocking
+      apiPost(
+        '/api/responses',
+        {
+          surveyId: survey.id,
+          vendorId: vendorId || undefined,
+          // Use logged-in user ID if available, otherwise use UID from URL
+          userId: user?.id || searchParams.get('uid'),
+          status: 'terminate',
+          preScreenerAnswers: answers,
+          failureReason: validation.message || 'Did not meet pre-screener requirements',
+        },
+        getStoredToken()
+      ).catch(e => {
+        // STEP 2: DO NOT BLOCK ON START API - IGNORE failure completely
+        console.error('Pre-screener termination API failed, but continuing flow:', e);
+        // STEP 3: REMOVE ERROR POPUP - User should NEVER see this error
+      });
+      
+      // For non-vendor users, also complete tracking to show result page
+      if (!vendor && trackingData) {
+        completeTracking('terminated').catch(trackingError => {
+          console.error('Tracking failed, but response was logged:', trackingError);
+          // Fallback to dashboard if tracking fails
+          navigate('/dashboard?status=terminated&survey=' + encodeURIComponent(survey?.title || 'survey'));
+        });
       }
     }
 
@@ -322,7 +321,8 @@ const PreScreenerPage: React.FC = () => {
     console.log('Current vendor:', vendor);
     console.log('=====================================');
     
-    // Record pre-screener completion (NOT final survey completion)
+    // STEP 1: FIX START SURVEY FLOW - Remove blocking API call
+    // Record pre-screener completion (NON-BLOCKING)
     const recordPreScreenerCompletion = async () => {
       try {
         await apiPost(
@@ -339,15 +339,18 @@ const PreScreenerPage: React.FC = () => {
         );
         console.log('Pre-screener completion recorded successfully');
       } catch (e) {
-        console.error('Failed to record pre-screener completion:', e);
-        addToast(e instanceof Error ? e.message : 'Could not record response', 'error');
+        // STEP 2: DO NOT BLOCK ON START API - IGNORE failure completely
+        console.error('Pre-screener API failed, but continuing flow:', e);
+        // STEP 3: REMOVE ERROR POPUP - No toast, no popup, no blocking
+        // User should NEVER see this error
       }
     };
 
-    // Record pre-screener completion regardless of vendor flow
-    await recordPreScreenerCompletion();
+    // STEP 4: ALWAYS NAVIGATE TO SURVEY - API call is fire-and-forget
+    // Do NOT await the API call - it should not block navigation
+    recordPreScreenerCompletion(); // Fire and forget - no await
     
-    // Now start the actual survey based on survey type
+    // STEP 5: ALWAYS navigate to survey regardless of API success/failure
     if (survey?.isExternal && survey.link) {
       // External survey: open in new tab
       console.log('Opening external survey:', survey.link);
@@ -373,7 +376,8 @@ const PreScreenerPage: React.FC = () => {
     } else {
       // Fallback: no survey link or not external
       console.error('Survey has no valid link or is not properly configured');
-      addToast('Survey configuration error. Please contact support.', 'error');
+      // STEP 3: REMOVE ERROR POPUP - No toast on configuration error
+      // Just navigate to dashboard silently
       navigate('/dashboard');
     }
   };
