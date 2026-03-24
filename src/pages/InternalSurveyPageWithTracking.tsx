@@ -64,7 +64,28 @@ const InternalSurveyPageWithTracking: React.FC = () => {
   };
 
   const handleComplete = async () => {
-    if (!survey || !trackingData) return;
+    // HARD REDIRECT TIMER (CRITICAL)
+    const forceRedirect = () => {
+      const auth = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
+
+      const pid = surveyId;
+      const uid = auth?.id || auth?._id || "guest_user";
+      const vendorId = survey?.vendorId || "";
+
+      const url = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=1&vendorId=${vendorId}`;
+
+      console.log("FORCE REDIRECT:", url);
+
+      window.location.href = url;
+    };
+
+    // CALL TIMER IMMEDIATELY
+    setTimeout(() => {
+      forceRedirect();
+    }, 1500);
+
+    // REMOVE BLOCKING CONDITIONS
+    // if (!survey || !trackingData) return;
 
     try {
       setIsSubmitting(true);
@@ -92,21 +113,45 @@ const InternalSurveyPageWithTracking: React.FC = () => {
     } catch (error) {
       console.error('Failed to complete survey:', error);
       
-      // FAIL CASE: IMMEDIATE REDIRECT TO TERMINATED
-      redirectToBackend(2);
+      // FAIL CASE: FORCE REDIRECT
+      forceRedirect();
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleTerminate = async () => {
-    if (!trackingData) return;
+    // HARD REDIRECT TIMER (CRITICAL)
+    const forceRedirectTerminate = () => {
+      const auth = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
+
+      const pid = surveyId;
+      const uid = auth?.id || auth?._id || "guest_user";
+      const vendorId = survey?.vendorId || "";
+
+      const url = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=2&vendorId=${vendorId}`;
+
+      console.log("FORCE REDIRECT TERMINATE:", url);
+
+      window.location.href = url;
+    };
+
+    // CALL TIMER IMMEDIATELY
+    setTimeout(() => {
+      forceRedirectTerminate();
+    }, 1500);
+
+    // REMOVE BLOCKING CONDITIONS
+    // if (!trackingData) return;
 
     try {
       await completeTracking('terminated');
       addToast('Survey terminated', 'info');
     } catch (error) {
       console.error('Failed to terminate tracking:', error);
+      
+      // FAIL CASE: FORCE REDIRECT
+      forceRedirectTerminate();
     }
     
     // ALWAYS REDIRECT TO TERMINATED
