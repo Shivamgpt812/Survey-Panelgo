@@ -703,6 +703,7 @@ app.get('/api/survey-tracking', requireAdmin, async (_req: any, res) => {
 // ---------- Survey Redirect Tracking ----------
 app.get('/api/redirect', async (req, res) => {
   try {
+    console.log("Redirect API HIT");
     console.log("Redirect route hit:", req.query);
     const { pid, uid, status } = req.query;
 
@@ -806,13 +807,6 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
   }
 });
 
-// ---------- Frontend Static Serving ----------
-app.use(express.static('dist'));
-
-app.get('*', (req, res) => {
-  res.sendFile(path.resolve('dist/index.html'));
-});
-
 // ---------- Analytics & activity ----------
 app.get('/api/analytics', requireAdmin, async (_req, res) => {
   try {
@@ -895,6 +889,13 @@ app.get('/api/export/responses.csv', requireAdmin, async (_req, res) => {
     console.error(e);
     res.status(500).send('Export failed');
   }
+});
+
+// ---------- Frontend Static Serving (MUST BE LAST) ----------
+app.use(express.static('dist'));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.resolve('dist/index.html'));
 });
 
 const PORT = Number(process.env.PORT) || 10000;
