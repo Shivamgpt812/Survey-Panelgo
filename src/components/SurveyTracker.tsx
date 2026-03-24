@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { startSurveyTracking, completeSurveyTracking } from '@/lib/api';
 
@@ -17,7 +16,6 @@ interface SurveyTrackerProps {
 
 export function useSurveyTracker(surveyId: string) {
   const { token } = useAuth();
-  const navigate = useNavigate();
   const [trackingData, setTrackingData] = useState<{
     clickId: string;
     userId: string;
@@ -54,8 +52,27 @@ export function useSurveyTracker(surveyId: string) {
         token
       );
       
-      // Redirect to result page
-      navigate(response.redirectUrl);
+      // MANDATORY: Always redirect to /api/redirect with proper params
+      const auth = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
+      const pid = surveyId;
+      const uid = auth?.id || auth?._id;
+      
+      if (!pid || !uid) {
+        console.error("Missing pid or uid", { pid, uid });
+        return;
+      }
+      
+      const statusMap = {
+        'completed': 1,
+        'terminated': 2,
+        'quota_full': 3
+      };
+      
+      const statusCode = statusMap[status] || 2;
+      
+      console.log("Redirecting to API:", { pid, uid, status: statusCode });
+      window.location.href = `/api/redirect?pid=${pid}&uid=${uid}&status=${statusCode}`;
+      
       return response;
     } catch (error) {
       console.error('Failed to complete survey tracking:', error);
