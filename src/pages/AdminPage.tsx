@@ -600,7 +600,7 @@ const AdminPage: React.FC = () => {
           </div>
 
           {/* Mobile Nav */}
-          <div className="lg:hidden flex gap-1 mb-6 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="lg:hidden grid grid-cols-3 gap-2 mb-6">
             {[
               { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
               { id: 'surveys', label: 'Surveys', icon: FileText },
@@ -612,12 +612,11 @@ const AdminPage: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-1.5 px-3 py-2 border-2 border-navy rounded-pill font-jakarta font-medium text-xs whitespace-nowrap transition-all shrink-0 ${activeTab === tab.id ? 'bg-violet text-white shadow-hard' : 'bg-white text-navy'
+                className={`flex flex-col items-center gap-1 px-2 py-3 border-2 border-navy rounded-xl font-jakarta font-medium text-xs transition-all ${activeTab === tab.id ? 'bg-violet text-white shadow-hard' : 'bg-white text-navy'
                   }`}
               >
-                <tab.icon className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.label.slice(0, 4)}</span>
+                <tab.icon className="w-4 h-4" />
+                <span className="text-center">{tab.label}</span>
               </button>
             ))}
           </div>
@@ -681,12 +680,12 @@ const AdminPage: React.FC = () => {
               {/* Analytics Chart Section */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Real-time Survey Timeline */}
-                <PlayfulCard className="p-4 sm:p-6">
-                  <h2 className="font-outfit font-bold text-lg sm:text-xl text-navy mb-3 sm:mb-4 flex items-center gap-2">
-                    <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
+                <PlayfulCard className="p-3 sm:p-4 md:p-5 lg:p-6">
+                  <h2 className="font-outfit font-bold text-base sm:text-lg md:text-xl text-navy mb-2 sm:mb-3 md:mb-4 flex items-center gap-2">
+                    <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5" />
                     <span className="truncate">Survey Completions (Last 7 Days)</span>
                   </h2>
-                  <div className="h-[150px] sm:h-[200px] md:h-[250px] w-full">
+                  <div className="h-[120px] sm:h-[150px] md:h-[200px] lg:h-[250px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={timelineData}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -724,13 +723,13 @@ const AdminPage: React.FC = () => {
                 </PlayfulCard>
 
                 {/* Response Mix */}
-                <PlayfulCard className="p-4 sm:p-6">
-                  <h2 className="font-outfit font-bold text-lg sm:text-xl text-navy mb-3 sm:mb-4 flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
+                <PlayfulCard className="p-3 sm:p-4 md:p-5 lg:p-6">
+                  <h2 className="font-outfit font-bold text-base sm:text-lg md:text-xl text-navy mb-2 sm:mb-3 md:mb-4 flex items-center gap-2">
+                    <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5" />
                     <span className="truncate">Response Distribution</span>
                   </h2>
                   <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <div className="h-[120px] sm:h-[150px] md:h-[200px] w-full">
+                    <div className="h-[100px] sm:h-[120px] md:h-[150px] lg:h-[200px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
@@ -765,10 +764,10 @@ const AdminPage: React.FC = () => {
                 </PlayfulCard>
 
                 {/* Vendor Performance Chart */}
-                <PlayfulCard className="p-4 sm:p-6 lg:col-span-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-2">
-                    <h2 className="font-outfit font-bold text-lg sm:text-xl text-navy flex items-center gap-2">
-                      <Store className="w-4 h-4 sm:w-5 sm:h-5" />
+                <PlayfulCard className="p-3 sm:p-4 md:p-5 lg:p-6 lg:col-span-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 md:mb-6 gap-2">
+                    <h2 className="font-outfit font-bold text-base sm:text-lg md:text-xl text-navy flex items-center gap-2">
+                      <Store className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5" />
                       <span className="truncate">Vendor Real-time Analytics</span>
                     </h2>
                     <div className="flex items-center gap-2 sm:gap-4">
@@ -784,7 +783,7 @@ const AdminPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="h-[150px] sm:h-[200px] md:h-[300px] w-full">
+                  <div className="h-[120px] sm:h-[150px] md:h-[200px] lg:h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={vendorStatsData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
