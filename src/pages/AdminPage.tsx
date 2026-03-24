@@ -541,6 +541,16 @@ const AdminPage: React.FC = () => {
               Vendors
             </button>
             <button
+              onClick={() => setActiveTab('redirect-analytics')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-jakarta font-medium transition-all ${activeTab === 'redirect-analytics'
+                ? 'bg-violet text-white shadow-hard'
+                : 'text-navy hover:bg-periwinkle'
+                }`}
+            >
+              <BarChart3 className="w-5 h-5" />
+              Redirect Analytics
+            </button>
+            <button
               onClick={() => setActiveTab('logs')}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-jakarta font-medium transition-all ${activeTab === 'logs'
                 ? 'bg-violet text-white shadow-hard'
@@ -559,16 +569,6 @@ const AdminPage: React.FC = () => {
             >
               <Activity className="w-5 h-5" />
               Survey Logs
-            </button>
-            <button
-              onClick={() => setActiveTab('redirect-analytics')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-jakarta font-medium transition-all ${activeTab === 'redirect-analytics'
-                ? 'bg-violet text-white shadow-hard'
-                : 'text-navy hover:bg-periwinkle'
-                }`}
-            >
-              <BarChart3 className="w-5 h-5" />
-              Redirect Analytics
             </button>
           </nav>
 
