@@ -64,98 +64,73 @@ const InternalSurveyPageWithTracking: React.FC = () => {
   };
 
   const handleComplete = async () => {
-    // HARD REDIRECT TIMER (CRITICAL)
-    const forceRedirect = () => {
-      const auth = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
-
+    // MOVE REDIRECT TO TOP (CRITICAL)
+    const redirectNow = (statusCode: number) => {
       const pid = surveyId;
-      const uid = auth?.id || auth?._id || "guest_user";
+      const uid = "guest_user"; // no auth required
       const vendorId = survey?.vendorId || "";
 
-      const url = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=1&vendorId=${vendorId}`;
+      const url = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=${statusCode}&vendorId=${vendorId}`;
 
-      console.log("FORCE REDIRECT:", url);
+      console.log("🚀 FINAL REDIRECT:", url);
 
       window.location.href = url;
     };
 
-    // CALL TIMER IMMEDIATELY
+    // CALL REDIRECT IMMEDIATELY
+    redirectNow(1);
+
+    // OPTIONAL (KEEP FOR FUTURE)
     setTimeout(() => {
-      forceRedirect();
-    }, 1500);
-
-    // REMOVE BLOCKING CONDITIONS
-    // if (!survey || !trackingData) return;
-
-    try {
-      setIsSubmitting(true);
-      
-      // Submit the internal survey completion
-      await apiPost('/api/internal-complete', { surveyId }, getStoredToken());
-      
-      // Complete tracking with 'completed' status
-      await completeTracking('completed');
-      
-      // Show celebration and refresh user data
-      setShowCelebration(true);
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-      
-      await refreshUser();
-      addToast('🎉 Survey completed successfully!', 'success');
-      
-      // IMMEDIATE REDIRECT (CRITICAL)
-      redirectToBackend(1);
-      
-    } catch (error) {
-      console.error('Failed to complete survey:', error);
-      
-      // FAIL CASE: FORCE REDIRECT
-      forceRedirect();
-    } finally {
-      setIsSubmitting(false);
-    }
+      try {
+        // Submit internal survey completion
+        apiPost('/api/internal-complete', { surveyId }, getStoredToken());
+        
+        // Complete tracking with 'completed' status
+        completeTracking('completed');
+        
+        // Show celebration and refresh user data
+        setShowCelebration(true);
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+        
+        refreshUser();
+        addToast('🎉 Survey completed successfully!', 'success');
+      } catch (e) {
+        console.log("Background tracking failed");
+      }
+    }, 0);
   };
 
   const handleTerminate = async () => {
-    // HARD REDIRECT TIMER (CRITICAL)
-    const forceRedirectTerminate = () => {
-      const auth = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
-
+    // MOVE REDIRECT TO TOP (CRITICAL)
+    const redirectNow = (statusCode: number) => {
       const pid = surveyId;
-      const uid = auth?.id || auth?._id || "guest_user";
+      const uid = "guest_user"; // no auth required
       const vendorId = survey?.vendorId || "";
 
-      const url = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=2&vendorId=${vendorId}`;
+      const url = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=${statusCode}&vendorId=${vendorId}`;
 
-      console.log("FORCE REDIRECT TERMINATE:", url);
+      console.log("🚀 FINAL REDIRECT TERMINATE:", url);
 
       window.location.href = url;
     };
 
-    // CALL TIMER IMMEDIATELY
+    // CALL REDIRECT IMMEDIATELY
+    redirectNow(2);
+
+    // OPTIONAL (KEEP FOR FUTURE)
     setTimeout(() => {
-      forceRedirectTerminate();
-    }, 1500);
-
-    // REMOVE BLOCKING CONDITIONS
-    // if (!trackingData) return;
-
-    try {
-      await completeTracking('terminated');
-      addToast('Survey terminated', 'info');
-    } catch (error) {
-      console.error('Failed to terminate tracking:', error);
-      
-      // FAIL CASE: FORCE REDIRECT
-      forceRedirectTerminate();
-    }
-    
-    // ALWAYS REDIRECT TO TERMINATED
-    redirectToBackend(2);
+      try {
+        completeTracking('terminated');
+        addToast('Survey terminated', 'info');
+      } catch (e) {
+        console.log("Background tracking failed");
+      }
+    }, 0);
   };
 
   if (loading || trackingLoading) {
