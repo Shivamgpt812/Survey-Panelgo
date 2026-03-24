@@ -141,11 +141,11 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
   }
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`w-full max-w-full overflow-hidden ${className}`}>
       <div className="bg-white rounded-lg shadow">
         {/* Tab Navigation */}
-        <div className="border-b border-gray-200">
-          <nav className="flex -mb-px space-x-8 px-6" aria-label="Tabs">
+        <div className="border-b border-gray-200 overflow-x-auto">
+          <nav className="flex min-w-max -mb-px space-x-8 px-6" aria-label="Tabs">
             {[
               { id: 'overview', label: 'Overview', icon: BarChart3 },
               { id: 'analytics', label: 'Analytics', icon: TrendingUp },
@@ -158,14 +158,14 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`group inline-flex items-center py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`group inline-flex items-center py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 <tab.icon
-                  className={`-ml-0.5 mr-2 h-5 w-5 ${
+                  className={`-ml-0.5 mr-2 h-5 w-5 flex-shrink-0 ${
                     activeTab === tab.id ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'
                   }`}
                   aria-hidden="true"
@@ -177,56 +177,60 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
         </div>
 
         {/* Tab Content */}
-        <div className="p-6">
+        <div className="p-6 max-h-[80vh] overflow-y-auto">
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Redirect Analytics Overview</h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div className="w-full">
                   <h3 className="text-lg font-semibold text-gray-700 mb-4">Status Distribution</h3>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="status" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#8884d8">
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="w-full h-[250px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="status" />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="count" fill="#8884d8">
+                          {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
 
-                <div>
+                <div className="w-full">
                   <h3 className="text-lg font-semibold text-gray-700 mb-4">Status Breakdown</h3>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div className="w-full h-[250px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
 
               {/* Filters */}
-              <div className="flex flex-col md:flex-row gap-3 w-full">
+              <div className="flex flex-col lg:flex-row gap-3 w-full">
                 <input
                   type="text"
                   placeholder="Filter by PID..."
@@ -235,7 +239,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                     setFilterPid(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full md:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full lg:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 
                 <select
@@ -244,7 +248,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                     setFilterStatus(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full lg:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">All Statuses</option>
                   <option value="1">Completed</option>
@@ -255,7 +259,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
               </div>
 
               {/* Table */}
-              <div className="overflow-x-auto w-full">
+              <div className="w-full overflow-x-auto">
                 <table className="min-w-[700px] w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
