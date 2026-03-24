@@ -43,7 +43,6 @@ const InternalSurveyPageWithTracking: React.FC = () => {
 
   const questions = survey?.questions || [];
 
-  const [answers, setAnswers] = useState<Record<string, string | number>>({});
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -71,12 +70,36 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       await refreshUser();
       addToast('🎉 Survey completed successfully!', 'success');
       
+      // MANDATORY: Add final redirect to /api/redirect with proper params
+      const user = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
+      const pid = survey.id || survey.pid;
+      const uid = user?.id || user?._id;
+      
+      if (pid && uid) {
+        console.log("Redirecting with:", { pid, uid, status: 1 });
+        window.location.href = `/api/redirect?pid=${pid}&uid=${uid}&status=1`;
+      } else {
+        console.error("Missing pid or uid for redirect");
+      }
+      
     } catch (error) {
       console.error('Failed to complete survey:', error);
       
-      // If tracking fails, still try to complete the survey
+      // FAIL CASE: If tracking fails, still try to complete with terminated status
       try {
         await completeTracking('terminated');
+        
+        // Add redirect for terminated case
+        const user = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
+        const pid = survey?.id || survey?.pid;
+        const uid = user?.id || user?._id;
+        
+        if (pid && uid) {
+          console.log("Redirecting with:", { pid, uid, status: 2 });
+          window.location.href = `/api/redirect?pid=${pid}&uid=${uid}&status=2`;
+        } else {
+          console.error("Missing pid or uid for redirect");
+        }
       } catch (trackingError) {
         console.error('Tracking also failed:', trackingError);
         addToast('Survey completed but tracking failed', 'warning');
@@ -154,7 +177,7 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       <div className="container mx-auto px-4 py-8 relative z-10">
         <div className="mb-6">
           <PlayfulButton 
-            variant="ghost" 
+            variant="outline" 
             size="sm" 
             onClick={() => handleTerminate()}
             leftIcon={<ArrowLeft className="w-4 h-4" />}
@@ -221,7 +244,7 @@ const InternalSurveyPageWithTracking: React.FC = () => {
                 <PlayfulButton
                   onClick={handleComplete}
                   disabled={isSubmitting}
-                  loading={isSubmitting}
+                  isLoading={isSubmitting}
                 >
                   Complete Survey
                 </PlayfulButton>
