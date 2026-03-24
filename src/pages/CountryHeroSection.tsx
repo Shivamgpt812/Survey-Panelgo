@@ -174,9 +174,6 @@ const CountryHeroSection: React.FC = () => {
               <br />
               <span className="relative inline-block">
                 Distribution
-                <svg className="absolute -bottom-4 left-0 w-full" viewBox="0 0 200 12" fill="none" aria-hidden>
-                  <path d="M2 10C50 2 150 2 198 10" stroke="#7B61FF" strokeWidth="4" strokeLinecap="round" />
-                </svg>
               </span>
             </h1>
             <p className="font-jakarta text-xl text-navy-light max-w-4xl mx-auto mb-12">
