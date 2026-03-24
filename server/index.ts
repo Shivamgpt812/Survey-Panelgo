@@ -746,22 +746,25 @@ app.get('/api/redirect', async (req, res) => {
     const BASE_URL = "https://surveypanelgo.netlify.app";
 
     // Capture IP address
-    const ip =
-      (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
-      req.socket.remoteAddress ||
-      "Unknown";
+    const rawIp = req.headers["x-forwarded-for"] as string;
+    const ip = rawIp
+      ? rawIp.split(",")[0].trim()
+      : req.socket.remoteAddress || "Unknown";
 
     // Capture timestamp
     const timestamp = new Date().toISOString();
 
+    // Log redirect data for debugging
+    console.log("Redirect Data:", { pid, uid, status, ip, timestamp });
+
     const redirectPages = {
-      1: `/survey-result/success?pid=${pid}&uid=${uid}&status=1&ip=${ip}&time=${timestamp}`,
-      2: `/survey-result/terminated?pid=${pid}&uid=${uid}&status=2&ip=${ip}&time=${timestamp}`,
-      3: `/survey-result/quota-full?pid=${pid}&uid=${uid}&status=3&ip=${ip}&time=${timestamp}`,
-      4: `/survey-result/security?pid=${pid}&uid=${uid}&status=4&ip=${ip}&time=${timestamp}`
+      1: `/survey-result/success?pid=${pid}&uid=${uid}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      2: `/survey-result/terminated?pid=${pid}&uid=${uid}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      3: `/survey-result/quota-full?pid=${pid}&uid=${uid}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      4: `/survey-result/security?pid=${pid}&uid=${uid}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
     };
 
-    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${pid}&uid=${uid}&status=${statusCode}&ip=${ip}&time=${timestamp}`;
+    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${pid}&uid=${uid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
     const finalUrl = `${BASE_URL}${finalPath}`;
 
     console.log("Redirecting to:", finalUrl);
