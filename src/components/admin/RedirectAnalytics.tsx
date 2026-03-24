@@ -1,5 +1,27 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { PlayfulCard, PlayfulBadge } from '@/components/ui/playful';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { 
+  Search, 
+  Globe, 
+  User, 
+  CheckCircle, 
+  XCircle, 
+  AlertCircle,
+  Clock,
+  RefreshCw,
+  Activity,
+  BarChart3,
+  Copy
+} from 'lucide-react';
 
 const BACKEND_URL = "https://survey-panelgo.onrender.com";
 
@@ -140,12 +162,21 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
 
   return (
     <div className={`space-y-6 ${className}`}>
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Redirect Analytics</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <PlayfulCard className="p-6">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">Status Distribution</h3>
+            <h2 className="font-outfit font-bold text-2xl text-navy mb-2">Redirect Analytics</h2>
+            <p className="font-jakarta text-navy-light">Monitor and analyze survey redirect activity</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Activity className="w-5 h-5 text-violet" />
+            <BarChart3 className="w-5 h-5 text-violet" />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div>
+            <h3 className="font-outfit font-semibold text-lg text-navy mb-4">Status Distribution</h3>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -162,7 +193,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">Status Breakdown</h3>
+            <h3 className="font-outfit font-semibold text-lg text-navy mb-4">Status Breakdown</h3>
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
@@ -214,69 +245,72 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
         </div>
 
         <div className="overflow-x-auto w-full">
-          <table className="min-w-[700px] w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Timestamp
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  PID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  UID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  IP Address
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+          <Table className="w-auto" style={{ minWidth: '900px' }}>
+            <TableHeader>
+              <TableRow className="bg-periwinkle/30">
+                <TableHead className="font-outfit font-bold text-navy">Timestamp</TableHead>
+                <TableHead className="font-outfit font-bold text-navy">PID (Click ID)</TableHead>
+                <TableHead className="font-outfit font-bold text-navy">UID (User ID)</TableHead>
+                <TableHead className="font-outfit font-bold text-navy">Status</TableHead>
+                <TableHead className="font-outfit font-bold text-navy">IP Address</TableHead>
+                <TableHead className="font-outfit font-bold text-navy">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {logs.map((log) => (
-                <tr 
-                  key={log.id}
-                  style={{ cursor: "pointer" }}
-                  onClick={() => {
-                    const statusCode = log.status || statusMap[log.statusText];
-                    window.open(
-                      `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`,
-                      "_blank"
-                    );
-                  }}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(log.createdAt).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div className="truncate max-w-[120px]" title={log.pid}>
-                      {log.pid}
+                <TableRow key={log.id} className="hover:bg-periwinkle/10 cursor-pointer" onClick={() => {
+                  const statusCode = log.status || statusMap[log.statusText];
+                  window.open(
+                    `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`,
+                    "_blank"
+                  );
+                }}>
+                  <TableCell className="font-medium min-w-[180px] max-w-[200px]">
+                    <div className="flex items-center space-x-2">
+                      <Clock className="h-4 w-4 text-navy-light flex-shrink-0" />
+                      <span className="text-sm font-mono whitespace-nowrap">{new Date(log.createdAt).toLocaleString()}</span>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div className="truncate max-w-[120px]" title={log.uid}>
-                      {log.uid}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="h-4 w-4 text-navy-light" />
+                      <span className="font-mono text-sm truncate max-w-[120px]" title={log.pid}>
+                        {log.pid}
+                      </span>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full text-white`}
-                      style={{ backgroundColor: statusColors[log.status as keyof typeof statusColors] }}
-                    >
-                      {log.statusText}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div className="truncate max-w-[120px]" title={log.ipAddress}>
-                      {log.ipAddress}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center space-x-2">
+                      <User className="h-4 w-4 text-navy-light" />
+                      <span className="font-mono text-sm truncate max-w-[120px]" title={log.uid}>
+                        {log.uid}
+                      </span>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      {(() => {
+                        const statusIcon = log.status === 1 ? CheckCircle : log.status === 2 ? XCircle : AlertCircle;
+                        const Icon = statusIcon;
+                        return <Icon className="h-4 w-4 text-navy-light" />;
+                      })()}
+                      <PlayfulBadge 
+                        variant={log.status === 1 ? 'green' : log.status === 2 ? 'pink' : 'yellow'}
+                        className="text-xs"
+                      >
+                        {log.statusText}
+                      </PlayfulBadge>
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center space-x-2">
+                      <Globe className="h-4 w-4 text-navy-light" />
+                      <span className="text-sm truncate max-w-[120px]" title={log.ipAddress}>
+                        {log.ipAddress}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={(e) => {
@@ -287,15 +321,9 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                             "_blank"
                           );
                         }}
-                        style={{
-                          padding: "6px 12px",
-                          borderRadius: "6px",
-                          border: "none",
-                          background: "#7C83FD",
-                          color: "white",
-                          cursor: "pointer"
-                        }}
+                        className="px-3 py-1 bg-violet hover:bg-violet/80 text-white text-xs font-medium rounded-md transition-colors flex items-center gap-1"
                       >
+                        <RefreshCw className="w-3 h-3" />
                         Replay
                       </button>
                       <button
@@ -306,23 +334,17 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                           navigator.clipboard.writeText(url);
                           alert("Link copied!");
                         }}
-                        style={{
-                          padding: "6px 12px",
-                          borderRadius: "6px",
-                          border: "none",
-                          background: "#10b981",
-                          color: "white",
-                          cursor: "pointer"
-                        }}
+                        className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded-md transition-colors flex items-center gap-1"
                       >
-                        Copy Link
+                        <Copy className="w-3 h-3" />
+                        Copy
                       </button>
                     </div>
-                  </td>
+                  </TableCell>
                 </tr>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {totalPages > 1 && (
@@ -348,7 +370,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
             </button>
           </div>
         )}
-      </div>
+      </PlayfulCard>
     </div>
   );
 }
