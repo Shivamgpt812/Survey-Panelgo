@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
+const BACKEND_URL = "https://survey-panelgo.onrender.com";
+
+const statusMap: Record<string, number> = {
+  "Completed": 1,
+  "Terminated": 2,
+  "Quota Full": 3,
+  "Security Terminated": 4
+};
+
 interface RedirectLog {
   id: string;
   pid: string;
@@ -223,11 +232,24 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   IP Address
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {logs.map((log) => (
-                <tr key={log.id}>
+                <tr 
+                  key={log.id}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => {
+                    const statusCode = log.status || statusMap[log.statusText];
+                    window.open(
+                      `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`,
+                      "_blank"
+                    );
+                  }}
+                >
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {new Date(log.createdAt).toLocaleString()}
                   </td>
@@ -247,6 +269,48 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {log.ipAddress}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const statusCode = log.status || statusMap[log.statusText];
+                        window.open(
+                          `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`,
+                          "_blank"
+                        );
+                      }}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        border: "none",
+                        background: "#7C83FD",
+                        color: "white",
+                        cursor: "pointer",
+                        marginRight: "8px"
+                      }}
+                    >
+                      Replay
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const statusCode = log.status || statusMap[log.statusText];
+                        const url = `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`;
+                        navigator.clipboard.writeText(url);
+                        alert("Link copied!");
+                      }}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        border: "none",
+                        background: "#10b981",
+                        color: "white",
+                        cursor: "pointer"
+                      }}
+                    >
+                      Copy Link
+                    </button>
                   </td>
                 </tr>
               ))}

@@ -1,6 +1,8 @@
 import React from "react";
 
-const SurveySuccess = () => {
+export default function SurveySuccess() {
+  console.log("SurveySuccess rendered");
+
   return (
     <div style={{
       display: "flex",
@@ -17,6 +19,4 @@ const SurveySuccess = () => {
       </button>
     </div>
   );
-};
-
-export default SurveySuccess;
+}
