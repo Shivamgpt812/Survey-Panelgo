@@ -51,6 +51,11 @@ const InternalSurveyPageWithTracking: React.FC = () => {
   const handleComplete = async () => {
     if (!survey || !trackingData) return;
 
+    if (isSubmitting) {
+      console.log("Submit already in progress, blocking duplicate call");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       
@@ -66,17 +71,26 @@ const InternalSurveyPageWithTracking: React.FC = () => {
         return;
       }
       
-      // Debug logging
-      console.log("Submitting survey with:", { uid, surveyId, vendorId, pid });
+      // STEP 2: FORCE SUBMIT LOGGING
+      console.log("=== SURVEY SUBMISSION DEBUG ===");
+      console.log("Before API call - Payload:", { 
+        surveyId, 
+        uid, 
+        vendorId, 
+        pid, 
+        status: "1" 
+      });
       
       // Submit internal survey completion with data from URL (no auth token required)
-      await apiPost('/api/internal-complete', { 
+      const response = await apiPost('/api/internal-complete', { 
         surveyId, 
         uid,        // from URL
         vendorId,   // from URL
         pid,        // from URL
         status: "1",  // status: "1" as required
       });
+      
+      console.log("After API call - Response:", response);
       
       // Complete tracking with 'completed' status
       await completeTracking('completed');
@@ -91,49 +105,32 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       
       addToast('🎉 Survey completed successfully!', 'success');
       
+      // STEP 5: FORCE SUCCESS REDIRECT
       // MANDATORY: Add final redirect to /api/redirect with proper params
       // Use pid from URL (already defined above)
       
       if (pid && uid) {
-        console.log("Redirecting with:", { pid, uid, status: 1 });
+        console.log("STEP 5: Force redirect with:", { pid, uid, status: 1 });
         window.location.href = `${BACKEND_URL}/api/redirect?pid=${encodeURIComponent(pid)}&uid=${encodeURIComponent(uid)}&status=1`;
       } else {
         console.error("Missing pid or uid for redirect");
       }
       
     } catch (error) {
-      console.error('Failed to complete survey:', error);
+      // STEP 4: VERIFY API RESPONSE - Handle errors properly
+      console.log("STEP 4: API Error detected");
+      console.error('Failed to complete survey - Full error:', error);
       
       // Show error message - DO NOT redirect to login
       addToast('Failed to submit survey. Please try again.', 'error');
       
-      // FAIL CASE: If tracking fails, still try to complete with terminated status
-      try {
-        // Use same data from URL for error case too
-        const uid = searchParams.get('uid');
-        const pid = searchParams.get('pid') || surveyId;
-        
-        if (!uid) {
-          console.error("UID is missing from URL in error case!");
-          addToast('Missing unique identifier. Please use the survey link provided.', 'error');
-          return;
-        }
-        
-        await completeTracking('terminated');
-        
-        // Add redirect for terminated case using UID from URL
-        if (pid && uid) {
-          console.log("Redirecting with:", { pid, uid, status: 2 });
-          window.location.href = `${BACKEND_URL}/api/redirect?pid=${encodeURIComponent(pid)}&uid=${encodeURIComponent(uid)}&status=2`;
-        } else {
-          console.error("Missing pid or uid for redirect");
-        }
-      } catch (trackingError) {
-        console.error('Tracking also failed:', trackingError);
-        addToast('Survey submission failed. Please refresh and try again.', 'error');
-      }
+      // STEP 8: ADD FAILSAFE - DO NOT navigate anywhere
+      console.log("STEP 8: Failsafe activated - No navigation, just error toast");
+      
     } finally {
+      // STEP 3: BLOCK SECOND CLICK BEHAVIOR
       setIsSubmitting(false);
+      console.log("Submit button re-enabled after operation completion");
     }
   };
 
