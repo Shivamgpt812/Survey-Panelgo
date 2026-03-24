@@ -51,7 +51,9 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
       if (filterPid) params.append('pid', filterPid);
       if (filterStatus) params.append('status', filterStatus);
 
-      const response = await fetch(`/api/redirect-logs?${params}`, {
+      const url = `https://survey-panelgo.onrender.com/api/redirect-logs?${params}`;
+      console.log("API CALL (GET):", url);
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -59,6 +61,13 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
 
       if (!response.ok) {
         throw new Error('Failed to fetch redirect logs');
+      }
+
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Invalid API response:", text);
+        throw new Error("API did not return JSON");
       }
 
       const data = await response.json();

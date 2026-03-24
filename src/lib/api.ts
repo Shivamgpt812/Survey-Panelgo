@@ -23,6 +23,7 @@ async function parseError(res: Response): Promise<string> {
 }
 
 export async function apiGet<T>(path: string, token?: string | null): Promise<T> {
+  console.log("API CALL (GET):", path);
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${BASE}${path}`, { headers });
@@ -31,18 +32,18 @@ export async function apiGet<T>(path: string, token?: string | null): Promise<T>
     throw new Error(await parseError(res));
   }
   
-  // Additional safety check before parsing JSON
-  const contentType = res.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
+  const contentType = res.headers.get("content-type");
+  if (!contentType || !contentType.includes("application/json")) {
     const text = await res.text();
-    console.log('Unexpected content type:', contentType, 'Response:', text);
-    throw new Error(`Expected JSON but got ${contentType}. Response: ${text.substring(0, 200)}...`);
+    console.error("Invalid API response:", text);
+    throw new Error("API did not return JSON");
   }
   
   return res.json() as Promise<T>;
 }
 
 export async function apiGetText(path: string, token: string): Promise<string> {
+  console.log("API CALL (GET TEXT):", path);
   const res = await fetch(`${BASE}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -55,6 +56,7 @@ export async function apiPost<T>(
   body?: unknown,
   token?: string | null
 ): Promise<T> {
+  console.log("API CALL (POST):", path);
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${BASE}${path}`, {
@@ -63,15 +65,32 @@ export async function apiPost<T>(
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) throw new Error(await parseError(res));
+
+  const contentType = res.headers.get("content-type");
+  if (!contentType || !contentType.includes("application/json")) {
+    const text = await res.text();
+    console.error("Invalid API response:", text);
+    throw new Error("API did not return JSON");
+  }
+
   return res.json() as Promise<T>;
 }
 
 export async function apiDelete<T>(path: string, token: string): Promise<T> {
+  console.log("API CALL (DELETE):", path);
   const res = await fetch(`${BASE}${path}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(await parseError(res));
+
+  const contentType = res.headers.get("content-type");
+  if (!contentType || !contentType.includes("application/json")) {
+    const text = await res.text();
+    console.error("Invalid API response:", text);
+    throw new Error("API did not return JSON");
+  }
+
   return res.json() as Promise<T>;
 }
 
@@ -80,6 +99,7 @@ export async function apiPatch<T>(
   body: unknown,
   token: string
 ): Promise<T> {
+  console.log("API CALL (PATCH):", path);
   const res = await fetch(`${BASE}${path}`, {
     method: 'PATCH',
     headers: {
@@ -89,6 +109,14 @@ export async function apiPatch<T>(
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(await parseError(res));
+
+  const contentType = res.headers.get("content-type");
+  if (!contentType || !contentType.includes("application/json")) {
+    const text = await res.text();
+    console.error("Invalid API response:", text);
+    throw new Error("API did not return JSON");
+  }
+
   return res.json() as Promise<T>;
 }
 
