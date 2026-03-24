@@ -33,6 +33,7 @@ export interface Survey {
   isPopular?: boolean;
   preScreener: PreScreenerQuestion[];
   questions?: Question[];
+  vendorId?: string;
 }
 
 export interface Question {

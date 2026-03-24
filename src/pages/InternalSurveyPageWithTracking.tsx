@@ -78,8 +78,8 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       const uid = user?.id || user?._id;
       
       if (pid && uid) {
-        console.log("Redirecting with:", { pid, uid, status: 1 });
-        window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=1`;
+        console.log("Redirecting with:", { pid, uid, status: 1, vendorId: survey?.vendorId });
+        window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=1&vendorId=${survey?.vendorId || ""}`;
       } else {
         console.error("Missing pid or uid for redirect");
       }
@@ -93,12 +93,12 @@ const InternalSurveyPageWithTracking: React.FC = () => {
         
         // Add redirect for terminated case
         const user = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
-        const pid = survey?.id || survey?.pid;
+        const pid = survey?.id;
         const uid = user?.id || user?._id;
         
         if (pid && uid) {
-          console.log("Redirecting with:", { pid, uid, status: 2 });
-          window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=2`;
+          console.log("Redirecting with:", { pid, uid, status: 2, vendorId: survey?.vendorId });
+          window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=2&vendorId=${survey?.vendorId || ""}`;
         } else {
           console.error("Missing pid or uid for redirect");
         }
