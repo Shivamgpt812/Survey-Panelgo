@@ -473,7 +473,15 @@ app.post('/api/responses', async (req, res) => {
 
 app.post('/api/internal-complete', async (req, res) => {
   try {
-    const { surveyId, vendorId, uid } = req.body as { surveyId?: string; vendorId?: string; uid?: string };
+    const { surveyId, vendorId, uid, pid, status } = req.body as { 
+      surveyId?: string; 
+      vendorId?: string; 
+      uid?: string; 
+      pid?: string;
+      status?: string;
+    };
+    
+    // STEP 1: REMOVE REQUIRED VALIDATION - Only validate required frontend fields
     if (!surveyId || !mongoose.isValidObjectId(surveyId)) {
       res.status(400).json({ error: 'Invalid survey' });
       return;
@@ -482,6 +490,7 @@ app.post('/api/internal-complete', async (req, res) => {
       res.status(400).json({ error: 'UID is required' });
       return;
     }
+    
     const survey = await Survey.findById(surveyId);
     if (!survey) {
       res.status(404).json({ error: 'Survey not found' });
@@ -497,11 +506,31 @@ app.post('/api/internal-complete', async (req, res) => {
     }
 
     const sid = survey._id.toString();
+    
+    // STEP 2: GENERATE IP INTERNALLY
+    const getIpAddress = (req: any) => {
+      return req.headers['x-forwarded-for'] || 
+             req.headers['cf-connecting-ip'] || 
+             req.ip || 
+             req.connection?.remoteAddress || 
+             req.socket?.remoteAddress || 
+             'unknown';
+    };
+    
+    const ipAddress = getIpAddress(req);
+    
+    // STEP 3: GENERATE TIMESTAMP INTERNALLY
+    const timestamp = new Date().toISOString();
+    
     console.log('=== INTERNAL COMPLETION DEBUG ===');
-    console.log('User ID:', uid);
-    console.log('Survey ID:', sid);
-    console.log('Vendor ID:', vendorId);
-    console.log('Vendor ID type:', typeof vendorId);
+    console.log('Frontend fields - Survey ID:', sid);
+    console.log('Frontend fields - UID:', uid);
+    console.log('Frontend fields - Vendor ID:', vendorId);
+    console.log('Frontend fields - PID:', pid);
+    console.log('Frontend fields - Status:', status);
+    console.log('Generated IP:', ipAddress);
+    console.log('Generated Timestamp:', timestamp);
+    console.log('=====================================');
     
     // First, let's see all existing responses for this user+survey
     const allExisting = await Response.find({ 
@@ -510,9 +539,6 @@ app.post('/api/internal-complete', async (req, res) => {
       status: 'complete'
     });
     console.log('All existing completions for this user+survey:', allExisting.length);
-    allExisting.forEach(r => {
-      console.log('- Response vendorId:', r.vendorId, 'type:', typeof r.vendorId);
-    });
     
     const existing = await Response.findOne({ 
       surveyId: sid, 
@@ -528,21 +554,25 @@ app.post('/api/internal-complete', async (req, res) => {
       return;
     }
 
+    // STEP 4: STORE THESE VALUES - Attach to submission data
     await Response.create({
       surveyId: survey._id.toString(),
       userId: uid,  // Use UID instead of user._id
       vendorId: vendorId || undefined,
       status: 'complete',
+      ipAddress,  // Generated internally
+      timestamp,  // Generated internally
+      pid,        // From frontend
     });
 
-    console.log('Internal completion response created with vendorId:', vendorId, 'for survey:', survey._id.toString());
+    console.log('Internal completion response created with IP:', ipAddress, 'timestamp:', timestamp, 'vendorId:', vendorId, 'for survey:', survey._id.toString());
 
     // Update vendor completion tracking if this is a vendor completion
     if (vendorId) {
       try {
         await Vendor.findByIdAndUpdate(vendorId, {
           $addToSet: { completedSurveys: survey._id },
-          $inc: { totalCompletions: 1 }
+            $inc: { totalCompletions: 1 }
         });
         console.log(`Vendor completion tracked: ${vendorId} for survey ${survey._id}`);
       } catch (vendorError) {
@@ -563,9 +593,22 @@ app.post('/api/internal-complete', async (req, res) => {
       });
     }
 
-    res.json({ success: true, message: 'Survey completed successfully' });
+    // STEP 5: KEEP ONLY REQUIRED FRONTEND FIELDS - Success response
+    res.json({ 
+      success: true, 
+      message: 'Survey completed successfully',
+      data: {
+        surveyId: sid,
+        uid,
+        vendorId,
+        pid,
+        status,
+        ipAddress,  // For debugging
+        timestamp,  // For debugging
+      }
+    });
   } catch (e) {
-    console.error(e);
+    console.error('Internal completion error:', e);
     res.status(500).json({ error: 'Failed to complete survey' });
   }
 });
