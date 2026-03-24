@@ -67,6 +67,16 @@ const AdminPanel: React.FC = () => {
   };
 
   const handleOpen = (url: string) => {
+    console.log("Opening redirect:", url);
+    window.open(url, '_blank');
+  };
+
+  const handleOpenWithValidation = (url: string) => {
+    if (!pid) {
+      alert("Enter PID first");
+      return;
+    }
+    console.log("Opening redirect:", url);
     window.open(url, '_blank');
   };
 
@@ -137,8 +147,9 @@ const AdminPanel: React.FC = () => {
                       <Copy className="w-4 h-4" />
                     </button>
                     <button
-                      className="w-full md:w-auto px-3 py-2 bg-green-500 text-white rounded-lg"
-                      onClick={() => handleOpen(link.url)}
+                      className="w-full md:w-auto px-3 py-2 bg-green-500 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      onClick={() => handleOpenWithValidation(link.url)}
+                      disabled={!pid}
                     >
                       <ExternalLink className="w-4 h-4" />
                     </button>
