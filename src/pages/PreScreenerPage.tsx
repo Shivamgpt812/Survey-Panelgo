@@ -683,5 +683,6 @@ const PreScreenerPage: React.FC = () => {
     </div>
   );
 };
+}
 
 export default PreScreenerPage;
