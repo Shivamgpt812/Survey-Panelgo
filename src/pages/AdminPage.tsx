@@ -729,7 +729,7 @@ const AdminPage: React.FC = () => {
                     <span className="truncate">Response Distribution</span>
                   </h2>
                   <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <div className="h-[140px] sm:h-[160px] md:h-[180px] lg:h-[200px] w-full">
+                    <div className="h-[180px] sm:h-[200px] md:h-[220px] lg:h-[250px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
