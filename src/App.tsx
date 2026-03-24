@@ -21,6 +21,18 @@ function AppContent() {
   const location = useLocation();
   const hideWhatsApp = location.pathname.startsWith('/auth');
 
+  // Generate persistent UID for non-logged-in users
+  useEffect(() => {
+    const existingUid = localStorage.getItem('surveypanelgo_uid');
+    if (!existingUid) {
+      // Generate unique ID: timestamp + random string
+      const timestamp = Date.now().toString(36);
+      const randomStr = Math.random().toString(36).substring(2, 15);
+      const uniqueUid = `${timestamp}_${randomStr}`;
+      localStorage.setItem('surveypanelgo_uid', uniqueUid);
+    }
+  }, []);
+
   return (
     <>
       <Routes>

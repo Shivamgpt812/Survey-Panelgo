@@ -106,7 +106,8 @@ const PreScreenerPage: React.FC = () => {
             {
               surveyId: survey.id,
               vendorId,
-              userId: user?.id,
+              // Use logged-in user ID if available, otherwise use persistent UID
+              userId: user?.id || localStorage.getItem('surveypanelgo_uid'),
               status: 'complete',
             },
             getStoredToken()
@@ -230,7 +231,8 @@ const PreScreenerPage: React.FC = () => {
           {
             surveyId: survey.id,
             vendorId: vendorId || undefined,
-            userId: user?.id,
+            // Use logged-in user ID if available, otherwise use persistent UID
+            userId: user?.id || localStorage.getItem('surveypanelgo_uid'),
             status: 'terminate',
             preScreenerAnswers: answers,
             failureReason: validation.message || 'Did not meet pre-screener requirements',
@@ -273,7 +275,8 @@ const PreScreenerPage: React.FC = () => {
           {
             surveyId: survey!.id,
             vendorId: vendorId || undefined,
-            userId: user?.id || undefined, // Allow undefined for vendor flow without login
+            // Use logged-in user ID if available, otherwise use persistent UID
+            userId: user?.id || localStorage.getItem('surveypanelgo_uid') || undefined,
             status: 'complete',
             preScreenerAnswers: answers,
           },

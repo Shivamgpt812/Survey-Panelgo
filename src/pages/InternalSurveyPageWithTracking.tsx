@@ -75,7 +75,8 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       // MANDATORY: Add final redirect to /api/redirect with proper params
       const user = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
       const pid = survey.id;
-      const uid = user?.id || user?._id;
+      // Use logged-in user ID if available, otherwise use persistent UID
+      const uid = user?.id || user?._id || localStorage.getItem('surveypanelgo_uid');
       
       if (pid && uid) {
         console.log("Redirecting with:", { pid, uid, status: 1 });
@@ -94,7 +95,8 @@ const InternalSurveyPageWithTracking: React.FC = () => {
         // Add redirect for terminated case
         const user = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
         const pid = survey?.id || survey?.pid;
-        const uid = user?.id || user?._id;
+        // Use logged-in user ID if available, otherwise use persistent UID
+        const uid = user?.id || user?._id || localStorage.getItem('surveypanelgo_uid');
         
         if (pid && uid) {
           console.log("Redirecting with:", { pid, uid, status: 2 });
