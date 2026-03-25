@@ -17,6 +17,7 @@ export interface IVendorSurvey extends Document {
   questions: Array<{
     text: string;
     options: string[];
+    type: 'multiple-choice' | 'rating' | 'text';
   }>;
   created_at: Date;
   updated_at: Date;
@@ -73,6 +74,11 @@ const VendorSurveySchema = new Schema<IVendorSurvey>({
       type: String,
       required: true,
     }],
+    type: {
+      type: String,
+      required: true,
+      enum: ['multiple-choice', 'rating', 'text']
+    }
   }],
 }, {
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
