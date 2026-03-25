@@ -21,39 +21,6 @@ function AppContent() {
   const location = useLocation();
   const hideWhatsApp = location.pathname.startsWith('/auth');
 
-  // Debug routing and redirects
-  useEffect(() => {
-    console.log('=== 🌐 APP ROUTING DEBUG ===');
-    console.log('📍 Current path:', location.pathname);
-    console.log('🔍 Search params:', location.search);
-    console.log('🔗 Hash:', location.hash);
-    console.log('📋 Full URL:', window.location.href);
-    console.log('🍪 Cookies:', document.cookie);
-    console.log('==========================');
-  }, [location]);
-
-  // Global error handlers for debugging
-  useEffect(() => {
-    console.log('🌐 Setting up global error handlers...');
-    
-    window.onerror = function(message, source, lineno, colno, error) {
-      console.error("🌐 GLOBAL ERROR:", { message, source, lineno, colno, error });
-    };
-
-    window.onunhandledrejection = function(event) {
-      console.error("🌐 PROMISE ERROR:", event.reason);
-    };
-    
-    // Debug navigation
-    const originalPushState = history.pushState;
-    history.pushState = function(state, title, url) {
-      console.log('🔁 NAVIGATION ATTEMPT:', { state, title, url, from: 'App.tsx' });
-      return originalPushState.call(this, state, title, url);
-    };
-    
-    console.log('✅ Global debug handlers ready');
-  }, []);
-
   return (
     <>
       <Routes>

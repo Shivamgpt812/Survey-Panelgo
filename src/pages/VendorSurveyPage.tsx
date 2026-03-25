@@ -32,29 +32,14 @@ const VendorSurveyPage: React.FC = () => {
 
   // Global error handlers for debugging
   useEffect(() => {
-    console.log('=== 🌐 VENDOR SURVEY PAGE DEBUG INIT ===');
-    console.log('📍 Current URL:', window.location.href);
-    console.log('🔑 Token from params:', token);
-    console.log('🍪 Cookies:', document.cookie);
-    
     window.onerror = function(message, source, lineno, colno, error) {
-      console.error("🌐 GLOBAL ERROR:", { message, source, lineno, colno, error });
+      console.error("GLOBAL ERROR:", { message, source, lineno, colno, error });
     };
 
     window.onunhandledrejection = function(event) {
-      console.error("🌐 PROMISE ERROR:", event.reason);
+      console.error("PROMISE ERROR:", event.reason);
     };
-    
-    // Debug navigation attempts
-    const originalPushState = history.pushState;
-    history.pushState = function(state, title, url) {
-      console.log('🔁 NAVIGATION ATTEMPT:', { state, title, url });
-      return originalPushState.call(this, state, title, url);
-    };
-    
-    console.log('✅ Debug handlers initialized');
-    console.log('======================================');
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -74,13 +59,7 @@ const VendorSurveyPage: React.FC = () => {
 
   const loadVendorSurvey = async () => {
     try {
-      console.log('🔄 === FETCHING VENDOR SURVEY ===');
-      console.log('📍 URL:', `/s/${token}`);
-      console.log('📋 Headers:', {
-        'Content-Type': 'application/json',
-        'x-vendor-flow': 'true'
-      });
-      console.log('🍪 Credentials: include');
+      console.log('🔄 Fetching vendor survey from server...');
       
       // Call the vendor survey endpoint
       const response = await fetch(`/s/${token}`, {
@@ -93,13 +72,11 @@ const VendorSurveyPage: React.FC = () => {
       });
 
       console.log('📡 Server response status:', response.status);
-      console.log('📋 Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
-        console.error('❌ Server error response');
-        const errorData = await response.text();
-        console.error('❌ Error response body:', errorData);
-        throw new Error(errorData || 'Failed to load vendor survey');
+        const errorData = await response.json();
+        console.error('❌ Server error:', errorData);
+        throw new Error(errorData.error || 'Failed to load vendor survey');
       }
 
       const data = await response.json();
@@ -107,9 +84,7 @@ const VendorSurveyPage: React.FC = () => {
         surveyId: data.survey._id,
         surveyTitle: data.survey.title,
         uid: data.uid,
-        isVendorFlow: data.isVendorFlow,
-        hasPreScreener: !!(data.survey.preScreener && data.survey.preScreener.length > 0),
-        isExternal: data.survey.isExternal
+        isVendorFlow: data.isVendorFlow
       });
 
       setSurvey(data.survey);
@@ -117,25 +92,16 @@ const VendorSurveyPage: React.FC = () => {
       
       // Check if survey has pre-screener questions
       if (data.survey.preScreener && data.survey.preScreener.length > 0) {
-        console.log('📋 Pre-screener questions found, step set to prescreener');
         setCurrentStep('prescreener');
+        console.log('📋 Pre-screener questions found, step set to prescreener');
       } else {
         // No pre-screener, go directly to survey
-        console.log('🚀 No pre-screener, step set to survey');
         setCurrentStep('survey');
+        console.log('🚀 No pre-screener, step set to survey');
       }
 
     } catch (error) {
-      console.error('❌ === VENDOR SURVEY LOAD ERROR ===');
-      console.error('❌ Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : 'No stack',
-        token,
-        currentUrl: window.location.href,
-        cookies: document.cookie
-      });
-      console.error('====================================');
-      
+      console.error('❌ VENDOR SURVEY LOAD ERROR:', error);
       addToast(error instanceof Error ? error.message : 'Failed to load survey', 'error');
       navigate('/');
     } finally {
@@ -144,11 +110,10 @@ const VendorSurveyPage: React.FC = () => {
   };
 
   const handlePrescreenerSubmit = async (answers: Array<{ questionId: string; value: any }>) => {
-    console.log('=== 📤 PRESCREENER SUBMISSION DEBUG ===');
-    console.log('📋 Submitting answers:', answers);
-    console.log('📋 Survey ID:', survey?.id);
-    console.log('🧠 UID:', uid);
-    console.log('🍪 Current cookies:', document.cookie);
+    console.log('=== PRESCREENER SUBMISSION DEBUG ===');
+    console.log('Submitting answers:', answers);
+    console.log('Survey ID:', survey?.id);
+    console.log('UID:', uid);
     console.log('=====================================');
 
     setPrescreenerAnswers(answers);
@@ -160,33 +125,12 @@ const VendorSurveyPage: React.FC = () => {
       if (passed) {
         console.log('✅ Pre-screener passed');
         
-        // Record the response with debugging
-        console.log('📤 Submitting response to API...');
-        const response = await fetch('/api/responses', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-vendor-flow': 'true'
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            surveyId: survey!.id,
-            status: 'complete',
-            preScreenerAnswers: answers
-          })
+        // Record the response
+        await apiPost('/api/responses', {
+          surveyId: survey!.id,
+          status: 'complete',
+          preScreenerAnswers: answers
         });
-
-        console.log('📡 API Response status:', response.status);
-        console.log('📋 Response headers:', Object.fromEntries(response.headers.entries()));
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ API Error Response:', errorText);
-          throw new Error(errorText || 'Failed to submit response');
-        }
-
-        const responseData = await response.json();
-        console.log('✅ Response submitted successfully:', responseData);
 
         setShowCelebration(true);
         confetti({
@@ -197,7 +141,6 @@ const VendorSurveyPage: React.FC = () => {
         });
 
         setTimeout(() => {
-          console.log('🔁 Handling post-submission redirect...');
           setShowCelebration(false);
           if (survey!.isExternal && survey!.link) {
             console.log('🔗 Opening external survey:', survey!.link);
@@ -211,49 +154,19 @@ const VendorSurveyPage: React.FC = () => {
       } else {
         console.log('❌ Pre-screener failed');
         
-        // Record failure with debugging
-        console.log('📤 Submitting failure response...');
-        const failResponse = await fetch('/api/responses', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-vendor-flow': 'true'
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            surveyId: survey!.id,
-            status: 'terminate',
-            preScreenerAnswers: answers,
-            failureReason: 'Did not meet pre-screener requirements'
-          })
+        // Record failure
+        await apiPost('/api/responses', {
+          surveyId: survey!.id,
+          status: 'terminate',
+          preScreenerAnswers: answers,
+          failureReason: 'Did not meet pre-screener requirements'
         });
 
-        console.log('📡 Failure API Response status:', failResponse.status);
-
-        if (!failResponse.ok) {
-          const errorText = await failResponse.text();
-          console.error('❌ Failure API Error:', errorText);
-        } else {
-          console.log('✅ Failure response recorded');
-        }
-
         addToast('Not eligible for this survey', 'error');
-        setTimeout(() => {
-          console.log('🔁 Redirecting to home after failure...');
-          navigate('/');
-        }, 3000);
+        setTimeout(() => navigate('/'), 3000);
       }
     } catch (error) {
-      console.error('❌ === PRESCREENER SUBMISSION ERROR ===');
-      console.error('❌ Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : 'No stack',
-        surveyId: survey?.id,
-        uid,
-        answers,
-        cookies: document.cookie
-      });
-      console.error('========================================');
+      console.error('❌ PRESCREENER SUBMISSION ERROR:', error);
       addToast('Failed to submit pre-screener', 'error');
     }
   };
