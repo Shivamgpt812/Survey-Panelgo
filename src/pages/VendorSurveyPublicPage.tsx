@@ -127,7 +127,7 @@ export default function VendorSurveyPublicPage() {
         ? 'https://survey-panelgo.onrender.com' 
         : 'http://localhost:3000';
 
-      const response = await fetch(`${apiUrl}/vendor-lite/validate-pre-screener`, {
+      const response = await fetch(`${apiUrl}/vendor-lite/validate-pre-screener?pid=${encodeURIComponent(pid)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -138,6 +138,8 @@ export default function VendorSurveyPublicPage() {
           userId: uid
         }),
       });
+
+      console.log("🚀 Pre-screener validation URL:", `${apiUrl}/vendor-lite/validate-pre-screener?pid=${encodeURIComponent(pid)}`);
 
       const data = await response.json();
       console.log("Pre-screener validation response:", data);
@@ -240,8 +242,9 @@ export default function VendorSurveyPublicPage() {
         : 'http://localhost:3000';
 
       console.log("🚀 Submitting survey to:", apiUrl);
+      console.log("🚀 PID being sent:", pid);
 
-      const response = await fetch(`${apiUrl}/vendor-lite/submit`, {
+      const response = await fetch(`${apiUrl}/vendor-lite/submit?pid=${encodeURIComponent(pid)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
