@@ -539,15 +539,15 @@ export default function VendorLitePage() {
               {surveyForm.type === 'internal' && (
                 <div>
                   <div className="flex justify-between items-center mb-3">
-                  <label className="block text-sm font-medium text-gray-700">Questions</label>
-                  <button
-                    type="button"
-                    onClick={addQuestion}
-                    className="px-3 py-1 text-sm bg-violet text-white rounded-lg hover:bg-violet/80 transition-colors"
-                  >
-                    + Add Question
-                  </button>
-                </div>
+                    <label className="block text-sm font-medium text-gray-700">Questions</label>
+                    <button
+                      type="button"
+                      onClick={addQuestion}
+                      className="px-3 py-1 text-sm bg-violet text-white rounded-lg hover:bg-violet/80 transition-colors"
+                    >
+                      + Add Question
+                    </button>
+                  </div>
                 
                 {questions.map((question, questionIndex) => (
                   <div key={questionIndex} className="mb-6 p-6 bg-gray-50 border-2 border-gray-200 rounded-xl">
