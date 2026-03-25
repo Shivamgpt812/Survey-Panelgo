@@ -93,7 +93,8 @@ router.get('/external/router', (req, res) => {
             return res.status(400).send("Missing parameters: rid, transactionId, and token are required");
         }
 
-        const frontendBase = process.env.FRONTEND_URL || 'https://surveypanelgo.netlify.app';
+        // 🔥 Use dynamic origin to support both netlify and custom domain
+        const frontendBase = (req.headers.origin as string) || "https://surveypanelgo.netlify.app";
 
         const params = new URLSearchParams();
         params.set('mode', 'external');

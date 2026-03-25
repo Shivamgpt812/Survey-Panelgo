@@ -33,13 +33,12 @@ const allowedOrigins = [
   'https://www.surveypanelgo.com'
 ];
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(null, true);
-    }
-  },
+  origin: [
+    'http://localhost:5173',
+    'https://surveypanelgo.netlify.app',
+    'https://surveypanelgo.com',
+    'https://www.surveypanelgo.com'
+  ],
   credentials: true
 }));
 app.use(express.json({ limit: '2mb' }));
@@ -719,7 +718,8 @@ app.get('/api/redirect', async (req, res) => {
     // Validate params
     if (!uid || !status) {
       console.error("Missing params:", { pid, uid, status });
-      return res.redirect("https://surveypanelgo.netlify.app/error");
+      const redirectBase = (req.headers.origin as string) || "https://surveypanelgo.netlify.app";
+      return res.redirect(`${redirectBase}/error`);
     }
 
     // Auto generate PID if not provided
@@ -756,7 +756,8 @@ app.get('/api/redirect', async (req, res) => {
     }
 
     // Redirect user to frontend (IMPORTANT)
-    const BASE_URL = "https://surveypanelgo.netlify.app";
+    // 🔥 Use dynamic origin to support both netlify and custom domain
+    const BASE_URL = (req.headers.origin as string) || "https://surveypanelgo.netlify.app";
 
     // Capture IP address
     const rawIp = req.headers["x-forwarded-for"] as string;
@@ -786,7 +787,8 @@ app.get('/api/redirect', async (req, res) => {
   } catch (error) {
     console.error("REDIRECT CRASH:", error);
 
-    return res.redirect("https://surveypanelgo.netlify.app/error");
+    const redirectBase = (req.headers.origin as string) || "https://surveypanelgo.netlify.app";
+    return res.redirect(`${redirectBase}/error`);
   }
 });
 
