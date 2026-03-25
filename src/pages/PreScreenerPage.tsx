@@ -101,7 +101,7 @@ const PreScreenerPage: React.FC = () => {
     const run = async () => {
       if (vendorId && vendor) {
         try {
-          const response = await apiPost(
+          await apiPost(
             '/api/responses',
             {
               surveyId: survey.id,
@@ -110,21 +110,11 @@ const PreScreenerPage: React.FC = () => {
               status: 'complete',
             },
             getStoredToken()
-          ) as { success: boolean; vendorUrl?: string };
-          
-          console.log('📤 Auto-flow submission result:', response);
-          
-          if (response.vendorUrl) {
-            console.log('🔁 Redirecting to Vendor:', response.vendorUrl);
-            window.location.href = response.vendorUrl;
-          } else {
-            console.log('🔗 Fallback to vendor complete URL:', vendor.redirectLinks.complete);
-            window.location.href = vendor.redirectLinks.complete;
-          }
+          );
         } catch {
-          console.log('🔗 Fallback to vendor complete URL after error:', vendor.redirectLinks.complete);
-          window.location.href = vendor.redirectLinks.complete;
+          /* ignore */
         }
+        window.location.href = vendor.redirectLinks.complete;
         return;
       }
       if (!survey.isExternal) {
@@ -244,7 +234,7 @@ const PreScreenerPage: React.FC = () => {
       // Always log the failed attempt, both for vendor and non-vendor users
       try {
         console.log('📝 Logging failed response...');
-        const response = await apiPost(
+        await apiPost(
           '/api/responses',
           {
             surveyId: survey!.id,
@@ -254,22 +244,8 @@ const PreScreenerPage: React.FC = () => {
             failureReason: validation.message || 'Did not meet pre-screener requirements',
           },
           user ? getStoredToken() : undefined // No token for vendor flow
-        ) as { success: boolean; vendorUrl?: string };
+        );
         console.log('✅ Failed response logged successfully');
-        console.log('📤 Submission Result:', response);
-        
-        // Handle vendor redirect from backend
-        if (response.vendorUrl) {
-          console.log('🔁 Redirecting to Vendor:', response.vendorUrl);
-          setTimeout(() => {
-            window.location.href = response.vendorUrl!;
-          }, 3000);
-        } else if (vendor) {
-          // Fallback to existing vendor redirect
-          setTimeout(() => {
-            window.location.href = vendor.redirectLinks.terminate;
-          }, 3000);
-        }
         
         // For non-vendor users, also complete tracking to show result page
         if (!vendor && trackingData) {
@@ -304,7 +280,7 @@ const PreScreenerPage: React.FC = () => {
     const recordStart = async () => {
       try {
         console.log('📝 Recording survey start...');
-        const response = await apiPost(
+        await apiPost(
           '/api/responses',
           {
             surveyId: survey!.id,
@@ -313,20 +289,17 @@ const PreScreenerPage: React.FC = () => {
             preScreenerAnswers: answers,
           },
           user ? getStoredToken() : undefined // No token for vendor flow
-        ) as { success: boolean; vendorUrl?: string };
+        );
         console.log('✅ Survey start recorded successfully');
-        console.log('📤 Submission Result:', response);
-        return response;
       } catch (e) {
         console.error('❌ Failed to record response:', e);
         addToast(e instanceof Error ? e.message : 'Could not record response', 'error');
-        return null;
       }
     };
 
     if (vendorId) {
       console.log('🏪 Vendor flow detected');
-      const response = await recordStart();
+      await recordStart();
       setShowCelebration(true);
       confetti({
         particleCount: 100,
@@ -338,11 +311,8 @@ const PreScreenerPage: React.FC = () => {
         if (!survey!.isExternal) {
           console.log('📝 Vendor internal survey - navigating to internal survey:', `/survey/${survey!.id}/take`);
           navigate(`/survey/${survey!.id}/take${vendorId ? `?vendorId=${vendorId}` : ''}`);
-        } else if (response?.vendorUrl) {
-          console.log('🔗 Vendor external survey - redirecting to backend URL:', response.vendorUrl);
-          window.location.href = response.vendorUrl;
         } else if (vendor) {
-          console.log('🔗 Vendor external survey - fallback to vendor complete URL:', vendor.redirectLinks.complete);
+          console.log('🔗 Vendor external survey - redirecting to vendor complete URL:', vendor.redirectLinks.complete);
           window.location.href = vendor.redirectLinks.complete;
         } else {
           console.log('🔗 Opening external survey link:', survey?.link);
@@ -352,10 +322,7 @@ const PreScreenerPage: React.FC = () => {
       }, 3000);
     } else {
       console.log('👤 Non-vendor flow detected');
-      const response = await recordStart();
-      if (response) {
-        console.log('📤 Non-vendor submission result:', response);
-      }
+      await recordStart();
       setShowCelebration(true);
       confetti({
         particleCount: 100,

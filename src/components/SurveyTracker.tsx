@@ -23,6 +23,8 @@ export function useSurveyTracker(surveyId: string) {
   } | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const BACKEND_URL = "https://survey-panelgo.onrender.com";
+
   const startTracking = async () => {
     if (!surveyId) return null;
 
@@ -52,17 +54,26 @@ export function useSurveyTracker(surveyId: string) {
         token
       );
       
-      // For non-vendor users, redirect to result page (not /api/redirect)
-      // This is used to show survey result pages to regular users
-      const pid = trackingData.clickId; // Use the clickId from tracking data
+      // MANDATORY: Always redirect to /api/redirect with proper params
+      const auth = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
+      const pid = surveyId;
+      const uid = auth?.id || auth?._id;
       
-      if (!pid) {
-        console.error("Missing clickId for result page redirect");
+      if (!pid || !uid) {
+        console.error("Missing pid or uid", { pid, uid });
         return;
       }
       
-      console.log("🔗 Redirecting to survey result page:", { pid, status });
-      window.location.href = `/survey-result/${pid}?status=${status}`;
+      const statusMap = {
+        'completed': 1,
+        'terminated': 2,
+        'quota_full': 3
+      };
+      
+      const statusCode = statusMap[status] || 2;
+      
+      console.log("Redirecting to API:", { pid, uid, status: statusCode });
+      window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=${statusCode}`;
       
       return response;
     } catch (error) {

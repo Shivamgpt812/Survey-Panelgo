@@ -397,9 +397,6 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
     console.log('Request body:', req.body);
     console.log('Logged in user:', req.user?._id?.toString());
     console.log('Headers:', req.headers);
-    console.log('IP Address:', req.headers['x-forwarded-for'] || req.socket.remoteAddress);
-    console.log('User-Agent:', req.headers['user-agent']);
-    console.log('=====================================');
     
     const { surveyId, status, vendorId, preScreenerAnswers, failureReason } = req.body as {
       surveyId?: string;
@@ -411,11 +408,9 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
     
     // Get UID for user (logged in or vendor)
     const uid = getUIDForUser(req, res, req.user);
-    console.log('🔍 USER IDENTIFICATION:');
     console.log('Final UID for response:', uid);
     console.log('User is logged in:', !!req.user);
     console.log('User is vendor flow:', req.headers['x-vendor-flow'] === 'true');
-    console.log('Vendor ID from request:', vendorId);
 
     if (!surveyId || !status) {
       console.error('Missing required fields:', { surveyId, status });
@@ -429,16 +424,10 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
 
     const survey = await Survey.findById(surveyId);
     if (!survey) {
-      console.error('❌ SURVEY VALIDATION FAILED: Survey not found:', surveyId);
+      console.error('Survey not found:', surveyId);
       return res.status(404).json({ message: 'Survey not found' });
     }
     const sid = survey._id.toString();
-    
-    console.log('📋 SURVEY VALIDATION:');
-    console.log('Survey found:', survey.title);
-    console.log('Survey ID:', sid);
-    console.log('Survey status:', survey.status);
-    console.log('Survey is external:', survey.isExternal);
 
     // Only check for duplicates if user is logged in (not for vendor flow)
     if (req.user && status === 'complete') {
@@ -469,12 +458,11 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
       console.log('============================================');
       
       if (existing) {
-        console.log('❌ DUPLICATE PREVENTED: Survey already completed');
         res.status(400).json({ error: 'Survey already completed' });
         return;
       }
     } else {
-      console.log('⏭️ Skipping duplicate check for vendor flow or non-complete status');
+      console.log('Skipping duplicate check for vendor flow or non-complete status');
     }
 
     // Extract user information from pre-screener answers
@@ -511,15 +499,14 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
       userInfo: preScreenerAnswers ? extractUserInfo(preScreenerAnswers) : undefined,
     });
 
-    console.log('✅ RESPONSE CREATED SUCCESSFULLY:');
-    console.log('Response ID:', response._id);
-    console.log('Survey ID:', survey._id);
-    console.log('User ID:', uid);
-    console.log('Vendor ID:', vendorId);
-    console.log('Status:', status);
-    console.log('Is Vendor Flow:', !req.user);
-    console.log('Pre-screener answers count:', preScreenerAnswers?.length || 0);
-    console.log('Failure reason:', failureReason || 'none');
+    console.log('✅ Response created successfully:', {
+      responseId: response._id,
+      surveyId: survey._id,
+      userId: uid,
+      vendorId,
+      status,
+      isVendorFlow: !req.user
+    });
 
     // Update vendor completion tracking if this is a vendor completion
     if (status === 'complete' && vendorId) {
@@ -528,9 +515,9 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
           $addToSet: { completedSurveys: survey._id },
           $inc: { totalCompletions: 1 }
         });
-        console.log(`🏪 VENDOR COMPLETION TRACKED: ${vendorId} for survey ${survey._id}`);
+        console.log(`Vendor completion tracked: ${vendorId} for survey ${survey._id}`);
       } catch (vendorError) {
-        console.error('❌ FAILED TO UPDATE VENDOR COMPLETION TRACKING:', vendorError);
+        console.error('Failed to update vendor completion tracking:', vendorError);
       }
     }
 
@@ -556,106 +543,8 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
       });
     }
 
-    console.log('✅ Response Saved:', { uid, pid: survey._id.toString(), status });
-
-    // STEP 2: Record Redirect Analytics (IMPORTANT)
-    try {
-      console.log('📊 STARTING REDIRECT ANALYTICS RECORDING...');
-      
-      // Get real IP address
-      const xForwardedFor = req.headers['x-forwarded-for'];
-      const xRealIP = req.headers['x-real-ip'];
-      let ipAddress = (req as any).ip || (req as any).connection?.remoteAddress || 'unknown';
-      
-      if (Array.isArray(xForwardedFor)) {
-        ipAddress = xForwardedFor[0];
-      } else if (typeof xForwardedFor === 'string') {
-        ipAddress = xForwardedFor.split(',')[0].trim();
-      } else if (xRealIP) {
-        ipAddress = xRealIP as string;
-      }
-      
-      // Clean up IP address
-      ipAddress = ipAddress.replace(/^::ffff:/, '');
-
-      // Generate PID if not vendor flow
-      const pid = vendorId ? `VENDOR_${vendorId}_${Date.now()}` : `PID_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-      // Map status to number for redirect logs
-      const statusMap = {
-        'complete': 1,
-        'terminate': 2,
-        'quota_full': 3
-      };
-      const statusCode = statusMap[status] || 2;
-
-      console.log('🌐 REDIRECT ANALYTICS DATA:');
-      console.log('Generated PID:', pid);
-      console.log('User ID (UID):', uid);
-      console.log('Status Code:', statusCode);
-      console.log('Status Text:', getStatusText(statusCode));
-      console.log('IP Address:', ipAddress);
-      console.log('User Agent:', req.headers['user-agent'] || 'Unknown');
-
-      await SurveyRedirectLogs.create({
-        pid,
-        uid,
-        status: statusCode,
-        statusText: getStatusText(statusCode),
-        ipAddress,
-        userAgent: req.headers['user-agent'] || 'Unknown',
-        createdAt: new Date()
-      });
-
-      console.log('✅ REDIRECT ANALYTICS SAVED SUCCESSFULLY');
-      console.log('📊 Redirect Analytics Saved:', { pid, uid, status });
-    } catch (analyticsError) {
-      console.error('❌ FAILED TO SAVE REDIRECT ANALYTICS:', analyticsError);
-      console.error('Analytics error details:', analyticsError instanceof Error ? analyticsError.message : analyticsError);
-      // Continue even if analytics fails
-    }
-
-    // STEP 3: Fetch Vendor Data from Survey and Build Vendor Redirect URL
-    let vendorUrl = "";
-    
-    console.log('🔗 FETCHING VENDOR DATA FROM SURVEY...');
-    console.log('Survey vendorId:', survey.vendorId);
-    
-    if (survey.vendorId) {
-      const vendor = await Vendor.findById(survey.vendorId);
-      if (vendor) {
-        console.log('📦 Vendor Data:', vendor);
-        console.log('🏪 Vendor found:', vendor.name);
-        console.log('📋 Vendor redirect links:', vendor.redirectLinks);
-        
-        if (status === 'complete') {
-          vendorUrl = `${vendor.redirectLinks.complete}?pid=${uid}&uid=${uid}`;
-          console.log('✅ Complete redirect URL built:', vendorUrl);
-        } else if (status === 'terminate') {
-          vendorUrl = `${vendor.redirectLinks.terminate}?pid=${uid}&uid=${uid}`;
-          console.log('❌ Terminate redirect URL built:', vendorUrl);
-        } else if (status === 'quota_full') {
-          vendorUrl = `${vendor.redirectLinks.quotaFull}?pid=${uid}&uid=${uid}`;
-          console.log('🚫 Quota full redirect URL built:', vendorUrl);
-        }
-      } else {
-        console.log('❌ VENDOR NOT FOUND for survey vendorId:', survey.vendorId);
-      }
-    } else {
-      console.log('👤 Survey has no vendorId - non-vendor flow, no redirect URL built');
-    }
-
-    // STEP 4: Return Vendor URL to Frontend
-    console.log('🚀 FINAL REDIRECT:', {
-      status,
-      vendorUrl: vendorUrl || 'none'
-    });
-
-    res.status(201).json({ 
-      success: true,
-      response: response.toJSON(),
-      vendorUrl 
-    });
+    console.log('=== RESPONSE SUBMISSION SUCCESS ===');
+    res.status(201).json({ response: response.toJSON() });
   } catch (e) {
     console.error('❌ RESPONSE SUBMISSION ERROR:', e);
     res.status(500).json({ error: 'Failed to record response' });
