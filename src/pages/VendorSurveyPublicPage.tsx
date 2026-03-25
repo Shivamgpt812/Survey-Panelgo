@@ -111,7 +111,7 @@ export default function VendorSurveyPublicPage() {
     e.preventDefault();
     
     console.log("=== PRE SCREENER VALIDATION DEBUG ===");
-    console.log("uid:", uid);
+    console.log("userId (from URL):", uid);
     console.log("token:", token);
     console.log("preScreenerAnswers:", preScreenerAnswers);
     
@@ -130,7 +130,7 @@ export default function VendorSurveyPublicPage() {
         body: JSON.stringify({
           token,
           preScreenerAnswers,
-          uid
+          userId: uid
         }),
       });
 
@@ -221,7 +221,7 @@ export default function VendorSurveyPublicPage() {
 
   const handleSubmit = async () => {
     console.log("=== VENDOR SURVEY SUBMISSION DEBUG ===");
-    console.log("uid:", uid);
+    console.log("userId (from URL):", uid);
     console.log("token:", token);
     console.log("answers:", answers);
     
@@ -244,7 +244,7 @@ export default function VendorSurveyPublicPage() {
         body: JSON.stringify({
           token,
           answers,
-          uid: uid.trim(),
+          userId: uid.trim(),
           preScreenerAnswers
         }),
       });
