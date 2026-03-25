@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ToastProvider } from '@/hooks/useToast';
 import { AdminRoute, UserRoute } from '@/components/auth/ProtectedRoute';
-import { LandingPage, AuthPage, DashboardPage, SurveyPage, RewardsPage, InternalSurveyPage, ServicesPage, ServiceDetailPage, BlogPage, AboutPage, BlogDetailPage, CountryDetailPage, CountryHeroSection, SuccessPage, TerminatedPage, QuotaFullPage, SecurityBlockPage } from '@/pages';
+import { LandingPage, AuthPage, DashboardPage, SurveyPage, RewardsPage, InternalSurveyPage, ServicesPage, ServiceDetailPage, BlogPage, AboutPage, BlogDetailPage, CountryDetailPage, CountryHeroSection, SuccessPage, TerminatedPage, QuotaFullPage, SecurityBlockPage, VendorSurveyPage } from '@/pages';
 import SurveyResult from '@/pages/SurveyResult';
 import SurveySuccess from '@/pages/SurveySuccess';
 import SurveyTerminated from '@/pages/SurveyTerminated';
@@ -29,6 +29,7 @@ function AppContent() {
         <Route path="/global" element={<CountryHeroSection />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/start" element={<VendorEntryPage />} />
+        <Route path="/s/:token" element={<VendorSurveyPage />} />
         <Route path="/survey-result/success" element={<SurveySuccess />} />
         <Route path="/survey-result/terminated" element={<SurveyTerminated />} />
         <Route path="/survey-result/quota-full" element={<SurveyQuota />} />

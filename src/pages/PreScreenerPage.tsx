@@ -211,6 +211,14 @@ const PreScreenerPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    console.log('=== PRESCREENER SUBMISSION DEBUG ===');
+    console.log('Survey:', survey?.title);
+    console.log('Vendor ID:', vendorId);
+    console.log('Is Vendor Flow:', isVendorFlow);
+    console.log('User logged in:', !!user);
+    console.log('Answers:', answers);
+    console.log('=====================================');
+    
     setIsSubmitting(true);
     await new Promise((r) => setTimeout(r, 1000));
     const validation = validatePreScreener(answers, preScreenerQuestions);
@@ -225,18 +233,19 @@ const PreScreenerPage: React.FC = () => {
 
       // Always log the failed attempt, both for vendor and non-vendor users
       try {
+        console.log('📝 Logging failed response...');
         await apiPost(
           '/api/responses',
           {
-            surveyId: survey.id,
+            surveyId: survey!.id,
             vendorId: vendorId || undefined,
-            userId: user?.id,
             status: 'terminate',
             preScreenerAnswers: answers,
             failureReason: validation.message || 'Did not meet pre-screener requirements',
           },
-          getStoredToken()
+          user ? getStoredToken() : undefined // No token for vendor flow
         );
+        console.log('✅ Failed response logged successfully');
         
         // For non-vendor users, also complete tracking to show result page
         if (!vendor && trackingData) {
@@ -249,6 +258,7 @@ const PreScreenerPage: React.FC = () => {
           }
         }
       } catch (e) {
+        console.error('❌ Failed to log response:', e);
         addToast(e instanceof Error ? e.message : 'Could not record response', 'error');
       }
     }
@@ -264,30 +274,31 @@ const PreScreenerPage: React.FC = () => {
     console.log('Survey link:', survey?.link);
     console.log('Current vendorId:', vendorId);
     console.log('Current vendor:', vendor);
+    console.log('User logged in:', !!user);
     console.log('=====================================');
     
     const recordStart = async () => {
       try {
+        console.log('📝 Recording survey start...');
         await apiPost(
           '/api/responses',
           {
             surveyId: survey!.id,
             vendorId: vendorId || undefined,
-            userId: user?.id || undefined, // Allow undefined for vendor flow without login
             status: 'complete',
             preScreenerAnswers: answers,
           },
-          user ? getStoredToken() : undefined // No token for vendor flow without login
+          user ? getStoredToken() : undefined // No token for vendor flow
         );
-        console.log('Response recorded successfully');
+        console.log('✅ Survey start recorded successfully');
       } catch (e) {
-        console.error('Failed to record response:', e);
+        console.error('❌ Failed to record response:', e);
         addToast(e instanceof Error ? e.message : 'Could not record response', 'error');
       }
     };
 
     if (vendorId) {
-      console.log('Vendor flow detected');
+      console.log('🏪 Vendor flow detected');
       await recordStart();
       setShowCelebration(true);
       confetti({
@@ -298,19 +309,19 @@ const PreScreenerPage: React.FC = () => {
       });
       setTimeout(() => {
         if (!survey!.isExternal) {
-          console.log('Vendor internal survey - navigating to internal survey:', `/survey/${survey!.id}/take`);
+          console.log('📝 Vendor internal survey - navigating to internal survey:', `/survey/${survey!.id}/take`);
           navigate(`/survey/${survey!.id}/take${vendorId ? `?vendorId=${vendorId}` : ''}`);
         } else if (vendor) {
-          console.log('Vendor external survey - redirecting to vendor complete URL:', vendor.redirectLinks.complete);
+          console.log('🔗 Vendor external survey - redirecting to vendor complete URL:', vendor.redirectLinks.complete);
           window.location.href = vendor.redirectLinks.complete;
         } else {
-          console.log('Opening external survey link:', survey?.link);
+          console.log('🔗 Opening external survey link:', survey?.link);
           window.open(survey?.link, '_blank');
-          navigate('/dashboard');
+          navigate('/');
         }
       }, 3000);
     } else {
-      console.log('Non-vendor flow detected');
+      console.log('👤 Non-vendor flow detected');
       await recordStart();
       setShowCelebration(true);
       confetti({
@@ -321,14 +332,14 @@ const PreScreenerPage: React.FC = () => {
       });
       setTimeout(() => {
         if (!survey!.isExternal) {
-          console.log('Navigating to internal survey:', `/survey/${survey!.id}/take`);
+          console.log('📝 Navigating to internal survey:', `/survey/${survey!.id}/take`);
           navigate(`/survey/${survey!.id}/take${vendorId ? `?vendorId=${vendorId}` : ''}`);
-        } else if (survey!.link) {
-          console.log('Opening external survey link:', survey!.link);
-          window.open(survey!.link, '_blank');
+        } else if (survey?.link) {
+          console.log('🔗 Opening external survey link:', survey?.link);
+          window.open(survey?.link, '_blank');
           navigate('/dashboard');
         } else {
-          console.log('No survey link, going to dashboard');
+          console.log('🏠 No survey link, going to dashboard');
           navigate('/dashboard');
         }
       }, 3000);
