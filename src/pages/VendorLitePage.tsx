@@ -258,12 +258,20 @@ export default function VendorLitePage() {
           <p className="text-gray-600">Create vendor surveys and generate public links</p>
         </div>
 
-        <div className="mb-6">
+        <div className="flex flex-wrap gap-4 mb-8">
           <PlayfulButton
             variant="primary"
             onClick={() => setShowCreateVendor(true)}
+            className="min-w-[180px]"
           >
             Create New Vendor
+          </PlayfulButton>
+          <PlayfulButton
+            variant="secondary"
+            onClick={() => setShowCreateSurvey(true)}
+            className="min-w-[180px]"
+          >
+            Create New Survey
           </PlayfulButton>
         </div>
 
@@ -331,15 +339,6 @@ export default function VendorLitePage() {
             </form>
           </PlayfulCard>
         )}
-
-        <div className="mb-6">
-          <PlayfulButton
-            variant="primary"
-            onClick={() => setShowCreateSurvey(true)}
-          >
-            Create New Survey
-          </PlayfulButton>
-        </div>
 
         {showCreateSurvey && (
           <PlayfulCard className="mb-6">
@@ -569,12 +568,12 @@ export default function VendorLitePage() {
           </PlayfulCard>
         )}
 
-        <div className="grid gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {vendors.map((vendor) => (
-            <PlayfulCard key={vendor.id}>
-              <div className="flex justify-between items-start mb-4">
+            <PlayfulCard key={vendor.id} className="p-6">
+              <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className="text-xl font-jakarta font-semibold text-navy">{vendor.name}</h3>
+                  <h3 className="text-xl font-jakarta font-semibold text-navy mb-2">{vendor.name}</h3>
                   <p className="text-sm text-gray-600">ID: {vendor.id}</p>
                 </div>
                 <PlayfulButton
@@ -584,27 +583,28 @@ export default function VendorLitePage() {
                     setSelectedVendor(vendor.id);
                     setShowCreateSurvey(true);
                   }}
+                  className="shrink-0"
                 >
                   Create Survey
                 </PlayfulButton>
               </div>
 
-              <div className="space-y-2 mb-4">
-                <div className="text-sm">
-                  <span className="font-medium">Complete:</span> 
-                  <a href={vendor.complete_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-1">
+              <div className="space-y-4 mb-6">
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm font-medium text-gray-700 mb-1">Complete:</div> 
+                  <a href={vendor.complete_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm break-all">
                     {vendor.complete_url}
                   </a>
                 </div>
-                <div className="text-sm">
-                  <span className="font-medium">Terminate:</span> 
-                  <a href={vendor.terminate_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-1">
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm font-medium text-gray-700 mb-1">Terminate:</div> 
+                  <a href={vendor.terminate_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm break-all">
                     {vendor.terminate_url}
                   </a>
                 </div>
-                <div className="text-sm">
-                  <span className="font-medium">Quota Full:</span> 
-                  <a href={vendor.quota_full_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-1">
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm font-medium text-gray-700 mb-1">Quota Full:</div> 
+                  <a href={vendor.quota_full_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm break-all">
                     {vendor.quota_full_url}
                   </a>
                 </div>
