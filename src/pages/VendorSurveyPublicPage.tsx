@@ -7,11 +7,11 @@ export default function VendorSurveyPublicPage() {
   const { token } = useParams<{ token: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  
+
   // Get PID and UID from URL parameters
   const pid = searchParams.get('pid') || '';
   const uid = searchParams.get('uid') || '';
-  
+
   const [survey, setSurvey] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -27,19 +27,40 @@ export default function VendorSurveyPublicPage() {
   }, [token]);
 
   // Handle external survey redirect
+  // If the respondent arrived via /external/router, localStorage will have
+  // ext_rid and ext_transactionId which must be forwarded to the external URL.
   useEffect(() => {
     if (survey?.externalLink) {
       console.log("=== EXTERNAL SURVEY REDIRECT DEBUG ===");
       console.log("Survey data:", survey);
       console.log("External link found:", survey.externalLink);
       console.log("Survey type:", survey.type);
-      
+
+      const rid = localStorage.getItem('ext_rid') || '';
+      const transactionId = localStorage.getItem('ext_transactionId') || '';
+
+      // Build final URL, appending rid + transactionId when available
+      const buildExternalUrl = (base: string) => {
+        const url = new URL(base);
+        if (rid) url.searchParams.set('rid', rid);
+        if (transactionId) url.searchParams.set('transactionId', transactionId);
+        // Also forward uid so the panel can track the individual respondent
+        if (uid) url.searchParams.set('uid', uid);
+        return url.toString();
+      };
+
+      const finalUrl = buildExternalUrl(survey.externalLink);
+      console.log("🚀 External Redirect URL (with respondent params):", finalUrl);
+
       // Add a small delay to ensure component renders
       const timer = setTimeout(() => {
-        console.log("Executing redirect to:", survey.externalLink);
-        window.location.href = survey.externalLink;
+        // Clean up stored params after use
+        localStorage.removeItem('ext_rid');
+        localStorage.removeItem('ext_transactionId');
+        localStorage.removeItem('ext_token');
+        window.location.href = finalUrl;
       }, 1000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [survey?.externalLink, survey]);
@@ -51,7 +72,7 @@ export default function VendorSurveyPublicPage() {
       console.log("PID from URL:", pid);
       console.log("UID from URL:", uid);
       console.log("Survey PID from survey:", survey.pid);
-      
+
       // Show pre-screener if survey has pre-screener questions, otherwise show survey
       if (survey?.preScreenerQuestions?.length > 0) {
         setShowPreScreener(true);
@@ -62,32 +83,32 @@ export default function VendorSurveyPublicPage() {
   const fetchSurvey = async () => {
     try {
       // Multiple environment detection strategies for Netlify
-      const isProduction = import.meta.env.PROD || 
-                           window.location.hostname !== 'localhost' || 
-                           window.location.hostname.includes('netlify.app');
-      
-      let apiUrl = isProduction 
-        ? 'https://survey-panelgo.onrender.com' 
+      const isProduction = import.meta.env.PROD ||
+        window.location.hostname !== 'localhost' ||
+        window.location.hostname.includes('netlify.app');
+
+      let apiUrl = isProduction
+        ? 'https://survey-panelgo.onrender.com'
         : 'http://localhost:3000';
-      
-      console.log("🔍 Environment Detection:", { 
+
+      console.log("🔍 Environment Detection:", {
         importMetaEnvProd: import.meta.env.PROD,
         hostname: window.location.hostname,
         isProduction,
         finalApiUrl: apiUrl
       });
-      
+
       // Try production API first, fallback to localhost if it fails
       let response;
       let data;
-      
+
       try {
         response = await fetch(`${apiUrl}/vendor-lite/survey/${token}`);
         data = await response.json();
         console.log("📊 Primary API Response:", data);
       } catch (primaryError) {
         console.warn("⚠️ Primary API failed, trying fallback:", primaryError);
-        
+
         // Fallback to localhost for development/testing
         if (isProduction) {
           apiUrl = 'http://localhost:3000';
@@ -98,7 +119,7 @@ export default function VendorSurveyPublicPage() {
           throw primaryError;
         }
       }
-      
+
       if (data.success) {
         setSurvey(data.survey);
         console.log("✅ Survey loaded successfully:", data.survey);
@@ -132,17 +153,17 @@ export default function VendorSurveyPublicPage() {
 
   const handlePreScreenerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     console.log("=== PRE SCREENER VALIDATION DEBUG ===");
     console.log("userId (from URL):", uid);
     console.log("token:", token);
     console.log("preScreenerAnswers:", preScreenerAnswers);
-    
+
     // Submit pre-screener answers for validation
     try {
       const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
-      const apiUrl = isProduction 
-        ? 'https://survey-panelgo.onrender.com' 
+      const apiUrl = isProduction
+        ? 'https://survey-panelgo.onrender.com'
         : 'http://localhost:3000';
 
       const response = await fetch(`${apiUrl}/vendor-lite/validate-pre-screener?pid=${encodeURIComponent(pid)}`, {
@@ -164,7 +185,7 @@ export default function VendorSurveyPublicPage() {
       console.log("Success:", data.success);
       console.log("Terminated:", data.terminated);
       console.log("Redirect URL:", data.redirectUrl);
-      
+
       if (data.success && !data.terminated) {
         // Passed pre-screener, show survey questions
         console.log("Pre-screener PASSED - showing survey questions");
@@ -199,10 +220,10 @@ export default function VendorSurveyPublicPage() {
       alert('There was an issue validating your responses. Thank you for your interest.');
       try {
         const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
-        const apiUrl = isProduction 
-          ? 'https://survey-panelgo.onrender.com' 
+        const apiUrl = isProduction
+          ? 'https://survey-panelgo.onrender.com'
           : 'http://localhost:3000';
-        
+
         const surveyResponse = await fetch(`${apiUrl}/vendor-lite/survey/${token}`);
         const surveyData = await surveyResponse.json();
         if (surveyData.success && surveyData.survey.vendor_id) {
@@ -221,12 +242,12 @@ export default function VendorSurveyPublicPage() {
     if (!survey?.questions || survey.questions.length === 0) return null;
     const answer = answers[`q_${currentStep}`];
     const currentQuestion = survey.questions[currentStep];
-    
+
     // For text questions, check if answer is not empty
     if (currentQuestion?.type === 'text') {
       return answer && answer.trim() ? answer : null;
     }
-    
+
     // For rating and multiple-choice questions, check if answer exists
     return answer !== undefined && answer !== null && answer !== '' ? answer : null;
   };
@@ -249,14 +270,14 @@ export default function VendorSurveyPublicPage() {
     console.log("userId (from URL):", uid);
     console.log("token:", token);
     console.log("answers:", answers);
-    
+
     setSubmitting(true);
 
     try {
       // Better environment detection for Netlify
       const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
-      const apiUrl = isProduction 
-        ? 'https://survey-panelgo.onrender.com' 
+      const apiUrl = isProduction
+        ? 'https://survey-panelgo.onrender.com'
         : 'http://localhost:3000';
 
       console.log("🚀 Submitting survey to:", apiUrl);
@@ -319,6 +340,21 @@ export default function VendorSurveyPublicPage() {
 
   // Handle external surveys - redirect to external link
   if (survey.externalLink) {
+    const rid = localStorage.getItem('ext_rid') || '';
+    const transactionId = localStorage.getItem('ext_transactionId') || '';
+    const buildExternalUrl = (base: string) => {
+      try {
+        const url = new URL(base);
+        if (rid) url.searchParams.set('rid', rid);
+        if (transactionId) url.searchParams.set('transactionId', transactionId);
+        if (uid) url.searchParams.set('uid', uid);
+        return url.toString();
+      } catch {
+        return base;
+      }
+    };
+    const enrichedExternalUrl = buildExternalUrl(survey.externalLink);
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-50 via-pink-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
@@ -337,9 +373,9 @@ export default function VendorSurveyPublicPage() {
               <span className="font-semibold">Powered by:</span> {survey.vendor_id?.name || 'Unknown Vendor'}
             </p>
             <div className="mt-4">
-              <a 
-                href={survey.externalLink}
-                target="_blank" 
+              <a
+                href={enrichedExternalUrl}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-violet hover:text-violet/80 underline font-medium"
               >
@@ -372,9 +408,9 @@ export default function VendorSurveyPublicPage() {
           <div className="text-center mb-12">
             <div className="mb-8">
               <div className="w-32 h-32 mx-auto mb-6 flex items-center justify-center shadow-2xl rounded-2xl overflow-hidden bg-white p-4 border border-gray-100">
-                <img 
-                  src="/logo.png" 
-                  alt="Survey Panelgo Logo" 
+                <img
+                  src="/logo.png"
+                  alt="Survey Panelgo Logo"
                   className="w-full h-full object-contain"
                 />
               </div>
@@ -396,7 +432,7 @@ export default function VendorSurveyPublicPage() {
                       <label className="block text-base font-semibold text-gray-700 mb-4">
                         {preScreen.question} <span className="text-red-500">*</span>
                       </label>
-                      
+
                       {preScreen.type === 'age' ? (
                         <input
                           type="number"
@@ -422,7 +458,7 @@ export default function VendorSurveyPublicPage() {
                     </div>
                   </div>
                 ))}
-                
+
                 <PlayfulButton
                   type="submit"
                   variant="primary"
@@ -459,7 +495,7 @@ export default function VendorSurveyPublicPage() {
                   </div>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-violet via-purple to-pink h-4 rounded-full transition-all duration-700 ease-out shadow-lg"
                     style={{ width: `${survey?.questions ? ((currentStep + 1) / survey.questions.length) * 100 : 0}%` }}
                   >
@@ -498,11 +534,10 @@ export default function VendorSurveyPublicPage() {
                             key={rating}
                             type="button"
                             onClick={() => handleAnswerChange(`q_${currentStep}`, rating)}
-                            className={`group relative w-20 h-20 rounded-2xl text-2xl font-bold border-2 transition-all duration-300 transform hover:scale-110 ${
-                              answers[`q_${currentStep}`] === rating
-                                ? 'bg-gradient-to-r from-violet to-pink text-white border-violet shadow-lg scale-105'
-                                : 'bg-white text-gray-600 border-gray-300 hover:border-violet hover:bg-violet/10 hover:shadow-md'
-                            }`}
+                            className={`group relative w-20 h-20 rounded-2xl text-2xl font-bold border-2 transition-all duration-300 transform hover:scale-110 ${answers[`q_${currentStep}`] === rating
+                              ? 'bg-gradient-to-r from-violet to-pink text-white border-violet shadow-lg scale-105'
+                              : 'bg-white text-gray-600 border-gray-300 hover:border-violet hover:bg-violet/10 hover:shadow-md'
+                              }`}
                           >
                             {rating}
                             {answers[`q_${currentStep}`] === rating && (

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
+import { useSearchParams } from 'react-router-dom';
 
 interface Vendor {
   id: string;
@@ -16,6 +17,32 @@ interface Question {
 }
 
 export default function VendorLitePage() {
+  const [searchParams] = useSearchParams();
+
+  // ── External-mode state ──────────────────────────────────────────────────
+  // When a respondent lands here via /external/router, the URL will contain
+  // ?mode=external&rid=...&transactionId=...  We store those values so the
+  // submit flow in VendorSurveyPublicPage can append them to the external URL.
+  const [isExternalMode, setIsExternalMode] = useState(false);
+
+  useEffect(() => {
+    const mode = searchParams.get('mode');
+    if (mode === 'external') {
+      const rid = searchParams.get('rid') || '';
+      const transactionId = searchParams.get('transactionId') || '';
+      const token = searchParams.get('token') || '';
+
+      console.log('🚀 External Entry detected:', { rid, transactionId, token });
+
+      // Persist so VendorSurveyPublicPage can read them on submit
+      localStorage.setItem('ext_rid', rid);
+      localStorage.setItem('ext_transactionId', transactionId);
+      localStorage.setItem('ext_token', token);
+
+      setIsExternalMode(true);
+    }
+  }, [searchParams]);
+
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateVendor, setShowCreateVendor] = useState(false);
@@ -38,20 +65,20 @@ export default function VendorLitePage() {
   });
 
   const [preScreenerQuestions, setPreScreenerQuestions] = useState([
-    { 
-      type: 'age', 
-      question: 'What is your age?', 
-      operator: '>=', 
+    {
+      type: 'age',
+      question: 'What is your age?',
+      operator: '>=',
       value: 18,
-      enabled: false 
+      enabled: false
     },
-    { 
-      type: 'gender', 
-      question: 'What is your gender?', 
-      operator: '=', 
+    {
+      type: 'gender',
+      question: 'What is your gender?',
+      operator: '=',
       value: '',
       options: ['Male', 'Female', 'Other'],
-      enabled: false 
+      enabled: false
     }
   ]);
 
@@ -90,23 +117,23 @@ export default function VendorLitePage() {
 
   const fetchVendors = async () => {
     try {
-      const apiUrl = import.meta.env.PROD 
-        ? 'https://survey-panelgo.onrender.com' 
+      const apiUrl = import.meta.env.PROD
+        ? 'https://survey-panelgo.onrender.com'
         : 'http://localhost:3000';
-      
+
       const response = await fetch(`${apiUrl}/vendor-lite/vendor`);
       const data = await response.json();
       console.log("📦 Vendors fetched:", data);
-      
+
       // Handle both array and wrapped response formats
       const vendorsArray = Array.isArray(data) ? data : (data.vendors || []);
-      
+
       // Transform _id to id for frontend compatibility
       const transformedVendors = vendorsArray.map((vendor: any) => ({
         ...vendor,
         id: vendor._id || vendor.id
       }));
-      
+
       console.log("🔄 Transformed vendors:", transformedVendors);
       setVendors(transformedVendors);
     } catch (error) {
@@ -119,8 +146,8 @@ export default function VendorLitePage() {
     setLoading(true);
 
     try {
-      const apiUrl = import.meta.env.PROD 
-        ? 'https://survey-panelgo.onrender.com' 
+      const apiUrl = import.meta.env.PROD
+        ? 'https://survey-panelgo.onrender.com'
         : 'http://localhost:3000';
 
       const response = await fetch(`${apiUrl}/vendor-lite/vendor`, {
@@ -148,12 +175,12 @@ export default function VendorLitePage() {
 
   const createSurvey = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     console.log("📊 Survey Form:", surveyForm);
     console.log("🎯 Selected Vendor:", selectedVendor);
     console.log("📦 Available Vendors:", vendors);
     console.log("❓ Questions:", questions);
-    
+
     if (!selectedVendor) {
       alert("Please select a vendor");
       return;
@@ -171,8 +198,8 @@ export default function VendorLitePage() {
     setLoading(true);
 
     try {
-      const apiUrl = import.meta.env.PROD 
-        ? 'https://survey-panelgo.onrender.com' 
+      const apiUrl = import.meta.env.PROD
+        ? 'https://survey-panelgo.onrender.com'
         : 'http://localhost:3000';
 
       const response = await fetch(`${apiUrl}/vendor-lite/survey`, {
@@ -193,17 +220,17 @@ export default function VendorLitePage() {
 
       const data = await response.json();
       console.log("🚀 Survey Created:", data);
-      
+
       if (data.success) {
         const link = getPublicSurveyLink(data.token, surveyForm.pid);
         setGeneratedLink(link);
-        
+
         // Save link to vendor's survey links
         setVendorSurveyLinks(prev => ({
           ...prev,
           [selectedVendor]: link
         }));
-        
+
         // Reset form
         setSurveyForm({ title: '', vendor_id: 0, pid: '', type: 'internal', externalLink: '' });
         setSelectedVendor("");
@@ -275,6 +302,20 @@ export default function VendorLitePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-pink-50 to-blue-50 p-6">
       <div className="max-w-6xl mx-auto">
+
+        {/* ── External-mode respondent banner ────────────────────────────── */}
+        {isExternalMode && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3">
+            <span className="text-2xl">🔗</span>
+            <div>
+              <p className="font-semibold text-blue-800">You arrived via an external survey link.</p>
+              <p className="text-sm text-blue-600 mt-1">
+                Your respondent details have been captured. The survey will start shortly.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="mb-8">
           <h1 className="text-4xl font-jakarta font-bold text-navy mb-2">Vendor Survey System</h1>
           <p className="text-gray-600">Create vendor surveys and generate public links</p>
@@ -469,75 +510,75 @@ export default function VendorLitePage() {
                     <label className="block text-base font-semibold text-gray-700">Pre-Screener Questions</label>
                     <span className="text-sm text-gray-500">Set criteria to qualify users</span>
                   </div>
-                  
+
                   {preScreenerQuestions.map((preScreen, index) => (
-                  <div key={index} className="mb-6 p-6 bg-gray-50 border-2 border-gray-200 rounded-xl">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={preScreen.enabled}
-                          onChange={() => togglePreScreenerEnabled(index)}
-                          className="mr-3 w-5 h-5 text-violet focus:ring-violet focus:ring-2"
-                        />
-                        <label className="text-base font-semibold text-gray-700">
-                          {preScreen.type === 'age' ? 'Age Requirement' : 'Gender Requirement'}
-                        </label>
-                      </div>
-                    </div>
-                    
-                    {preScreen.enabled && (
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Question</label>
+                    <div key={index} className="mb-6 p-6 bg-gray-50 border-2 border-gray-200 rounded-xl">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center">
                           <input
-                            type="text"
-                            value={preScreen.question}
-                            onChange={(e) => updatePreScreenerQuestion(index, 'question', e.target.value)}
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
+                            type="checkbox"
+                            checked={preScreen.enabled}
+                            onChange={() => togglePreScreenerEnabled(index)}
+                            className="mr-3 w-5 h-5 text-violet focus:ring-violet focus:ring-2"
                           />
+                          <label className="text-base font-semibold text-gray-700">
+                            {preScreen.type === 'age' ? 'Age Requirement' : 'Gender Requirement'}
+                          </label>
                         </div>
-                        
-                        {preScreen.type === 'age' ? (
-                          <div className="flex items-center space-x-2">
-                            <label className="text-xs font-medium text-gray-600">Must be</label>
-                            <select
-                              value={preScreen.operator}
-                              onChange={(e) => updatePreScreenerQuestion(index, 'operator', e.target.value)}
-                              className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
-                            >
-                              <option value=">=">&gt;= (At least)</option>
-                              <option value=">">&gt; (Greater than)</option>
-                              <option value="<=">&lt;= (At most)</option>
-                              <option value="<">&lt; (Less than)</option>
-                            </select>
-                            <input
-                              type="number"
-                              value={preScreen.value}
-                              onChange={(e) => updatePreScreenerQuestion(index, 'value', parseInt(e.target.value))}
-                              className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
-                            />
-                            <label className="text-xs font-medium text-gray-600">years old</label>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <label className="text-xs font-medium text-gray-600">Must be</label>
-                            <select
-                              value={preScreen.value}
-                              onChange={(e) => updatePreScreenerQuestion(index, 'value', e.target.value)}
-                              className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
-                            >
-                              <option value="">Select gender</option>
-                              {preScreen.options?.map((option: string) => (
-                                <option key={option} value={option}>{option}</option>
-                              )) || []}
-                            </select>
-                          </div>
-                        )}
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      {preScreen.enabled && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Question</label>
+                            <input
+                              type="text"
+                              value={preScreen.question}
+                              onChange={(e) => updatePreScreenerQuestion(index, 'question', e.target.value)}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
+                            />
+                          </div>
+
+                          {preScreen.type === 'age' ? (
+                            <div className="flex items-center space-x-2">
+                              <label className="text-xs font-medium text-gray-600">Must be</label>
+                              <select
+                                value={preScreen.operator}
+                                onChange={(e) => updatePreScreenerQuestion(index, 'operator', e.target.value)}
+                                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
+                              >
+                                <option value=">=">&gt;= (At least)</option>
+                                <option value=">">&gt; (Greater than)</option>
+                                <option value="<=">&lt;= (At most)</option>
+                                <option value="<">&lt; (Less than)</option>
+                              </select>
+                              <input
+                                type="number"
+                                value={preScreen.value}
+                                onChange={(e) => updatePreScreenerQuestion(index, 'value', parseInt(e.target.value))}
+                                className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
+                              />
+                              <label className="text-xs font-medium text-gray-600">years old</label>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <label className="text-xs font-medium text-gray-600">Must be</label>
+                              <select
+                                value={preScreen.value}
+                                onChange={(e) => updatePreScreenerQuestion(index, 'value', e.target.value)}
+                                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
+                              >
+                                <option value="">Select gender</option>
+                                {preScreen.options?.map((option: string) => (
+                                  <option key={option} value={option}>{option}</option>
+                                )) || []}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -554,76 +595,76 @@ export default function VendorLitePage() {
                       + Add Question
                     </button>
                   </div>
-                
-                {questions.map((question, questionIndex) => (
-                  <div key={questionIndex} className="mb-6 p-6 bg-gray-50 border-2 border-gray-200 rounded-xl">
-                    <div className="mb-4">
-                      <input
-                        type="text"
-                        placeholder="Enter question text"
-                        value={question.text}
-                        onChange={(e) => updateQuestion(questionIndex, 'text', e.target.value)}
-                        className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
-                      />
-                    </div>
-                    
-                    <div className="mb-4">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Question Type</label>
-                      <select
-                        value={question.type}
-                        onChange={(e) => updateQuestion(questionIndex, 'type', e.target.value)}
-                        className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
-                      >
-                        <option value="multiple-choice">Multiple Choice</option>
-                        <option value="rating">Rating (1-5 Stars)</option>
-                        <option value="text">Text Box</option>
-                      </select>
-                    </div>
-                    
-                    {/* Show options only for multiple-choice questions */}
-                    {question.type === 'multiple-choice' && (
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <label className="block text-sm font-semibold text-gray-700">Options</label>
-                          <button
-                            type="button"
-                            onClick={() => addOption(questionIndex)}
-                            className="px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                          >
-                            + Add Option
-                          </button>
+
+                  {questions.map((question, questionIndex) => (
+                    <div key={questionIndex} className="mb-6 p-6 bg-gray-50 border-2 border-gray-200 rounded-xl">
+                      <div className="mb-4">
+                        <input
+                          type="text"
+                          placeholder="Enter question text"
+                          value={question.text}
+                          onChange={(e) => updateQuestion(questionIndex, 'text', e.target.value)}
+                          className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
+                        />
+                      </div>
+
+                      <div className="mb-4">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Question Type</label>
+                        <select
+                          value={question.type}
+                          onChange={(e) => updateQuestion(questionIndex, 'type', e.target.value)}
+                          className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
+                        >
+                          <option value="multiple-choice">Multiple Choice</option>
+                          <option value="rating">Rating (1-5 Stars)</option>
+                          <option value="text">Text Box</option>
+                        </select>
+                      </div>
+
+                      {/* Show options only for multiple-choice questions */}
+                      {question.type === 'multiple-choice' && (
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <label className="block text-sm font-semibold text-gray-700">Options</label>
+                            <button
+                              type="button"
+                              onClick={() => addOption(questionIndex)}
+                              className="px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                            >
+                              + Add Option
+                            </button>
+                          </div>
+
+                          {question.options.map((option, optionIndex) => (
+                            <input
+                              key={optionIndex}
+                              type="text"
+                              placeholder={`Option ${optionIndex + 1}`}
+                              value={option}
+                              onChange={(e) => updateOption(questionIndex, optionIndex, e.target.value)}
+                              className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
+                            />
+                          ))}
                         </div>
-                        
-                        {question.options.map((option, optionIndex) => (
-                          <input
-                            key={optionIndex}
-                            type="text"
-                            placeholder={`Option ${optionIndex + 1}`}
-                            value={option}
-                            onChange={(e) => updateOption(questionIndex, optionIndex, e.target.value)}
-                            className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
-                          />
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Show rating scale for rating questions */}
-                    {question.type === 'rating' && (
-                      <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
-                        <p className="text-sm font-semibold text-gray-700 mb-2">Rating Scale: 1-5 Stars</p>
-                        <p className="text-sm text-gray-600">Users will be able to rate from 1 to 5 stars</p>
-                      </div>
-                    )}
-                    
-                    {/* Show info for text questions */}
-                    {question.type === 'text' && (
-                      <div className="p-4 bg-green-50 border-2 border-green-200 rounded-xl">
-                        <p className="text-sm font-semibold text-gray-700 mb-2">Open Text Answer</p>
-                        <p className="text-sm text-gray-600">Users will be able to type a text response</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      )}
+
+                      {/* Show rating scale for rating questions */}
+                      {question.type === 'rating' && (
+                        <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                          <p className="text-sm font-semibold text-gray-700 mb-2">Rating Scale: 1-5 Stars</p>
+                          <p className="text-sm text-gray-600">Users will be able to rate from 1 to 5 stars</p>
+                        </div>
+                      )}
+
+                      {/* Show info for text questions */}
+                      {question.type === 'text' && (
+                        <div className="p-4 bg-green-50 border-2 border-green-200 rounded-xl">
+                          <p className="text-sm font-semibold text-gray-700 mb-2">Open Text Answer</p>
+                          <p className="text-sm text-gray-600">Users will be able to type a text response</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -654,9 +695,9 @@ export default function VendorLitePage() {
             <h3 className="text-xl font-jakarta font-semibold text-navy mb-4">🎉 Survey Created Successfully!</h3>
             <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-sm font-medium text-green-800 mb-2">Public Survey Link:</p>
-              <a 
-                href={generatedLink} 
-                target="_blank" 
+              <a
+                href={generatedLink}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:text-blue-800 underline break-all"
               >
@@ -703,19 +744,19 @@ export default function VendorLitePage() {
 
               <div className="space-y-4 mb-6">
                 <div className="p-3 bg-gray-50 rounded-lg">
-                  <div className="text-sm font-medium text-gray-700 mb-1">Complete:</div> 
+                  <div className="text-sm font-medium text-gray-700 mb-1">Complete:</div>
                   <a href={vendor.complete_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm break-all">
                     {vendor.complete_url}
                   </a>
                 </div>
                 <div className="p-3 bg-gray-50 rounded-lg">
-                  <div className="text-sm font-medium text-gray-700 mb-1">Terminate:</div> 
+                  <div className="text-sm font-medium text-gray-700 mb-1">Terminate:</div>
                   <a href={vendor.terminate_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm break-all">
                     {vendor.terminate_url}
                   </a>
                 </div>
                 <div className="p-3 bg-gray-50 rounded-lg">
-                  <div className="text-sm font-medium text-gray-700 mb-1">Quota Full:</div> 
+                  <div className="text-sm font-medium text-gray-700 mb-1">Quota Full:</div>
                   <a href={vendor.quota_full_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm break-all">
                     {vendor.quota_full_url}
                   </a>
@@ -726,9 +767,9 @@ export default function VendorLitePage() {
               {vendorSurveyLinks[vendor.id] && (
                 <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                   <p className="text-sm font-medium text-green-800 mb-1">📋 Survey Link:</p>
-                  <a 
-                    href={vendorSurveyLinks[vendor.id]} 
-                    target="_blank" 
+                  <a
+                    href={vendorSurveyLinks[vendor.id]}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:text-blue-800 underline break-all text-sm"
                   >

@@ -82,7 +82,7 @@ app.post('/api/auth/register', async (req, res) => {
       surveysCompleted: 0,
       memberSince: new Date().toISOString().slice(0, 10),
     });
-    const token = signToken(user._id.toString(), user.role);
+    const token = signToken(user._id.toString(), String(user.role));
     res.status(201).json({ token, user: userJson(user) });
   } catch (e) {
     console.error(e);
@@ -102,7 +102,7 @@ app.post('/api/auth/login', async (req, res) => {
       res.status(401).json({ error: 'Invalid email or password' });
       return;
     }
-    const token = signToken(user._id.toString(), user.role);
+    const token = signToken(user._id.toString(), String(user.role));
     await ActivityLog.create({
       message: `${user.name} logged in`,
       type: 'info',
