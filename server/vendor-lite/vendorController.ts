@@ -158,16 +158,30 @@ export const getSurveyByToken = async (req: Request, res: Response) => {
 };
 
 const validatePreScreenerAnswers = (preScreenerQuestions: any[], responses: any): { passed: boolean; failedCriteria?: any } => {
+  console.log("=== PRE SCREENER VALIDATION DEBUG ===");
+  console.log("preScreenerQuestions:", preScreenerQuestions);
+  console.log("responses:", responses);
+  
   for (const question of preScreenerQuestions) {
     if (!question.enabled) continue;
     
     const userAnswer = responses[question.type];
     const requiredValue = question.value;
     
+    console.log("Validating question:", {
+      type: question.type,
+      userAnswer,
+      requiredValue,
+      operator: question.operator,
+      enabled: question.enabled
+    });
+    
     let passed = false;
     
     if (question.type === 'age') {
       const userAge = parseInt(userAnswer);
+      console.log("Age validation:", { userAge, requiredValue, operator: question.operator });
+      
       switch (question.operator) {
         case '>=':
           passed = userAge >= requiredValue;
@@ -184,21 +198,28 @@ const validatePreScreenerAnswers = (preScreenerQuestions: any[], responses: any)
         default:
           passed = userAge >= requiredValue;
       }
+      console.log("Age validation result:", passed);
     } else if (question.type === 'gender') {
       passed = userAnswer === requiredValue;
+      console.log("Gender validation:", { userAnswer, requiredValue, passed });
     }
     
     if (!passed) {
+      console.log("VALIDATION FAILED for question:", question);
       return { passed: false, failedCriteria: question };
     }
   }
   
+  console.log("ALL VALIDATIONS PASSED");
   return { passed: true };
 };
 
 export const validatePreScreener = async (req: Request, res: Response) => {
   try {
+    console.log("=== VALIDATE PRE SCREENER ENDPOINT DEBUG ===");
     const { token, preScreenerAnswers, userId } = req.body;
+    
+    console.log("Received data:", { token, preScreenerAnswers, userId });
 
     if (!token) {
       return res.status(400).json({
@@ -221,9 +242,13 @@ export const validatePreScreener = async (req: Request, res: Response) => {
 
     // Validate pre-screener if present
     if (survey.preScreenerQuestions && survey.preScreenerQuestions.length > 0) {
+      console.log("Pre-screener questions found, validating...");
       const validation = validatePreScreenerAnswers(survey.preScreenerQuestions, preScreenerAnswers || {});
       
+      console.log("Validation result:", validation);
+      
       if (!validation.passed) {
+        console.log("Pre-screener validation FAILED - terminating user");
         // User failed pre-screener - log as terminated and redirect
         const ip = req.ip || req.connection.remoteAddress || 'unknown';
         
@@ -257,6 +282,7 @@ export const validatePreScreener = async (req: Request, res: Response) => {
     }
 
     // Passed pre-screener
+    console.log("Pre-screener validation PASSED - user can proceed");
     res.json({
       success: true,
       terminated: false,
