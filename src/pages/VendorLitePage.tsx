@@ -146,73 +146,6 @@ export default function VendorLitePage() {
     }
   };
 
-  const deleteVendor = async (vendorId: string) => {
-    console.log('Attempting to delete vendor:', vendorId);
-    
-    if (!confirm('Are you sure you want to delete this vendor? This action cannot be undone.')) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Try DELETE method first
-      let response = await fetch(`/api/vendor-lite/vendors/${vendorId}`, {
-        method: 'DELETE',
-      });
-      
-      console.log('DELETE response status:', response.status);
-      console.log('DELETE response ok:', response.ok);
-
-      // If DELETE fails, try POST fallback
-      if (!response.ok) {
-        console.log('DELETE failed, trying POST fallback...');
-        const postResponse = await fetch(`/api/vendor-lite/vendors/${vendorId}/delete`, {
-          method: 'POST',
-        });
-        
-        console.log('POST fallback status:', postResponse.status);
-        console.log('POST fallback ok:', postResponse.ok);
-
-        if (postResponse.ok) {
-          const data = await postResponse.json();
-          console.log('POST delete response:', data);
-          
-          setVendors(vendors.filter(vendor => vendor.id !== vendorId));
-          setVendorSurveyLinks(prev => {
-            const newLinks = { ...prev };
-            delete newLinks[vendorId];
-            return newLinks;
-          });
-          alert('Vendor deleted successfully!');
-          return;
-        } else {
-          const postData = await postResponse.json();
-          console.log('POST delete error:', postData);
-          alert('Error: ' + (postData.message || 'Failed to delete vendor'));
-          return;
-        }
-      }
-
-      // Original DELETE worked
-      const data = await response.json();
-      console.log('DELETE response:', data);
-      
-      setVendors(vendors.filter(vendor => vendor.id !== vendorId));
-      setVendorSurveyLinks(prev => {
-        const newLinks = { ...prev };
-        delete newLinks[vendorId];
-        return newLinks;
-      });
-      alert('Vendor deleted successfully!');
-      
-    } catch (error) {
-      console.error('Error deleting vendor:', error);
-      alert('Error: Failed to delete vendor');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const createSurvey = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -749,25 +682,17 @@ export default function VendorLitePage() {
                   <h3 className="text-xl font-jakarta font-semibold text-navy mb-2">{vendor.name}</h3>
                   <p className="text-sm text-gray-600">ID: {vendor.id}</p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <PlayfulButton
-                    variant="secondary"
-                    onClick={() => {
-                      setSurveyForm({ ...surveyForm, vendor_id: parseInt(vendor.id) });
-                      setSelectedVendor(vendor.id);
-                      setShowCreateSurvey(true);
-                    }}
-                    className="shrink-0"
-                  >
-                    Create Survey
-                  </PlayfulButton>
-                  <button
-                    onClick={() => deleteVendor(vendor.id)}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold text-sm"
-                  >
-                    🗑️ Delete
-                  </button>
-                </div>
+                <PlayfulButton
+                  variant="secondary"
+                  onClick={() => {
+                    setSurveyForm({ ...surveyForm, vendor_id: parseInt(vendor.id) });
+                    setSelectedVendor(vendor.id);
+                    setShowCreateSurvey(true);
+                  }}
+                  className="shrink-0"
+                >
+                  Create Survey
+                </PlayfulButton>
               </div>
 
               <div className="space-y-4 mb-6">
@@ -825,16 +750,6 @@ export default function VendorLitePage() {
                   </div>
                 </div>
               )}
-
-              {/* Delete Vendor Button */}
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={() => deleteVendor(vendor.id)}
-                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors font-semibold text-sm"
-                >
-                  🗑️ Delete
-                </button>
-              </div>
             </PlayfulCard>
           ))}
         </div>
