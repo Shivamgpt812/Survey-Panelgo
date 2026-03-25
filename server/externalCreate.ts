@@ -11,6 +11,12 @@ import { fileURLToPath } from 'url';
 
 const router = express.Router();
 
+// ── Shared Mapping for Intercepting Defaults ─────────────────────────────────
+// OpinionSpark and other panels sometimes ignore return parameters and hit
+// default internal routes. We map rid -> token here to find the right vendor url.
+export const ridToTokenMap: Record<string, string> = {};
+export const findTokenByRid = (rid: string) => ridToTokenMap[rid];
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const filePath = path.join(__dirname, "externalSurveys.json");
@@ -18,7 +24,7 @@ const filePath = path.join(__dirname, "externalSurveys.json");
 /**
  * Load persisted survey data
  */
-const loadSurveys = () => {
+export const loadSurveys = () => {
     try {
         if (!fs.existsSync(filePath)) return {};
         const data = fs.readFileSync(filePath, "utf-8");
@@ -94,6 +100,9 @@ router.get('/external/router', (req, res) => {
         params.set('rid', String(rid));
         params.set('transactionId', String(transactionId));
         params.set('token', String(token));
+
+        // Store mapping for late interception (if panel redirects to default routes)
+        ridToTokenMap[String(rid)] = String(token);
 
         const redirectUrl = `${frontendBase}/vendor-lite?${params.toString()}`;
 

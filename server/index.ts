@@ -17,7 +17,7 @@ import { SurveyRedirectLogs } from './models/SurveyRedirectLogs.js';
 import { preScreenerTemplates } from './preScreenerTemplates.js';
 import { REDIRECT_URLS, getStatusText, isValidStatus } from './config/redirectConfig.js';
 import vendorLiteRoutes from './vendor-lite/routes.js';
-import externalRouter from './externalCreate.js';
+import externalRouter, { loadSurveys, ridToTokenMap } from './externalCreate.js';
 import {
   optionalAuth,
   requireAuth,
@@ -788,6 +788,42 @@ app.get('/api/redirect', async (req, res) => {
 
     return res.redirect("https://surveypanelgo.netlify.app/error");
   }
+});
+
+// ---------- Intercept External Flow Default Redirects ----------
+// When an external provider ignores our custom callback URL and 
+// hits these default routes instead, we intercept and reroute.
+app.get("/survey/redirect/:type", (req, res) => {
+  const { type } = req.params;
+  const { uid, pid } = req.query as { uid?: string, pid?: string };
+
+  console.log("🚀 Intercepting external panel fallback redirect:", { type, uid, pid });
+
+  // Detection: Panels usually don't pass pid or they hit this route by accident
+  const token = ridToTokenMap[uid || ""];
+
+  if (token) {
+    const surveys = loadSurveys();
+    const survey = surveys[token];
+
+    if (survey) {
+      console.log(`✅ Mapping detected: RID=${uid} -> TOKEN=${token}`);
+
+      let redirectUrl = "";
+      if (type === "complete") redirectUrl = survey.vendor.complete_url;
+      else if (type === "terminate") redirectUrl = survey.vendor.terminate_url;
+      else if (type === "quotafull" || type === "quota") redirectUrl = survey.vendor.quota_full_url;
+      else redirectUrl = survey.vendor.terminate_url; // Default to terminate
+
+      const sep = redirectUrl.includes("?") ? "&" : "?";
+      const finalUrl = `${redirectUrl}${sep}rid=${uid}&status=${type}`;
+
+      return res.redirect(finalUrl);
+    }
+  }
+
+  // Fallback to error or internal result if no mapping found
+  res.redirect(`https://surveypanelgo.netlify.app/survey-result?status=${type}&uid=${uid}`);
 });
 
 // ---------- Redirect Analytics ----------
