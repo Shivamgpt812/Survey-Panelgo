@@ -486,13 +486,6 @@ const LandingPage: React.FC = () => {
             <a href="#global" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
               Throughout Global
             </a>
-            <button 
-              onClick={() => navigate('/vendor-lite')}
-              className="font-jakarta font-medium text-violet hover:text-violet/80 transition-colors flex items-center gap-1"
-            >
-              <Zap className="w-4 h-4" />
-              Vendor Lite
-            </button>
             <a href="#contact" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
               Contact
             </a>
@@ -543,13 +536,6 @@ const LandingPage: React.FC = () => {
               <a href="#global" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                 Throughout Global
               </a>
-              <button 
-                onClick={() => { navigate('/vendor-lite'); setIsMobileMenuOpen(false); }}
-                className="font-jakarta font-medium text-violet hover:text-violet/80 transition-colors flex items-center gap-1 text-left"
-              >
-                <Zap className="w-4 h-4" />
-                Vendor Lite
-              </button>
               <a href="#contact" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                 Contact
               </a>
