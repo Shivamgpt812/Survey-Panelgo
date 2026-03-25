@@ -11,6 +11,7 @@ import {
   BarChart3,
   Menu,
   X,
+  Zap,
 } from 'lucide-react';
 import { PlayfulButton } from '@/components/ui/playful';
 import { BrandLogo } from '@/components/brand/BrandLogo';
@@ -55,6 +56,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
     { id: 'surveys', label: 'All Surveys', icon: FileText, path: '/admin', tab: 'surveys' },
     { id: 'create', label: 'Create Survey', icon: Plus, path: '/admin', tab: 'create' },
     { id: 'vendors', label: 'Vendors', icon: Store, path: '/admin', tab: 'vendors' },
+    { id: 'vendor-lite', label: 'Vendor Lite', icon: Zap, path: '/vendor-lite' },
     { id: 'logs', label: 'Activity Logs', icon: ClipboardList, path: '/admin', tab: 'logs' },
     { id: 'survey-logs', label: 'Survey Logs', icon: Activity, path: '/admin', tab: 'survey-logs' },
     { id: 'redirect-analytics', label: 'Redirect Analytics', icon: BarChart3, path: '/admin', tab: 'redirect-analytics' },
