@@ -904,7 +904,7 @@ app.get('/api/export/responses.csv', requireAdmin, async (_req, res) => {
     const responses = await Response.find().sort({ createdAt: -1 });
     const headers = ['Response ID', 'Survey ID', 'Vendor ID', 'User ID', 'Status', 'Timestamp'];
     const rows = responses.map((r) => {
-      const j = r.toJSON() as { id: string; surveyId?: string; vendorId?: string; userId?: string; status?: string; timestamp?: string };
+      const j = r.toJSON() as unknown as { id: string; surveyId?: string; vendorId?: string; userId?: string; status?: string; timestamp?: string };
       return [
         j.id,
         j.surveyId || '',
