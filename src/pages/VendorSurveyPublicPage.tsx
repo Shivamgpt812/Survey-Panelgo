@@ -302,27 +302,11 @@ export default function VendorSurveyPublicPage() {
   // Handle external surveys - redirect to external link
   if (survey.externalLink) {
     useEffect(() => {
-      // Append PID and UID to the external link
-      const url = new URL(survey.externalLink);
-      
-      // Replace PID=XXXX with actual PID or add PID parameter if not present
-      if (url.searchParams.has('PID') && url.searchParams.get('PID') === 'XXXX') {
-        url.searchParams.set('PID', pid);
-      } else if (!url.searchParams.has('PID')) {
-        url.searchParams.set('PID', pid);
-      }
-      
-      // Add UID parameter
-      url.searchParams.set('UID', uid);
-      
       console.log("=== EXTERNAL SURVEY REDIRECT DEBUG ===");
-      console.log("Original external link:", survey.externalLink);
-      console.log("Final redirect URL:", url.toString());
-      console.log("PID:", pid);
-      console.log("UID:", uid);
+      console.log("Redirecting to external link:", survey.externalLink);
       
-      window.location.href = url.toString();
-    }, [survey.externalLink, pid, uid]);
+      window.location.href = survey.externalLink;
+    }, [survey.externalLink]);
     
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-50 via-pink-50 to-blue-50 flex items-center justify-center">
@@ -343,16 +327,7 @@ export default function VendorSurveyPublicPage() {
             </p>
             <div className="mt-4">
               <a 
-                href={(() => {
-                  const url = new URL(survey.externalLink);
-                  if (url.searchParams.has('PID') && url.searchParams.get('PID') === 'XXXX') {
-                    url.searchParams.set('PID', pid);
-                  } else if (!url.searchParams.has('PID')) {
-                    url.searchParams.set('PID', pid);
-                  }
-                  url.searchParams.set('UID', uid);
-                  return url.toString();
-                })()} 
+                href={survey.externalLink}
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-violet hover:text-violet/80 underline font-medium"
