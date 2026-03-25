@@ -457,18 +457,17 @@ export default function VendorLitePage() {
                     className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
                   />
                   <p className="text-sm text-gray-500 mt-2">
-                    Users will be redirected to this external survey link
+                    Users will answer your pre-screener questions first, then be redirected to this external survey link
                   </p>
                 </div>
               )}
 
-              {/* Pre-Screener Questions Section - Only show for internal surveys */}
-              {surveyForm.type === 'internal' && (
-                <div>
-                  <div className="flex justify-between items-center mb-6">
-                    <label className="block text-base font-semibold text-gray-700">Pre-Screener Questions</label>
-                    <span className="text-sm text-gray-500">Set criteria to qualify users</span>
-                  </div>
+              {/* Pre-Screener Questions Section - Show for both internal and external surveys */}
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <label className="block text-base font-semibold text-gray-700">Pre-Screener Questions</label>
+                  <span className="text-sm text-gray-500">Set criteria to qualify users</span>
+                </div>
                   
                   {preScreenerQuestions.map((preScreen, index) => (
                   <div key={index} className="mb-6 p-6 bg-gray-50 border-2 border-gray-200 rounded-xl">
@@ -539,7 +538,6 @@ export default function VendorLitePage() {
                   </div>
                 ))}
                 </div>
-              )}
 
               {/* Questions Section - Only show for internal surveys */}
               {surveyForm.type === 'internal' && (
