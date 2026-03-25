@@ -42,7 +42,15 @@ export function useSurveyTracker(surveyId: string) {
   };
 
   const completeTracking = async (status: 'completed' | 'terminated' | 'quota_full') => {
-    if (!trackingData) return;
+    console.log("=== COMPLETE TRACKING DEBUG ===");
+    console.log("status received:", status);
+    console.log("trackingData:", trackingData);
+    console.log("surveyId:", surveyId);
+    
+    if (!trackingData) {
+      console.log("ERROR: No tracking data in completeTracking");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -54,10 +62,14 @@ export function useSurveyTracker(surveyId: string) {
         token
       );
       
+      console.log("completeSurveyTracking API call successful");
+      
       // MANDATORY: Always redirect to /api/redirect with proper params
       const auth = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
       const pid = surveyId;
       const uid = auth?.id || auth?._id;
+      
+      console.log("Auth data:", { auth, pid, uid });
       
       if (!pid || !uid) {
         console.error("Missing pid or uid", { pid, uid });
@@ -72,6 +84,7 @@ export function useSurveyTracker(surveyId: string) {
       
       const statusCode = statusMap[status] || 2;
       
+      console.log("Status mapping:", { status, statusCode, statusMap });
       console.log("Redirecting to API:", { pid, uid, status: statusCode });
       window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=${statusCode}`;
       
