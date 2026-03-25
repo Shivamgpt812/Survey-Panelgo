@@ -292,7 +292,7 @@ export const validatePreScreener = async (req: Request, res: Response) => {
 
         // Return terminate redirect URL
         const vendor = survey.vendor_id as any;
-        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=${userId || 'pre-screener-validation'}&status=2&reason=pre-screener-failed`;
+        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=${userId || 'pre-screener-validation'}&status=terminated`;
         
         return res.json({
           success: true,
@@ -338,7 +338,7 @@ export const validatePreScreener = async (req: Request, res: Response) => {
         
         // Return terminate redirect URL
         const vendor = survey.vendor_id as any;
-        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=${userId || 'validation-error'}&status=2&reason=validation-error`;
+        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=${userId || 'validation-error'}&status=terminated`;
         
         return res.json({
           success: true,
@@ -429,17 +429,16 @@ export const submitResponse = async (req: Request, res: Response) => {
           const url = new URL(terminateUrl);
           url.searchParams.set('pid', survey.pid);
           url.searchParams.set('uid', uid);
-          url.searchParams.set('status', '2');
-          url.searchParams.set('reason', 'pre-screener-failed');
+          url.searchParams.set('status', 'terminated');
           terminateUrl = url.toString();
         } catch (error) {
           // Fallback if URL parsing fails
           console.log("URL parsing failed, using fallback logic");
           const hasQueryParams = terminateUrl.includes('?');
           if (hasQueryParams) {
-            terminateUrl = `${terminateUrl}&pid=${survey.pid}&uid=${uid}&status=2&reason=pre-screener-failed`;
+            terminateUrl = `${terminateUrl}&pid=${survey.pid}&uid=${uid}&status=terminated`;
           } else {
-            terminateUrl = `${terminateUrl}?pid=${survey.pid}&uid=${uid}&status=2&reason=pre-screener-failed`;
+            terminateUrl = `${terminateUrl}?pid=${survey.pid}&uid=${uid}&status=terminated`;
           }
         }
         
@@ -491,7 +490,7 @@ export const submitResponse = async (req: Request, res: Response) => {
     console.log("Vendor complete_url type:", typeof redirectUrl);
 
     // Use PID from survey, fallback to URL PID if survey PID is missing or invalid
-    const finalPid = (survey.pid && survey.pid.length > 0) ? survey.pid : urlPid;
+    const finalPid = (survey.pid && survey.pid.length > 0) ? survey.pid : (urlPid as string) || '';
     console.log("=== PID COMPARISON DEBUG ===");
     console.log("Survey PID from database:", survey.pid);
     console.log("PID from URL parameters:", urlPid);
