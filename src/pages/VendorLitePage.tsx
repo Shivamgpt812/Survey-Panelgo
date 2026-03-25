@@ -726,10 +726,8 @@ export default function VendorLitePage() {
                     Create Survey
                   </PlayfulButton>
                   <button
-                    onClick={() => deleteVendor(vendor.id)}
-                    disabled={loading}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm"
-                    style={{ backgroundColor: '#ef4444', color: 'white', border: 'none' }}
+                    onClick={() => alert('Delete button clicked for vendor: ' + vendor.id)}
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold text-sm"
                   >
                     🗑️ Delete
                   </button>
