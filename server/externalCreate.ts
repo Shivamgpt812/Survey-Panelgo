@@ -1,34 +1,53 @@
 /**
  * externalCreate.ts
  *
- * Standalone Express router for external survey creation and router logic.
- * Mounted in index.ts at app.use('/', externalRouter).
+ * Persisted Express router for external survey creation.
+ * Stores data in externalSurveys.json to survive server restarts.
  *
  * Routes:
- *   POST /external/create         – create an external survey token (stores in memory)
- *   GET  /external/router         – redirect respondent to vendor-lite with params
- *   GET  /external/data/:token    – return stored survey data (externalUrl + questions + vendor)
+ *   POST /external/create         – preserve survey config + return router link
+ *   GET  /external/router         – redirect respondent to frontend
+ *   GET  /external/data/:token    – fetch preserved survey config
  */
 
 import express from 'express';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const router = express.Router();
 
 // ---------------------------------------------------------------------------
-// In-memory store for external surveys
+// Persistence Setup (ESM compatible __dirname)
 // ---------------------------------------------------------------------------
-const externalSurveys: Record<string, {
-    title: string;
-    externalUrl: string;
-    questions: { text: string; correctAnswer: string }[];
-    vendor: {
-        id: string;
-        name: string;
-        complete_url: string;
-        terminate_url: string;
-        quota_full_url: string;
-    };
-}> = {};
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const filePath = path.join(__dirname, "externalSurveys.json");
+
+/**
+ * Load persisted survey data
+ */
+const loadSurveys = () => {
+    try {
+        if (!fs.existsSync(filePath)) return {};
+        const data = fs.readFileSync(filePath, "utf-8");
+        return JSON.parse(data || "{}");
+    } catch (err) {
+        console.error("Failed to load surveys:", err);
+        return {};
+    }
+};
+
+/**
+ * Persist survey data
+ */
+const saveSurveys = (data: any) => {
+    try {
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    } catch (err) {
+        console.error("Failed to save surveys:", err);
+    }
+};
 
 // ---------------------------------------------------------------------------
 // POST /external/create
@@ -43,17 +62,23 @@ router.post('/external/create', (req, res) => {
 
         const token = Math.random().toString(36).substring(2, 10);
 
-        externalSurveys[token] = {
+        const surveys = loadSurveys();
+
+        // Persist survey definition
+        surveys[token] = {
             title: title || 'External Survey',
             externalUrl,
             questions: Array.isArray(questions) ? questions : [],
             vendor
         };
 
-        const baseUrl = process.env.BACKEND_URL || 'https://survey-panelgo.onrender.com';
-        const link = `${baseUrl}/external/router?token=${token}`;
+        saveSurveys(surveys);
 
-        console.log('✅ External Survey Created:', { title, externalUrl, token, link });
+        const baseUrl = process.env.BACKEND_URL || 'https://survey-panelgo.onrender.com';
+        // Link includes informative hints for vendor substitution
+        const link = `${baseUrl}/external/router?token=${token}&rid=[USER_ID]&transactionId=[TRANSACTION_ID]`;
+
+        console.log('✅ External Survey Persisted:', { title, token, link });
 
         return res.json({
             success: true,
@@ -68,7 +93,6 @@ router.post('/external/create', (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /external/router
-// Query: { rid, transactionId, token }
 // ---------------------------------------------------------------------------
 router.get('/external/router', (req, res) => {
     try {
@@ -101,13 +125,19 @@ router.get('/external/router', (req, res) => {
 // GET /external/data/:token
 // ---------------------------------------------------------------------------
 router.get('/external/data/:token', (req, res) => {
-    const survey = externalSurveys[req.params.token];
+    try {
+        const surveys = loadSurveys();
+        const survey = surveys[req.params.token];
 
-    if (!survey) {
-        return res.status(404).json({ success: false, message: 'Survey not found' });
+        if (!survey) {
+            return res.status(404).json({ success: false, message: 'Survey not found' });
+        }
+
+        return res.json({ success: true, survey });
+    } catch (err) {
+        console.error('Data Fetch Error:', err);
+        return res.status(500).json({ success: false });
     }
-
-    return res.json({ success: true, survey });
 });
 
 export default router;
