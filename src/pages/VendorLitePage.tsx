@@ -155,46 +155,56 @@ export default function VendorLitePage() {
 
     setLoading(true);
     try {
-      // Test with simple route first
-      const response = await fetch(`/api/vendor-lite/test-delete/${vendorId}`, {
+      // Try DELETE method first
+      let response = await fetch(`/api/vendor-lite/vendors/${vendorId}`, {
         method: 'DELETE',
       });
       
-      console.log('Delete response status:', response.status);
-      console.log('Delete response ok:', response.ok);
+      console.log('DELETE response status:', response.status);
+      console.log('DELETE response ok:', response.ok);
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Test delete response:', data);
-        alert('Test DELETE working! Now trying real delete...');
-        
-        // Now try the real delete
-        const realResponse = await fetch(`/api/vendor-lite/vendors/${vendorId}`, {
-          method: 'DELETE',
+      // If DELETE fails, try POST fallback
+      if (!response.ok) {
+        console.log('DELETE failed, trying POST fallback...');
+        const postResponse = await fetch(`/api/vendor-lite/vendors/${vendorId}/delete`, {
+          method: 'POST',
         });
         
-        console.log('Real delete status:', realResponse.status);
-        console.log('Real delete ok:', realResponse.ok);
+        console.log('POST fallback status:', postResponse.status);
+        console.log('POST fallback ok:', postResponse.ok);
 
-        if (realResponse.ok) {
+        if (postResponse.ok) {
+          const data = await postResponse.json();
+          console.log('POST delete response:', data);
+          
           setVendors(vendors.filter(vendor => vendor.id !== vendorId));
-          // Also remove any associated survey links
           setVendorSurveyLinks(prev => {
             const newLinks = { ...prev };
             delete newLinks[vendorId];
             return newLinks;
           });
           alert('Vendor deleted successfully!');
+          return;
         } else {
-          const realData = await realResponse.json();
-          console.log('Real delete error:', realData);
-          alert('Real delete error: ' + (realData.message || 'Failed to delete vendor'));
+          const postData = await postResponse.json();
+          console.log('POST delete error:', postData);
+          alert('Error: ' + (postData.message || 'Failed to delete vendor'));
+          return;
         }
-      } else {
-        const data = await response.json();
-        console.log('Test delete error:', data);
-        alert('Test delete error: ' + (data.message || 'DELETE method not working'));
       }
+
+      // Original DELETE worked
+      const data = await response.json();
+      console.log('DELETE response:', data);
+      
+      setVendors(vendors.filter(vendor => vendor.id !== vendorId));
+      setVendorSurveyLinks(prev => {
+        const newLinks = { ...prev };
+        delete newLinks[vendorId];
+        return newLinks;
+      });
+      alert('Vendor deleted successfully!');
+      
     } catch (error) {
       console.error('Error deleting vendor:', error);
       alert('Error: Failed to delete vendor');

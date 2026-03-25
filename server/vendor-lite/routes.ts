@@ -20,9 +20,10 @@ router.get('/vendor', getVendors);  // Add GET route for /vendor
 router.get('/vendors', getVendors);
 router.delete('/vendors/:id', deleteVendor);
 
-// Test route
-router.delete('/test-delete/:id', (req, res) => {
-  res.json({ message: 'DELETE method working', id: req.params.id });
+// Alternative POST route for DELETE (for hosting that doesn't support DELETE)
+router.post('/vendors/:id/delete', (req, res) => {
+  req.params.id = req.params.id;
+  deleteVendor(req, res);
 });
 
 router.post('/survey', createSurvey);
