@@ -44,11 +44,8 @@ export const createVendor = async (req: Request, res: Response) => {
 
 export const getVendors = async (req: Request, res: Response) => {
   try {
-    const vendors = await IVendor.find().populate({
-      path: 'vendor_surveys',
-      model: 'VendorLiteSurvey'
-    });
-
+    const vendors = await IVendor.find().sort({ created_at: -1 });
+    
     res.json({
       success: true,
       vendors

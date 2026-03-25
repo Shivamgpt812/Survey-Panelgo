@@ -15,4 +15,3 @@ export { default as SuccessPage } from './SuccessPage';
 export { default as TerminatedPage } from './TerminatedPage';
 export { default as QuotaFullPage } from './QuotaFullPage';
 export { default as SecurityBlockPage } from './SecurityBlockPage';
-export { default as VendorSurveyPage } from './VendorSurveyPage';

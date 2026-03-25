@@ -74,7 +74,7 @@ export default function VendorSurveyPublicPage() {
 
   const fetchSurvey = async () => {
     try {
-      const response = await fetch(`/vendor-lite/survey/${token}`);
+      const response = await fetch(`http://localhost:3000/vendor-lite/survey/${token}`);
       const data = await response.json();
       
       if (data.success) {
@@ -120,7 +120,7 @@ export default function VendorSurveyPublicPage() {
     setSubmitting(true);
 
     try {
-      const response = await fetch('/vendor-lite/submit', {
+      const response = await fetch('http://localhost:3000/vendor-lite/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

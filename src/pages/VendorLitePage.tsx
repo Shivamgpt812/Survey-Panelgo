@@ -41,7 +41,7 @@ export default function VendorLitePage() {
 
   const fetchVendors = async () => {
     try {
-      const response = await fetch('/vendor-lite/vendors');
+      const response = await fetch('http://localhost:3000/vendor-lite/vendors');
       const data = await response.json();
       if (data.success) {
         setVendors(data.vendors);
@@ -56,7 +56,7 @@ export default function VendorLitePage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/vendor-lite/vendor', {
+      const response = await fetch('http://localhost:3000/vendor-lite/vendor', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,7 +84,7 @@ export default function VendorLitePage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/vendor-lite/survey', {
+      const response = await fetch('http://localhost:3000/vendor-lite/survey', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
