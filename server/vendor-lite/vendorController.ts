@@ -292,7 +292,31 @@ export const validatePreScreener = async (req: Request, res: Response) => {
 
         // Return terminate redirect URL
         const vendor = survey.vendor_id as any;
-        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=${userId || 'pre-screener-validation'}&status=2&reason=pre-screener-failed`;
+        let redirectUrl = vendor.terminate_url;
+        
+        console.log("=== VENDOR TERMINATE URL DEBUG (PRE SCREENER) ===");
+        console.log("Vendor terminate_url:", redirectUrl);
+        console.log("Vendor terminate_url type:", typeof redirectUrl);
+
+        // Use PID from survey, fallback to URL PID if survey PID is missing or invalid
+        const finalPid = (survey.pid && survey.pid.length > 0) ? survey.pid : req.query.pid;
+        console.log("=== TERMINATE PID COMPARISON DEBUG (PRE SCREENER) ===");
+        console.log("Survey PID from database:", survey.pid);
+        console.log("PID from URL parameters:", req.query.pid);
+        console.log("Final PID being used for terminate:", finalPid);
+
+        // Check if redirectUrl already has query parameters
+        const hasQueryParams = redirectUrl.includes('?');
+        if (hasQueryParams) {
+          redirectUrl = `${redirectUrl}&pid=${finalPid}&uid=${userId || 'pre-screener-validation'}&status=2`;
+        } else {
+          redirectUrl = `${redirectUrl}?pid=${finalPid}&uid=${userId || 'pre-screener-validation'}&status=2`;
+        }
+        
+        console.log("=== TERMINATE REDIRECT URL DEBUG (PRE SCREENER) ===");
+        console.log("Survey PID:", survey.pid);
+        console.log("User ID:", userId || 'pre-screener-validation');
+        console.log("Terminate URL:", redirectUrl);
         
         return res.json({
           success: true,
@@ -338,7 +362,31 @@ export const validatePreScreener = async (req: Request, res: Response) => {
         
         // Return terminate redirect URL
         const vendor = survey.vendor_id as any;
-        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=${userId || 'validation-error'}&status=2&reason=validation-error`;
+        let redirectUrl = vendor.terminate_url;
+        
+        console.log("=== VENDOR TERMINATE URL DEBUG (VALIDATION ERROR) ===");
+        console.log("Vendor terminate_url:", redirectUrl);
+        console.log("Vendor terminate_url type:", typeof redirectUrl);
+
+        // Use PID from survey, fallback to URL PID if survey PID is missing or invalid
+        const finalPid = (survey.pid && survey.pid.length > 0) ? survey.pid : req.query.pid;
+        console.log("=== TERMINATE PID COMPARISON DEBUG (VALIDATION ERROR) ===");
+        console.log("Survey PID from database:", survey.pid);
+        console.log("PID from URL parameters:", req.query.pid);
+        console.log("Final PID being used for terminate:", finalPid);
+
+        // Check if redirectUrl already has query parameters
+        const hasQueryParams = redirectUrl.includes('?');
+        if (hasQueryParams) {
+          redirectUrl = `${redirectUrl}&pid=${finalPid}&uid=${userId || 'validation-error'}&status=2`;
+        } else {
+          redirectUrl = `${redirectUrl}?pid=${finalPid}&uid=${userId || 'validation-error'}&status=2`;
+        }
+        
+        console.log("=== TERMINATE REDIRECT URL DEBUG (VALIDATION ERROR) ===");
+        console.log("Survey PID:", survey.pid);
+        console.log("User ID:", userId || 'validation-error');
+        console.log("Terminate URL:", redirectUrl);
         
         return res.json({
           success: true,
@@ -417,13 +465,29 @@ export const submitResponse = async (req: Request, res: Response) => {
         const vendor = survey.vendor_id as any;
         let terminateUrl = vendor.terminate_url;
         
+        console.log("=== VENDOR TERMINATE URL DEBUG ===");
+        console.log("Vendor terminate_url:", terminateUrl);
+        console.log("Vendor terminate_url type:", typeof terminateUrl);
+
+        // Use PID from survey, fallback to URL PID if survey PID is missing or invalid
+        const finalPid = (survey.pid && survey.pid.length > 0) ? survey.pid : urlPid;
+        console.log("=== TERMINATE PID COMPARISON DEBUG ===");
+        console.log("Survey PID from database:", survey.pid);
+        console.log("PID from URL parameters:", urlPid);
+        console.log("Final PID being used for terminate:", finalPid);
+
         // Check if terminateUrl already has query parameters
         const hasQueryParams = terminateUrl.includes('?');
         if (hasQueryParams) {
-          terminateUrl = `${terminateUrl}&pid=${survey.pid}&uid=${uid}&status=2&reason=pre-screener-failed`;
+          terminateUrl = `${terminateUrl}&pid=${finalPid}&uid=${uid}&status=2`;
         } else {
-          terminateUrl = `${terminateUrl}?pid=${survey.pid}&uid=${uid}&status=2&reason=pre-screener-failed`;
+          terminateUrl = `${terminateUrl}?pid=${finalPid}&uid=${uid}&status=2`;
         }
+        
+        console.log("=== TERMINATE REDIRECT URL DEBUG ===");
+        console.log("Survey PID:", survey.pid);
+        console.log("User ID:", uid);
+        console.log("Terminate URL:", terminateUrl);
         
         return res.json({
           success: true,
