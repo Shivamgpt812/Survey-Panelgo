@@ -504,15 +504,16 @@ export const submitResponse = async (req: Request, res: Response) => {
       const url = new URL(redirectUrl);
       url.searchParams.set('pid', finalPid);
       url.searchParams.set('uid', uid);
+      url.searchParams.set('status', 'complete');
       redirectUrl = url.toString();
     } catch (error) {
       // Fallback if URL parsing fails
       console.log("URL parsing failed, using fallback logic");
       const hasQueryParams = redirectUrl.includes('?');
       if (hasQueryParams) {
-        redirectUrl = `${redirectUrl}&pid=${finalPid}&uid=${uid}`;
+        redirectUrl = `${redirectUrl}&pid=${finalPid}&uid=${uid}&status=complete`;
       } else {
-        redirectUrl = `${redirectUrl}?pid=${finalPid}&uid=${uid}`;
+        redirectUrl = `${redirectUrl}?pid=${finalPid}&uid=${uid}&status=complete`;
       }
     }
     
