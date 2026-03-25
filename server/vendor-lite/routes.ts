@@ -5,7 +5,8 @@ import {
   createSurvey,
   getSurveyByToken,
   submitResponse,
-  getSurveyResponses
+  getSurveyResponses,
+  handleVendorRedirect
 } from './vendorController';
 
 const router = Router();
@@ -19,5 +20,6 @@ router.get('/survey/:token', getSurveyByToken);
 router.get('/survey/:token/responses', getSurveyResponses);
 
 router.post('/submit', submitResponse);
+router.get('/redirect', handleVendorRedirect);
 
 export default router;

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import IVendor from './vendorModel.js';
 import IVendorSurvey from './surveyModel.js';
 import IVendorResponse from './responseModel.js';
+import { SurveyRedirectLogs } from '../models/SurveyRedirectLogs.js';
 
 export const generateRandomToken = (): string => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -189,6 +190,22 @@ export const submitResponse = async (req: Request, res: Response) => {
       answers
     });
 
+    // Log redirect data for analytics
+    try {
+      await SurveyRedirectLogs.create({
+        pid: survey._id.toString(),
+        uid,
+        status: 1, // Completed survey
+        statusText: 'Completed',
+        ipAddress: ip,
+        userAgent: req.get('User-Agent') || 'unknown'
+      });
+      console.log("✅ Redirect log saved for vendor survey:", { pid: survey._id, uid, status: 1 });
+    } catch (logError) {
+      console.error("❌ Error saving redirect log:", logError);
+      // Don't fail the response if logging fails
+    }
+
     // Since status is always "complete", use complete_url
     let redirectUrl = (survey.vendor_id as any).complete_url;
 
@@ -205,6 +222,100 @@ export const submitResponse = async (req: Request, res: Response) => {
       success: false,
       message: 'Internal server error'
     });
+  }
+};
+
+export const handleVendorRedirect = async (req: Request, res: Response) => {
+  try {
+    const { pid, uid, status } = req.query;
+
+    console.log("Vendor Redirect HIT:", { pid, uid, status });
+
+    // Validate params
+    if (!pid || !uid || !status) {
+      console.error("Missing params:", { pid, uid, status });
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required parameters: pid, uid, status'
+      });
+    }
+
+    // Get survey and vendor info
+    const survey = await IVendorSurvey.findById(pid).populate({
+      path: 'vendor_id',
+      model: 'VendorLite'
+    });
+
+    if (!survey) {
+      return res.status(404).json({
+        success: false,
+        message: 'Survey not found'
+      });
+    }
+
+    const vendor = survey.vendor_id as any;
+    const statusCode = parseInt(status as string);
+    
+    // Log redirect data for analytics
+    try {
+      const statusText = getStatusText(statusCode);
+      await SurveyRedirectLogs.create({
+        pid: pid as string,
+        uid: uid as string,
+        status: statusCode,
+        statusText,
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        userAgent: req.get('User-Agent') || 'unknown'
+      });
+      console.log("✅ Vendor redirect log saved:", { pid, uid, status: statusCode });
+    } catch (logError) {
+      console.error("❌ Error saving vendor redirect log:", logError);
+    }
+
+    // Determine redirect URL based on status
+    let redirectUrl;
+    switch (statusCode) {
+      case 1: // Completed
+        redirectUrl = vendor.complete_url;
+        break;
+      case 2: // Terminated
+        redirectUrl = vendor.terminate_url;
+        break;
+      case 3: // Quota Full
+        redirectUrl = vendor.quota_full_url;
+        break;
+      case 4: // Security Terminated
+        redirectUrl = vendor.terminate_url; // Use terminate URL for security
+        break;
+      default:
+        redirectUrl = vendor.complete_url; // Default to complete
+    }
+
+    // Add parameters to redirect URL
+    const separator = redirectUrl.includes('?') ? '&' : '?';
+    redirectUrl = `${redirectUrl}${separator}pid=${pid}&uid=${uid}&status=${status}`;
+
+    res.json({
+      success: true,
+      redirectUrl,
+      message: 'Redirect processed successfully'
+    });
+  } catch (error) {
+    console.error('Vendor redirect error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+const getStatusText = (status: number): string => {
+  switch (status) {
+    case 1: return 'Completed';
+    case 2: return 'Terminated';
+    case 3: return 'Quota Full';
+    case 4: return 'Security Terminated';
+    default: return 'Unknown';
   }
 };
 

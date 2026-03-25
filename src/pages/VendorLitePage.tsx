@@ -32,14 +32,29 @@ export default function VendorLitePage() {
     { text: '', options: [''] }
   ]);
   const [generatedLink, setGeneratedLink] = useState('');
+  const [vendorSurveyLinks, setVendorSurveyLinks] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchVendors();
+    // Load saved survey links from localStorage
+    const savedLinks = localStorage.getItem('vendorSurveyLinks');
+    if (savedLinks) {
+      try {
+        setVendorSurveyLinks(JSON.parse(savedLinks));
+      } catch (error) {
+        console.error('Error loading saved links:', error);
+      }
+    }
   }, []);
 
   useEffect(() => {
     console.log("📦 Vendors state updated:", vendors);
   }, [vendors]);
+
+  useEffect(() => {
+    // Save survey links to localStorage whenever they change
+    localStorage.setItem('vendorSurveyLinks', JSON.stringify(vendorSurveyLinks));
+  }, [vendorSurveyLinks]);
 
   const fetchVendors = async () => {
     try {
@@ -144,6 +159,12 @@ export default function VendorLitePage() {
       if (data.success) {
         const link = getPublicSurveyLink(data.token);
         setGeneratedLink(link);
+        
+        // Save link to vendor's survey links
+        setVendorSurveyLinks(prev => ({
+          ...prev,
+          [selectedVendor]: link
+        }));
         
         // Reset form
         setSurveyForm({ title: '', vendor_id: 0 });
@@ -462,6 +483,41 @@ export default function VendorLitePage() {
                   </a>
                 </div>
               </div>
+
+              {/* Display saved survey link if exists */}
+              {vendorSurveyLinks[vendor.id] && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm font-medium text-green-800 mb-1">📋 Survey Link:</p>
+                  <a 
+                    href={vendorSurveyLinks[vendor.id]} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 underline break-all text-sm"
+                  >
+                    {vendorSurveyLinks[vendor.id]}
+                  </a>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => navigator.clipboard.writeText(vendorSurveyLinks[vendor.id])}
+                      className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                    >
+                      📋 Copy
+                    </button>
+                    <button
+                      onClick={() => {
+                        setVendorSurveyLinks(prev => {
+                          const newLinks = { ...prev };
+                          delete newLinks[vendor.id];
+                          return newLinks;
+                        });
+                      }}
+                      className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                    >
+                      🗑️ Remove
+                    </button>
+                  </div>
+                </div>
+              )}
             </PlayfulCard>
           ))}
         </div>
