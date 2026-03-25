@@ -221,7 +221,7 @@ export const validatePreScreener = async (req: Request, res: Response) => {
 
     // Validate pre-screener if present
     if (survey.preScreenerQuestions && survey.preScreenerQuestions.length > 0) {
-      const validation = validatePreScreenerAnswers(survey.preScreenerQuestions, preScreenerAnswers || {});
+      const validation = validatePreScreener(survey.preScreenerQuestions, preScreenerAnswers || {});
       
       if (!validation.passed) {
         // User failed pre-screener - log as terminated and redirect
@@ -272,45 +272,6 @@ export const validatePreScreener = async (req: Request, res: Response) => {
   }
 };
 
-const validatePreScreener = (preScreenerQuestions: any[], responses: any): { passed: boolean; failedCriteria?: any } => {
-  for (const question of preScreenerQuestions) {
-    if (!question.enabled) continue;
-    
-    const userAnswer = responses[question.type];
-    const requiredValue = question.value;
-    
-    let passed = false;
-    
-    if (question.type === 'age') {
-      const userAge = parseInt(userAnswer);
-      switch (question.operator) {
-        case '>=':
-          passed = userAge >= requiredValue;
-          break;
-        case '>':
-          passed = userAge > requiredValue;
-          break;
-        case '<=':
-          passed = userAge <= requiredValue;
-          break;
-        case '<':
-          passed = userAge < requiredValue;
-          break;
-        default:
-          passed = userAge >= requiredValue;
-      }
-    } else if (question.type === 'gender') {
-      passed = userAnswer === requiredValue;
-    }
-    
-    if (!passed) {
-      return { passed: false, failedCriteria: question };
-    }
-  }
-  
-  return { passed: true };
-};
-
 export const submitResponse = async (req: Request, res: Response) => {
   try {
     const { token, answers, userId, preScreenerAnswers } = req.body;
@@ -343,7 +304,7 @@ export const submitResponse = async (req: Request, res: Response) => {
 
     // Validate pre-screener if present
     if (survey.preScreenerQuestions && survey.preScreenerQuestions.length > 0) {
-      const validation = validatePreScreenerAnswers(survey.preScreenerQuestions, preScreenerAnswers || {});
+      const validation = validatePreScreener(survey.preScreenerQuestions, preScreenerAnswers || {});
       
       if (!validation.passed) {
         // User failed pre-screener - log as terminated and redirect
