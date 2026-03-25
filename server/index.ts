@@ -615,13 +615,16 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
       // Continue even if analytics fails
     }
 
-    // STEP 3: Build Vendor Redirect URL
+    // STEP 3: Fetch Vendor Data from Survey and Build Vendor Redirect URL
     let vendorUrl = "";
     
-    if (vendorId) {
-      console.log('🔗 BUILDING VENDOR REDIRECT URL...');
-      const vendor = await Vendor.findById(vendorId);
+    console.log('🔗 FETCHING VENDOR DATA FROM SURVEY...');
+    console.log('Survey vendorId:', survey.vendorId);
+    
+    if (survey.vendorId) {
+      const vendor = await Vendor.findById(survey.vendorId);
       if (vendor) {
+        console.log('📦 Vendor Data:', vendor);
         console.log('🏪 Vendor found:', vendor.name);
         console.log('📋 Vendor redirect links:', vendor.redirectLinks);
         
@@ -636,16 +639,14 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
           console.log('🚫 Quota full redirect URL built:', vendorUrl);
         }
       } else {
-        console.log('❌ VENDOR NOT FOUND for ID:', vendorId);
+        console.log('❌ VENDOR NOT FOUND for survey vendorId:', survey.vendorId);
       }
     } else {
-      console.log('👤 Non-vendor flow - no redirect URL built');
+      console.log('👤 Survey has no vendorId - non-vendor flow, no redirect URL built');
     }
 
     // STEP 4: Return Vendor URL to Frontend
-    console.log('🚀 FINAL REDIRECT FLOW:', {
-      uid,
-      pid: survey._id.toString(),
+    console.log('🚀 FINAL REDIRECT:', {
       status,
       vendorUrl: vendorUrl || 'none'
     });

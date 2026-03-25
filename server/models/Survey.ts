@@ -36,6 +36,7 @@ const surveySchema = new mongoose.Schema(
     difficulty: { type: String, enum: ['easy', 'medium', 'hard'], required: true },
     isNew: { type: Boolean },
     isPopular: { type: Boolean },
+    vendorId: { type: String, default: null }, // Link to vendor
     preScreener: { type: [preScreenerSchema], default: [] },
     questions: { type: [questionSchema], default: [] },
   },
@@ -44,10 +45,14 @@ const surveySchema = new mongoose.Schema(
     suppressReservedKeysWarning: true,
     toJSON: {
       virtuals: true,
-      transform(_doc, ret) {
-        ret.id = ret._id.toString();
-        delete ret._id;
-        delete ret.__v;
+      transform(_doc, ret: any) {
+        if (ret._id) {
+          ret.id = ret._id.toString();
+        }
+        // Type assertion to allow deletion
+        const retToDelete = ret as any;
+        delete retToDelete._id;
+        delete retToDelete.__v;
         return ret;
       },
     },
