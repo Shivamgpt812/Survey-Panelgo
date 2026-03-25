@@ -276,55 +276,56 @@ export default function VendorLitePage() {
         </div>
 
         {showCreateVendor && (
-          <PlayfulCard className="mb-6">
-            <h3 className="text-xl font-jakarta font-semibold text-navy mb-4">Create New Vendor</h3>
-            <form onSubmit={createVendor} className="space-y-4">
+          <PlayfulCard className="mb-6 p-8">
+            <h3 className="text-2xl font-jakarta font-semibold text-navy mb-8">Create New Vendor</h3>
+            <form onSubmit={createVendor} className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vendor Name</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Vendor Name</label>
                 <input
                   type="text"
                   required
                   value={vendorForm.name}
                   onChange={(e) => setVendorForm({ ...vendorForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                  className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Complete URL</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Complete URL</label>
                 <input
                   type="url"
                   required
                   value={vendorForm.complete_url}
                   onChange={(e) => setVendorForm({ ...vendorForm, complete_url: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                  className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Terminate URL</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Terminate URL</label>
                 <input
                   type="url"
                   required
                   value={vendorForm.terminate_url}
                   onChange={(e) => setVendorForm({ ...vendorForm, terminate_url: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                  className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Quota Full URL</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Quota Full URL</label>
                 <input
                   type="url"
                   required
                   value={vendorForm.quota_full_url}
                   onChange={(e) => setVendorForm({ ...vendorForm, quota_full_url: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                  className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-4 pt-4">
                 <PlayfulButton
                   type="submit"
                   variant="primary"
                   disabled={loading}
                   isLoading={loading}
+                  className="px-8 py-3 text-lg"
                 >
                   Create Vendor
                 </PlayfulButton>
@@ -332,6 +333,7 @@ export default function VendorLitePage() {
                   type="button"
                   variant="secondary"
                   onClick={() => setShowCreateVendor(false)}
+                  className="px-8 py-3 text-lg"
                 >
                   Cancel
                 </PlayfulButton>
@@ -341,21 +343,21 @@ export default function VendorLitePage() {
         )}
 
         {showCreateSurvey && (
-          <PlayfulCard className="mb-6">
-            <h3 className="text-xl font-jakarta font-semibold text-navy mb-4">Create New Survey</h3>
-            <form onSubmit={createSurvey} className="space-y-4">
+          <PlayfulCard className="mb-6 p-8">
+            <h3 className="text-2xl font-jakarta font-semibold text-navy mb-8">Create New Survey</h3>
+            <form onSubmit={createSurvey} className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Survey Title</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Survey Title</label>
                 <input
                   type="text"
                   required
                   value={surveyForm.title}
                   onChange={(e) => setSurveyForm({ ...surveyForm, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                  className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Select Vendor</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Select Vendor</label>
                 <select
                   required
                   value={selectedVendor}
@@ -364,7 +366,7 @@ export default function VendorLitePage() {
                     setSelectedVendor(e.target.value);
                     setSurveyForm({ ...surveyForm, vendor_id: parseInt(e.target.value) });
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                  className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
                 >
                   <option value="">Select a vendor</option>
                   {vendors.map((vendor) => (
@@ -375,35 +377,35 @@ export default function VendorLitePage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">PID (Project ID)</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">PID (Project ID)</label>
                 <input
                   type="text"
                   required
                   value={surveyForm.pid}
                   onChange={(e) => setSurveyForm({ ...surveyForm, pid: e.target.value })}
                   placeholder="Enter project ID (e.g., PROJ123)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                  className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
                 />
               </div>
 
               {/* Pre-Screener Questions Section */}
               <div>
-                <div className="flex justify-between items-center mb-3">
-                  <label className="block text-sm font-medium text-gray-700">Pre-Screener Questions</label>
-                  <span className="text-xs text-gray-500">Set criteria to qualify users</span>
+                <div className="flex justify-between items-center mb-6">
+                  <label className="block text-base font-semibold text-gray-700">Pre-Screener Questions</label>
+                  <span className="text-sm text-gray-500">Set criteria to qualify users</span>
                 </div>
                 
                 {preScreenerQuestions.map((preScreen, index) => (
-                  <div key={index} className="mb-4 p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
+                  <div key={index} className="mb-6 p-6 bg-gray-50 border-2 border-gray-200 rounded-xl">
+                    <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center">
                         <input
                           type="checkbox"
                           checked={preScreen.enabled}
                           onChange={() => togglePreScreenerEnabled(index)}
-                          className="mr-2 text-violet focus:ring-violet"
+                          className="mr-3 w-5 h-5 text-violet focus:ring-violet focus:ring-2"
                         />
-                        <label className="text-sm font-medium text-gray-700">
+                        <label className="text-base font-semibold text-gray-700">
                           {preScreen.type === 'age' ? 'Age Requirement' : 'Gender Requirement'}
                         </label>
                       </div>
