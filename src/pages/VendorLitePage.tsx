@@ -379,23 +379,23 @@ export default function VendorLitePage() {
     }
 
     // PASS → External Survey with control parameters
-    const returnBase = "https://survey-panelgo.onrender.com/external/return";
+    const base = "https://survey-panelgo.onrender.com/external/redirect";
 
     let cleanUrl = extSurvey.externalUrl;
 
-    // REMOVE old params completely to prevent conflicts
-    cleanUrl = cleanUrl.replace(/&?complete=[^&]*/g, "");
-    cleanUrl = cleanUrl.replace(/&?terminate=[^&]*/g, "");
-    cleanUrl = cleanUrl.replace(/&?quotafull=[^&]*/g, "");
+    // REMOVE OLD REDIRECT PARAMS (prevent conflicts)
+    cleanUrl = cleanUrl.replace(/&?return_url=[^&]*/g, "");
+    cleanUrl = cleanUrl.replace(/&?fail_url=[^&]*/g, "");
+    cleanUrl = cleanUrl.replace(/&?overquota_url=[^&]*/g, "");
 
     // REPLACE placeholders
     cleanUrl = cleanUrl
       .replace("[#transaction_id#]", transactionId)
       .replace("[#userid#]", rid);
 
-    // Build our controlled return URLs
+    // Build our controlled return URLs using the /redirect/:status path
     const buildReturnUrl = (status: string) => {
-      const url = `${returnBase}?status=${status}&token=${token}&rid=${rid}&transactionId=${transactionId}`;
+      const url = `${base}/${status}?token=${token}&rid=${rid}&transactionId=${transactionId}`;
       return encodeURIComponent(url);
     };
 
@@ -405,7 +405,12 @@ export default function VendorLitePage() {
       + `&fail_url=${buildReturnUrl("terminate")}`
       + `&overquota_url=${buildReturnUrl("quota")}`;
 
-    console.log("🚀 FINAL URL (with industry standard return params):", finalUrl);
+    console.log("🚀 FINAL REDIRECT (External Flow):");
+    console.log("RID:", rid);
+    console.log("TRANSACTION:", transactionId);
+    console.log("TOKEN:", token);
+    console.log("URL:", finalUrl);
+
     window.location.href = finalUrl;
   };
 

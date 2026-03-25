@@ -132,33 +132,46 @@ router.get('/external/data/:token', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /external/return
+// GET /external/redirect/:status
 // ---------------------------------------------------------------------------
-router.get("/external/return", (req, res) => {
+router.get("/external/redirect/:status", (req, res) => {
     try {
-        const { status, token, rid, transactionId } = req.query;
+        const { status } = req.params;
+        const { rid, token, transactionId } = req.query;
+
+        console.log("🔥 EXTERNAL RETURN HIT:", { status, rid, token });
 
         const surveys = loadSurveys();
         const survey = surveys[token as string];
 
-        if (!survey) return res.send("Invalid survey");
+        if (!survey) {
+            return res.status(404).send("Invalid survey token or token expired");
+        }
 
         let redirectUrl = "";
 
-        if (status === "complete") redirectUrl = survey.vendor.complete_url;
-        if (status === "terminate") redirectUrl = survey.vendor.terminate_url;
-        if (status === "quota") redirectUrl = survey.vendor.quota_full_url;
+        if (status === "complete") {
+            redirectUrl = survey.vendor.complete_url;
+        } else if (status === "terminate") {
+            redirectUrl = survey.vendor.terminate_url;
+        } else if (status === "quota") {
+            redirectUrl = survey.vendor.quota_full_url;
+        }
 
         if (!redirectUrl) {
-            return res.send("Redirect configuration missing");
+            return res.send("Invalid status or redirect configuration missing");
         }
 
         const sep = redirectUrl.includes("?") ? "&" : "?";
-        redirectUrl += `${sep}rid=${rid}&transactionId=${transactionId}`;
+        const finalUrl = `${redirectUrl}${sep}rid=${rid}&transactionId=${transactionId}`;
 
-        res.redirect(redirectUrl);
+        console.log("✅ FINAL EXTERNAL REDIRECT TO VENDOR:", finalUrl);
+
+        res.redirect(finalUrl);
+
     } catch (err) {
-        res.send("Return error");
+        console.error("Return Error:", err);
+        res.status(500).send("Error in return handler");
     }
 });
 
