@@ -26,28 +26,11 @@ export default function VendorSurveyPublicPage() {
     }
   }, [token]);
 
-  // Handle external survey redirect
-  useEffect(() => {
-    if (survey?.externalLink) {
-      console.log("=== EXTERNAL SURVEY REDIRECT DEBUG ===");
-      console.log("Survey data:", survey);
-      console.log("External link found:", survey.externalLink);
-      console.log("Survey type:", survey.type);
-      
-      // Add a small delay to ensure component renders
-      const timer = setTimeout(() => {
-        console.log("Executing redirect to:", survey.externalLink);
-        window.location.href = survey.externalLink;
-      }, 1000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [survey?.externalLink, survey]);
-
   useEffect(() => {
     // Auto-start survey flow when survey is loaded and we have URL parameters
-    if (survey && pid && uid) {
-      console.log("=== URL PARAMETERS DEBUG ===");
+    // Only for internal surveys - external surveys are handled separately
+    if (survey && pid && uid && !survey.externalLink) {
+      console.log("=== URL PARAMETERS DEBUG (INTERNAL SURVEY) ===");
       console.log("PID from URL:", pid);
       console.log("UID from URL:", uid);
       console.log("Survey PID from survey:", survey.pid);
@@ -317,39 +300,76 @@ export default function VendorSurveyPublicPage() {
     );
   }
 
-  // Handle external surveys - redirect to external link
+  // Handle external surveys - show pre-screener first, then redirect
   if (survey.externalLink) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-pink-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-violet to-pink rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg animate-spin">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-jakarta font-bold text-navy mb-3">Redirecting to Survey</h2>
-          <p className="text-lg text-gray-600 mb-4">Please wait while we redirect you to the external survey...</p>
-          <div className="bg-white/80 backdrop-blur border border-violet/20 rounded-2xl p-6 max-w-md">
-            <p className="text-sm text-gray-700 mb-2">
-              <span className="font-semibold">Survey:</span> {survey.title}
-            </p>
-            <p className="text-sm text-gray-700 mb-2">
-              <span className="font-semibold">Powered by:</span> {survey.vendor_id?.name || 'Unknown Vendor'}
-            </p>
-            <div className="mt-4">
-              <a 
-                href={survey.externalLink}
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-violet hover:text-violet/80 underline font-medium"
-              >
-                Click here if you are not redirected automatically
-              </a>
+    // Show pre-screener if survey has pre-screener questions, otherwise redirect directly
+    if (survey?.preScreenerQuestions?.length > 0 && !showPreScreener) {
+      setShowPreScreener(true);
+    }
+    
+    // If pre-screener is passed or no pre-screener questions, redirect to external link
+    if (!showPreScreener || survey?.preScreenerQuestions?.length === 0) {
+      useEffect(() => {
+        console.log("=== EXTERNAL SURVEY REDIRECT DEBUG ===");
+        console.log("Survey data:", survey);
+        console.log("External link found:", survey.externalLink);
+        console.log("Survey type:", survey.type);
+        console.log("PID:", pid);
+        console.log("UID:", uid);
+        
+        // Replace placeholders in external link
+        let finalUrl = survey.externalLink;
+        finalUrl = finalUrl.replace('[#transaction_id#]', pid);
+        finalUrl = finalUrl.replace('[#userid#]', uid);
+        
+        console.log("Final external URL:", finalUrl);
+        
+        // Add a small delay to ensure component renders
+        const timer = setTimeout(() => {
+          console.log("Executing redirect to:", finalUrl);
+          window.location.href = finalUrl;
+        }, 1000);
+        
+        return () => clearTimeout(timer);
+      }, [survey?.externalLink, survey, pid, uid]);
+      
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-violet-50 via-pink-50 to-blue-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-gradient-to-r from-violet to-pink rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg animate-spin">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-jakarta font-bold text-navy mb-3">Redirecting to Survey</h2>
+            <p className="text-lg text-gray-600 mb-4">Please wait while we redirect you to the external survey...</p>
+            <div className="bg-white/80 backdrop-blur border border-violet/20 rounded-2xl p-6 max-w-md">
+              <p className="text-sm text-gray-700 mb-2">
+                <span className="font-semibold">Survey:</span> {survey.title}
+              </p>
+              <p className="text-sm text-gray-700 mb-2">
+                <span className="font-semibold">Powered by:</span> {survey.vendor_id?.name || 'Unknown Vendor'}
+              </p>
+              <div className="mt-4">
+                <a 
+                  href={(() => {
+                    let url = survey.externalLink;
+                    url = url.replace('[#transaction_id#]', pid);
+                    url = url.replace('[#userid#]', uid);
+                    return url;
+                  })()}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-violet hover:text-violet/80 underline font-medium"
+                >
+                  Click here if you are not redirected automatically
+                </a>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 
   if (!survey.questions || survey.questions.length === 0) {
