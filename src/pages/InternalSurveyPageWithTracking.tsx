@@ -50,13 +50,22 @@ const InternalSurveyPageWithTracking: React.FC = () => {
   const [showCelebration, setShowCelebration] = useState(false);
 
   const handleComplete = async () => {
-    if (!survey || !trackingData) return;
+    if (!trackingData) return;
 
     try {
       setIsSubmitting(true);
       
       // Submit the internal survey completion
-      await apiPost('/api/internal-complete', { surveyId }, getStoredToken());
+      try {
+        await apiPost('/api/internal-complete', { surveyId }, getStoredToken());
+      } catch (completionError: any) {
+        // If survey is already completed, treat as success
+        if (completionError?.response?.data?.error === 'Survey already completed') {
+          console.log('Survey was already completed - proceeding with tracking');
+        } else {
+          throw completionError; // Re-throw other errors
+        }
+      }
       
       // Complete tracking with 'completed' status
       await completeTracking('completed');
@@ -72,17 +81,8 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       await refreshUser();
       addToast('🎉 Survey completed successfully!', 'success');
       
-      // MANDATORY: Add final redirect to /api/redirect with proper params
-      const user = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
-      const pid = survey.id;
-      const uid = user?.id || user?._id;
-      
-      if (pid && uid) {
-        console.log("Redirecting with:", { pid, uid, status: 1 });
-        window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=1`;
-      } else {
-        console.error("Missing pid or uid for redirect");
-      }
+      // NOTE: completeTracking will handle redirect to result page
+      // No need for manual /api/redirect call
       
     } catch (error) {
       console.error('Failed to complete survey:', error);
@@ -90,21 +90,12 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       // FAIL CASE: If tracking fails, still try to complete with terminated status
       try {
         await completeTracking('terminated');
-        
-        // Add redirect for terminated case
-        const user = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
-        const pid = survey?.id || survey?.pid;
-        const uid = user?.id || user?._id;
-        
-        if (pid && uid) {
-          console.log("Redirecting with:", { pid, uid, status: 2 });
-          window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=2`;
-        } else {
-          console.error("Missing pid or uid for redirect");
-        }
+        // NOTE: completeTracking will handle redirect to result page
       } catch (trackingError) {
         console.error('Tracking also failed:', trackingError);
         addToast('Survey completed but tracking failed', 'warning');
+        // Fallback to dashboard if everything fails
+        navigate('/dashboard');
       }
     } finally {
       setIsSubmitting(false);

@@ -149,7 +149,8 @@ export default function VendorSurveyPublicPage() {
         },
         body: JSON.stringify({
           token,
-          preScreenerAnswers
+          preScreenerAnswers,
+          userId
         }),
       });
 

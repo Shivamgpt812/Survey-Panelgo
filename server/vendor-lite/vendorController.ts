@@ -198,7 +198,7 @@ const validatePreScreenerAnswers = (preScreenerQuestions: any[], responses: any)
 
 export const validatePreScreener = async (req: Request, res: Response) => {
   try {
-    const { token, preScreenerAnswers } = req.body;
+    const { token, preScreenerAnswers, userId } = req.body;
 
     if (!token) {
       return res.status(400).json({
@@ -231,7 +231,7 @@ export const validatePreScreener = async (req: Request, res: Response) => {
         try {
           await SurveyRedirectLogs.create({
             pid: survey.pid,
-            uid: 'pre-screener-validation', // Temporary UID
+            uid: userId || 'pre-screener-validation', // Use actual user ID if provided
             status: 2, // Terminated
             statusText: 'Terminated - Failed Pre-Screener',
             ipAddress: ip,
@@ -244,7 +244,7 @@ export const validatePreScreener = async (req: Request, res: Response) => {
 
         // Return terminate redirect URL
         const vendor = survey.vendor_id as any;
-        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=pre-screener-validation&status=2&reason=pre-screener-failed`;
+        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=${userId || 'pre-screener-validation'}&status=2&reason=pre-screener-failed`;
         
         return res.json({
           success: true,
@@ -265,6 +265,7 @@ export const validatePreScreener = async (req: Request, res: Response) => {
 
   } catch (error) {
     console.error('Error validating pre-screener:', error);
+    const { userId } = req.body;
     
     // Log the validation error as terminated
     try {
@@ -278,7 +279,7 @@ export const validatePreScreener = async (req: Request, res: Response) => {
         const ip = req.ip || req.connection.remoteAddress || 'unknown';
         await SurveyRedirectLogs.create({
           pid: survey.pid,
-          uid: 'validation-error',
+          uid: userId || 'validation-error', // Use actual user ID if provided
           status: 2, // Terminated
           statusText: 'Terminated - Validation Error',
           ipAddress: ip,
@@ -288,7 +289,7 @@ export const validatePreScreener = async (req: Request, res: Response) => {
         
         // Return terminate redirect URL
         const vendor = survey.vendor_id as any;
-        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=validation-error&status=2&reason=validation-error`;
+        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=${userId || 'validation-error'}&status=2&reason=validation-error`;
         
         return res.json({
           success: true,
