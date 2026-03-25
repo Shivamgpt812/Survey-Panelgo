@@ -155,7 +155,8 @@ export default function VendorLitePage() {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/vendor-lite/vendors/${vendorId}`, {
+      // Test with simple route first
+      const response = await fetch(`/api/vendor-lite/test-delete/${vendorId}`, {
         method: 'DELETE',
       });
       
@@ -163,18 +164,36 @@ export default function VendorLitePage() {
       console.log('Delete response ok:', response.ok);
 
       if (response.ok) {
-        setVendors(vendors.filter(vendor => vendor.id !== vendorId));
-        // Also remove any associated survey links
-        setVendorSurveyLinks(prev => {
-          const newLinks = { ...prev };
-          delete newLinks[vendorId];
-          return newLinks;
+        const data = await response.json();
+        console.log('Test delete response:', data);
+        alert('Test DELETE working! Now trying real delete...');
+        
+        // Now try the real delete
+        const realResponse = await fetch(`/api/vendor-lite/vendors/${vendorId}`, {
+          method: 'DELETE',
         });
-        alert('Vendor deleted successfully!');
+        
+        console.log('Real delete status:', realResponse.status);
+        console.log('Real delete ok:', realResponse.ok);
+
+        if (realResponse.ok) {
+          setVendors(vendors.filter(vendor => vendor.id !== vendorId));
+          // Also remove any associated survey links
+          setVendorSurveyLinks(prev => {
+            const newLinks = { ...prev };
+            delete newLinks[vendorId];
+            return newLinks;
+          });
+          alert('Vendor deleted successfully!');
+        } else {
+          const realData = await realResponse.json();
+          console.log('Real delete error:', realData);
+          alert('Real delete error: ' + (realData.message || 'Failed to delete vendor'));
+        }
       } else {
         const data = await response.json();
-        console.log('Delete error response:', data);
-        alert('Error: ' + (data.message || 'Failed to delete vendor'));
+        console.log('Test delete error:', data);
+        alert('Test delete error: ' + (data.message || 'DELETE method not working'));
       }
     } catch (error) {
       console.error('Error deleting vendor:', error);
