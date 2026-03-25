@@ -219,7 +219,16 @@ export default function VendorSurveyPublicPage() {
 
   const getCurrentAnswer = () => {
     if (!survey?.questions || survey.questions.length === 0) return null;
-    return answers[`q_${currentStep}`];
+    const answer = answers[`q_${currentStep}`];
+    const currentQuestion = survey.questions[currentStep];
+    
+    // For text questions, check if answer is not empty
+    if (currentQuestion?.type === 'text') {
+      return answer && answer.trim() ? answer : null;
+    }
+    
+    // For rating and multiple-choice questions, check if answer exists
+    return answer !== undefined && answer !== null && answer !== '' ? answer : null;
   };
 
   const handleNext = () => {
@@ -440,19 +449,56 @@ export default function VendorSurveyPublicPage() {
                 </h2>
 
                 <div className="space-y-6">
-                  {currentQuestion?.options?.map((option: string, optionIndex: number) => (
-                    <label key={optionIndex} className="flex items-center p-6 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-violet hover:bg-violet/5 transition-all duration-200 group">
-                      <input
-                        type="radio"
+                  {currentQuestion?.type === 'text' ? (
+                    <div>
+                      <textarea
                         name={`q_${currentStep}`}
-                        value={option}
-                        checked={answers[`q_${currentStep}`] === option}
+                        value={answers[`q_${currentStep}`] || ''}
                         onChange={(e) => handleAnswerChange(`q_${currentStep}`, e.target.value)}
-                        className="w-5 h-5 text-violet focus:ring-violet focus:ring-2"
+                        placeholder="Enter your answer here..."
+                        className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all resize-none"
+                        rows={4}
                       />
-                      <span className="text-lg text-gray-700 group-hover:text-violet transition-colors ml-5">{option}</span>
-                    </label>
-                  ))}
+                    </div>
+                  ) : currentQuestion?.type === 'rating' ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-center space-x-3">
+                        {[1, 2, 3, 4, 5].map((rating) => (
+                          <button
+                            key={rating}
+                            type="button"
+                            onClick={() => handleAnswerChange(`q_${currentStep}`, rating)}
+                            className={`w-16 h-16 rounded-full text-2xl font-bold border-2 transition-all duration-200 ${
+                              answers[`q_${currentStep}`] === rating
+                                ? 'bg-violet text-white border-violet'
+                                : 'bg-white text-gray-600 border-gray-300 hover:border-violet hover:bg-violet/10'
+                            }`}
+                          >
+                            {rating}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-500 px-4">
+                        <span>Poor</span>
+                        <span>Excellent</span>
+                      </div>
+                    </div>
+                  ) : (
+                    // Multiple choice
+                    currentQuestion?.options?.map((option: string, optionIndex: number) => (
+                      <label key={optionIndex} className="flex items-center p-6 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-violet hover:bg-violet/5 transition-all duration-200 group">
+                        <input
+                          type="radio"
+                          name={`q_${currentStep}`}
+                          value={option}
+                          checked={answers[`q_${currentStep}`] === option}
+                          onChange={(e) => handleAnswerChange(`q_${currentStep}`, e.target.value)}
+                          className="w-5 h-5 text-violet focus:ring-violet focus:ring-2"
+                        />
+                        <span className="text-lg text-gray-700 group-hover:text-violet transition-colors ml-5">{option}</span>
+                      </label>
+                    ))
+                  )}
                 </div>
               </div>
 
