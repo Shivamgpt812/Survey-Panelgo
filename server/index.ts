@@ -795,35 +795,47 @@ app.get('/api/redirect', async (req, res) => {
 // hits these default routes instead, we intercept and reroute.
 app.get("/survey/redirect/:type", (req, res) => {
   const { type } = req.params;
-  const { uid, pid } = req.query as { uid?: string, pid?: string };
+  const { uid } = req.query as { uid: string };
 
-  console.log("🚀 Intercepting external panel fallback redirect:", { type, uid, pid });
+  console.log("� INTERCEPTED:", type, uid);
+  console.log("RID MAP CURRENT STATE:", ridToTokenMap);
 
-  // Detection: Panels usually don't pass pid or they hit this route by accident
-  const token = ridToTokenMap[uid || ""];
+  const token = ridToTokenMap[uid];
 
   if (token) {
     const surveys = loadSurveys();
     const survey = surveys[token];
 
-    if (survey) {
-      console.log(`✅ Mapping detected: RID=${uid} -> TOKEN=${token}`);
-
-      let redirectUrl = "";
-      if (type === "complete") redirectUrl = survey.vendor.complete_url;
-      else if (type === "terminate") redirectUrl = survey.vendor.terminate_url;
-      else if (type === "quotafull" || type === "quota") redirectUrl = survey.vendor.quota_full_url;
-      else redirectUrl = survey.vendor.terminate_url; // Default to terminate
-
-      const sep = redirectUrl.includes("?") ? "&" : "?";
-      const finalUrl = `${redirectUrl}${sep}rid=${uid}&status=${type}`;
-
-      return res.redirect(finalUrl);
+    if (!survey) {
+      return res.send("Survey not found");
     }
+
+    let redirectUrl = "";
+
+    if (type === "complete") {
+      redirectUrl = survey.vendor.complete_url;
+    }
+
+    if (type === "terminate") {
+      redirectUrl = survey.vendor.terminate_url;
+    }
+
+    if (type === "quotafull" || type === "quota") {
+      redirectUrl = survey.vendor.quota_full_url;
+    }
+
+    if (!redirectUrl) {
+      return res.send("Vendor URL configuration missing");
+    }
+
+    const sep = redirectUrl.includes("?") ? "&" : "?";
+    redirectUrl += `${sep}rid=${uid}`;
+
+    return res.redirect(redirectUrl);
   }
 
-  // Fallback to error or internal result if no mapping found
-  res.redirect(`https://surveypanelgo.netlify.app/survey-result?status=${type}&uid=${uid}`);
+  // fallback (internal flow)
+  res.send("Internal redirect fallback");
 });
 
 // ---------- Redirect Analytics ----------
