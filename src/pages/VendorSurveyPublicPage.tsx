@@ -303,10 +303,18 @@ export default function VendorSurveyPublicPage() {
   if (survey.externalLink) {
     useEffect(() => {
       console.log("=== EXTERNAL SURVEY REDIRECT DEBUG ===");
-      console.log("Redirecting to external link:", survey.externalLink);
+      console.log("Survey data:", survey);
+      console.log("External link found:", survey.externalLink);
+      console.log("Survey type:", survey.type);
       
-      window.location.href = survey.externalLink;
-    }, [survey.externalLink]);
+      // Add a small delay to ensure the component renders
+      const timer = setTimeout(() => {
+        console.log("Executing redirect to:", survey.externalLink);
+        window.location.href = survey.externalLink;
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }, [survey.externalLink, survey]);
     
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-50 via-pink-50 to-blue-50 flex items-center justify-center">
