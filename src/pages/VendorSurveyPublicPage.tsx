@@ -441,9 +441,6 @@ export default function VendorSurveyPublicPage() {
             <p className="text-sm text-gray-700 mb-2">
               <span className="font-semibold">Survey:</span> {survey.title}
             </p>
-            <p className="text-sm text-gray-700 mb-2">
-              <span className="font-semibold">Powered by:</span> {survey.vendor_id?.name || 'Unknown Vendor'}
-            </p>
             <div className="mt-4">
               <a
                 href={enrichedExternalUrl}
@@ -489,13 +486,12 @@ export default function VendorSurveyPublicPage() {
             </div>
             <div className="bg-gradient-to-r from-violet/10 to-pink/10 rounded-3xl p-8 mb-6 border border-violet/20">
               <h1 className="text-4xl font-jakarta font-bold text-navy mb-3">{survey.title}</h1>
-              <p className="text-lg text-gray-700">Powered by <span className="font-bold text-violet bg-white px-3 py-1 rounded-full">{survey.vendor_id?.name || 'Unknown Vendor'}</span></p>
             </div>
           </div>
 
           {/* Pre-Screener Questions */}
           {showPreScreener && survey?.preScreenerQuestions?.length > 0 && (
-            <PlayfulCard className="mb-12">
+            <PlayfulCard className="mb-12 p-8 md:p-12 shadow-2xl">
               <h2 className="text-2xl font-jakarta font-semibold text-navy mb-8">Pre-Screener Questions</h2>
               <form onSubmit={handlePreScreenerSubmit} className="space-y-8">
                 {survey.preScreenerQuestions.map((preScreen: any, index: number) => (

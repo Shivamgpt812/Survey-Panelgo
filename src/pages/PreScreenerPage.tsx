@@ -69,7 +69,7 @@ const PreScreenerPage: React.FC = () => {
   // Load vendor session on mount
   useEffect(() => {
     const storedVendorId = getVendorSession();
-    
+
     if (storedVendorId) {
       setVendorId(storedVendorId);
       void apiGet<{ vendors: Vendor[] }>('/api/vendors').then(({ vendors }) => {
@@ -234,7 +234,7 @@ const PreScreenerPage: React.FC = () => {
           },
           getStoredToken()
         );
-        
+
         // For non-vendor users, also complete tracking to show result page
         if (!vendor && trackingData) {
           try {
@@ -262,7 +262,7 @@ const PreScreenerPage: React.FC = () => {
     console.log('Current vendorId:', vendorId);
     console.log('Current vendor:', vendor);
     console.log('=====================================');
-    
+
     const recordStart = async () => {
       try {
         await apiPost(
@@ -423,12 +423,7 @@ const PreScreenerPage: React.FC = () => {
             <span className="font-jakarta text-sm text-navy-light">• {survey.timeEstimate} min</span>
           </div>
 
-          {vendor && (
-            <div className="mb-4 p-3 bg-lavender/50 border-2 border-navy rounded-xl">
-              <p className="font-mono text-xs text-navy-light">Powered by</p>
-              <p className="font-outfit font-bold text-navy">{vendor.name}</p>
-            </div>
-          )}
+
 
           <div className="space-y-3">
             <PlayfulButton
