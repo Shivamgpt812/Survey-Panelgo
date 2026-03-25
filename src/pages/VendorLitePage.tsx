@@ -32,7 +32,9 @@ export default function VendorLitePage() {
   const [surveyForm, setSurveyForm] = useState({
     title: '',
     vendor_id: 0,
-    pid: ''
+    pid: '',
+    type: 'internal',
+    externalLink: ''
   });
 
   const [preScreenerQuestions, setPreScreenerQuestions] = useState([
@@ -199,7 +201,7 @@ export default function VendorLitePage() {
         }));
         
         // Reset form
-        setSurveyForm({ title: '', vendor_id: 0, pid: '' });
+        setSurveyForm({ title: '', vendor_id: 0, pid: '', type: 'internal', externalLink: '' });
         setSelectedVendor("");
         setQuestions([{ text: '', options: [''], type: 'multiple-choice' }]);
         setShowCreateSurvey(false);
@@ -360,6 +362,40 @@ export default function VendorLitePage() {
           <PlayfulCard className="mb-6 p-8">
             <h3 className="text-2xl font-jakarta font-semibold text-navy mb-8">Create New Survey</h3>
             <form onSubmit={createSurvey} className="space-y-6">
+              {/* Survey Type Selection */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Survey Type</label>
+                <div className="flex space-x-4">
+                  <label className="flex items-center p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-violet hover:bg-violet/5 transition-all">
+                    <input
+                      type="radio"
+                      name="surveyType"
+                      value="internal"
+                      checked={surveyForm.type === 'internal'}
+                      onChange={(e) => setSurveyForm({ ...surveyForm, type: e.target.value })}
+                      className="mr-3 text-violet focus:ring-violet"
+                    />
+                    <div>
+                      <div className="font-semibold text-gray-800">Internal Survey</div>
+                      <div className="text-sm text-gray-500">Create questions manually</div>
+                    </div>
+                  </label>
+                  <label className="flex items-center p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-violet hover:bg-violet/5 transition-all">
+                    <input
+                      type="radio"
+                      name="surveyType"
+                      value="external"
+                      checked={surveyForm.type === 'external'}
+                      onChange={(e) => setSurveyForm({ ...surveyForm, type: e.target.value })}
+                      className="mr-3 text-violet focus:ring-violet"
+                    />
+                    <div>
+                      <div className="font-semibold text-gray-800">External Survey</div>
+                      <div className="text-sm text-gray-500">Redirect to external link</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">Survey Title</label>
                 <input
@@ -402,14 +438,33 @@ export default function VendorLitePage() {
                 />
               </div>
 
-              {/* Pre-Screener Questions Section */}
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <label className="block text-base font-semibold text-gray-700">Pre-Screener Questions</label>
-                  <span className="text-sm text-gray-500">Set criteria to qualify users</span>
+              {/* External Link Input - Only show for external surveys */}
+              {surveyForm.type === 'external' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">External Survey Link</label>
+                  <input
+                    type="url"
+                    required
+                    value={surveyForm.externalLink}
+                    onChange={(e) => setSurveyForm({ ...surveyForm, externalLink: e.target.value })}
+                    placeholder="https://external-survey.com/survey-link"
+                    className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
+                  />
+                  <p className="text-sm text-gray-500 mt-2">
+                    Users will be redirected to this external survey link
+                  </p>
                 </div>
-                
-                {preScreenerQuestions.map((preScreen, index) => (
+              )}
+
+              {/* Pre-Screener Questions Section - Only show for internal surveys */}
+              {surveyForm.type === 'internal' && (
+                <div>
+                  <div className="flex justify-between items-center mb-6">
+                    <label className="block text-base font-semibold text-gray-700">Pre-Screener Questions</label>
+                    <span className="text-sm text-gray-500">Set criteria to qualify users</span>
+                  </div>
+                  
+                  {preScreenerQuestions.map((preScreen, index) => (
                   <div key={index} className="mb-6 p-6 bg-gray-50 border-2 border-gray-200 rounded-xl">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center">
@@ -477,9 +532,12 @@ export default function VendorLitePage() {
                     )}
                   </div>
                 ))}
-              </div>
+                </div>
+              )}
 
-              {/* Questions Section */}
+              {/* Questions Section - Only show for internal surveys */}
+              {surveyForm.type === 'internal' && (
+                <div>
               <div>
                 <div className="flex justify-between items-center mb-3">
                   <label className="block text-sm font-medium text-gray-700">Questions</label>
@@ -561,7 +619,8 @@ export default function VendorLitePage() {
                     )}
                   </div>
                 ))}
-              </div>
+                </div>
+              )}
 
               <div className="flex gap-2">
                 <PlayfulButton

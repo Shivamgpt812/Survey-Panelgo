@@ -19,6 +19,7 @@ export interface IVendorSurvey extends Document {
     options: string[];
     type: 'multiple-choice' | 'rating' | 'text';
   }>;
+  externalLink?: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -80,6 +81,10 @@ const VendorSurveySchema = new Schema<IVendorSurvey>({
       enum: ['multiple-choice', 'rating', 'text']
     }
   }],
+  externalLink: {
+    type: String,
+    required: false,
+  }
 }, {
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
   collection: 'vendor_lite_surveys'

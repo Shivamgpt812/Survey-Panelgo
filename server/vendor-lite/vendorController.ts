@@ -62,7 +62,7 @@ export const getVendors = async (req: Request, res: Response) => {
 
 export const createSurvey = async (req: Request, res: Response) => {
   try {
-    const { title, vendor_id, pid, preScreenerQuestions, questions } = req.body;
+    const { title, vendor_id, pid, preScreenerQuestions, questions, type, externalLink } = req.body;
 
     if (!title || !vendor_id || !pid) {
       return res.status(400).json({
@@ -71,28 +71,41 @@ export const createSurvey = async (req: Request, res: Response) => {
       });
     }
 
-    if (!questions || !Array.isArray(questions) || questions.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least one question is required'
-      });
-    }
+    let validQuestions: any[] = [];
 
-    // Validate questions structure
-    const validQuestions = questions.filter((q: any) => 
-      q.text && 
-      q.type && 
-      (
-        (q.type === 'multiple-choice' && q.options && Array.isArray(q.options) && q.options.length > 0 && q.options.some((opt: string) => opt.trim())) ||
-        (q.type !== 'multiple-choice')
-      )
-    );
+    // Handle external surveys
+    if (type === 'external') {
+      if (!externalLink || !externalLink.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'External survey link is required for external surveys'
+        });
+      }
+    } else {
+      // Internal survey validation
+      if (!questions || !Array.isArray(questions) || questions.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one question is required for internal surveys'
+        });
+      }
 
-    if (validQuestions.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least one valid question is required. Multiple-choice questions must have options.'
-      });
+      // Validate questions structure
+      validQuestions = questions.filter((q: any) => 
+        q.text && 
+        q.type && 
+        (
+          (q.type === 'multiple-choice' && q.options && Array.isArray(q.options) && q.options.length > 0 && q.options.some((opt: string) => opt.trim())) ||
+          (q.type !== 'multiple-choice')
+        )
+      );
+
+      if (validQuestions.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one valid question is required. Multiple-choice questions must have options.'
+        });
+      }
     }
 
     const vendor = await IVendor.findById(vendor_id);
@@ -111,7 +124,8 @@ export const createSurvey = async (req: Request, res: Response) => {
       pid,
       preScreenerQuestions: preScreenerQuestions || [],
       token,
-      questions: validQuestions
+      questions: type === 'external' ? [] : validQuestions,
+      externalLink: type === 'external' ? externalLink : undefined
     });
 
     res.json({

@@ -316,6 +316,45 @@ export default function VendorSurveyPublicPage() {
     );
   }
 
+  // Handle external surveys - redirect to external link
+  if (survey.externalLink) {
+    useEffect(() => {
+      window.location.href = survey.externalLink;
+    }, [survey.externalLink]);
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-pink-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-violet to-pink rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg animate-spin">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-jakarta font-bold text-navy mb-3">Redirecting to Survey</h2>
+          <p className="text-lg text-gray-600 mb-4">Please wait while we redirect you to the external survey...</p>
+          <div className="bg-white/80 backdrop-blur border border-violet/20 rounded-2xl p-6 max-w-md">
+            <p className="text-sm text-gray-700 mb-2">
+              <span className="font-semibold">Survey:</span> {survey.title}
+            </p>
+            <p className="text-sm text-gray-700 mb-2">
+              <span className="font-semibold">Powered by:</span> {survey.vendor_id?.name || 'Unknown Vendor'}
+            </p>
+            <div className="mt-4">
+              <a 
+                href={survey.externalLink} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-violet hover:text-violet/80 underline font-medium"
+              >
+                Click here if you are not redirected automatically
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!survey.questions || survey.questions.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-50 via-pink-50 to-blue-50 flex items-center justify-center">
