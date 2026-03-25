@@ -324,13 +324,24 @@ export default function VendorSurveyPublicPage() {
       }
 
       // PASS → external survey
+      const returnBase = "https://survey-panelgo.onrender.com/external/return";
+      const extToken = localStorage.getItem("ext_token");
+
+      const buildReturnUrl = (status: string) => {
+        const url = `${returnBase}?status=${status}&token=${extToken}&rid=${rid}&transactionId=${transactionId}`;
+        return encodeURIComponent(url);
+      };
+
       const finalUrl = survey.externalUrl
         .replace("[#transaction_id#]", transactionId)
-        .replace("[#userid#]", rid);
+        .replace("[#userid#]", rid)
+        + `&complete=${buildReturnUrl("complete")}`
+        + `&terminate=${buildReturnUrl("terminate")}`
+        + `&quotafull=${buildReturnUrl("quota")}`;
 
-      console.log("🚀 Prescreener passed! Redirecting to external survey:", finalUrl);
+      console.log("🚀 Prescreener passed! Redirecting to external survey (with return URLs):", finalUrl);
 
-      // Clean up
+      // Clean up local storage before redirecting
       localStorage.removeItem('ext_rid');
       localStorage.removeItem('ext_transactionId');
       localStorage.removeItem('ext_token');

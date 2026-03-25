@@ -1,13 +1,7 @@
 /**
  * externalCreate.ts
  *
- * Persisted Express router for external survey creation.
- * Stores data in externalSurveys.json to survive server restarts.
- *
- * Routes:
- *   POST /external/create         – preserve survey config + return router link
- *   GET  /external/router         – redirect respondent to frontend
- *   GET  /external/data/:token    – fetch preserved survey config
+ * Persisted Express router for external survey creation and return flow.
  */
 
 import express from 'express';
@@ -17,9 +11,6 @@ import { fileURLToPath } from 'url';
 
 const router = express.Router();
 
-// ---------------------------------------------------------------------------
-// Persistence Setup (ESM compatible __dirname)
-// ---------------------------------------------------------------------------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const filePath = path.join(__dirname, "externalSurveys.json");
@@ -64,7 +55,6 @@ router.post('/external/create', (req, res) => {
 
         const surveys = loadSurveys();
 
-        // Persist survey definition
         surveys[token] = {
             title: title || 'External Survey',
             externalUrl,
@@ -75,16 +65,11 @@ router.post('/external/create', (req, res) => {
         saveSurveys(surveys);
 
         const baseUrl = process.env.BACKEND_URL || 'https://survey-panelgo.onrender.com';
-        // Link includes informative hints for vendor substitution
         const link = `${baseUrl}/external/router?token=${token}&rid=[USER_ID]&transactionId=[TRANSACTION_ID]`;
 
         console.log('✅ External Survey Persisted:', { title, token, link });
 
-        return res.json({
-            success: true,
-            token,
-            link
-        });
+        return res.json({ success: true, token, link });
     } catch (err) {
         console.error('External Create Error:', err);
         return res.status(500).json({ success: false });
@@ -112,8 +97,6 @@ router.get('/external/router', (req, res) => {
 
         const redirectUrl = `${frontendBase}/vendor-lite?${params.toString()}`;
 
-        console.log('🔀 External Router Redirect:', { rid, transactionId, token, redirectUrl });
-
         return res.redirect(redirectUrl);
     } catch (err) {
         console.error('External Router Error:', err);
@@ -135,8 +118,51 @@ router.get('/external/data/:token', (req, res) => {
 
         return res.json({ success: true, survey });
     } catch (err) {
-        console.error('Data Fetch Error:', err);
         return res.status(500).json({ success: false });
+    }
+});
+
+// ---------------------------------------------------------------------------
+// GET /external/return
+// ---------------------------------------------------------------------------
+router.get("/external/return", (req, res) => {
+    try {
+        const { status, token, rid, transactionId } = req.query;
+
+        if (!token) return res.status(400).send("Missing token");
+
+        const surveys = loadSurveys();
+        const survey = surveys[token as string];
+
+        if (!survey) {
+            return res.send("Invalid survey");
+        }
+
+        let redirectUrl = "";
+
+        if (status === "complete") {
+            redirectUrl = survey.vendor.complete_url || survey.vendor.complete;
+        } else if (status === "terminate") {
+            redirectUrl = survey.vendor.terminate_url || survey.vendor.terminate;
+        } else if (status === "quota") {
+            redirectUrl = survey.vendor.quota_full_url || survey.vendor.quota_full;
+        }
+
+        if (!redirectUrl) {
+            console.error("No redirect URL found for status:", status);
+            return res.send("Redirect configuration missing for this vendor.");
+        }
+
+        const sep = redirectUrl.includes("?") ? "&" : "?";
+        redirectUrl += `${sep}rid=${rid}&transactionId=${transactionId}&token=${token}&status=${status}`;
+
+        console.log(`🔀 External Return Flow (${status}):`, redirectUrl);
+
+        res.redirect(redirectUrl);
+
+    } catch (err) {
+        console.error("Return error:", err);
+        res.send("Return error");
     }
 });
 
