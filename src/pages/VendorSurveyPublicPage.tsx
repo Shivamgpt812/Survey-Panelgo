@@ -12,6 +12,8 @@ export default function VendorSurveyPublicPage() {
   const [submitting, setSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [userId, setUserId] = useState('');
+  const [showUserIdInput, setShowUserIdInput] = useState(true);
 
   useEffect(() => {
     if (token) {
@@ -83,6 +85,40 @@ export default function VendorSurveyPublicPage() {
     }));
   };
 
+  const checkUserIdUnique = async (uid: string): Promise<boolean> => {
+    try {
+      const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
+      const apiUrl = isProduction 
+        ? 'https://survey-panelgo.onrender.com' 
+        : 'http://localhost:3000';
+
+      const response = await fetch(`${apiUrl}/vendor-lite/check-uid/${uid}`);
+      const data = await response.json();
+      return data.available; // true if available, false if already used
+    } catch (error) {
+      console.error('Error checking user ID:', error);
+      return false;
+    }
+  };
+
+  const handleUserIdSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!userId.trim()) {
+      alert('Please enter a user ID');
+      return;
+    }
+
+    const isUnique = await checkUserIdUnique(userId.trim());
+    
+    if (!isUnique) {
+      alert('This user ID is already taken. Please choose a different one.');
+      return;
+    }
+
+    setShowUserIdInput(false);
+  };
+
   const getCurrentAnswer = () => {
     if (!survey?.questions || survey.questions.length === 0) return null;
     return answers[`q_${currentStep}`];
@@ -120,7 +156,8 @@ export default function VendorSurveyPublicPage() {
         },
         body: JSON.stringify({
           token,
-          answers
+          answers,
+          userId: userId.trim()
         }),
       });
 
@@ -183,7 +220,41 @@ export default function VendorSurveyPublicPage() {
             <p className="text-gray-600">Powered by {survey.vendor_id?.name || 'Unknown Vendor'}</p>
           </div>
 
-          <PlayfulCard>
+          {/* User ID Input */}
+          {showUserIdInput && (
+            <PlayfulCard className="mb-6">
+              <h2 className="text-xl font-jakarta font-semibold text-navy mb-4">Enter Your User ID</h2>
+              <form onSubmit={handleUserIdSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    User ID <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={userId}
+                    onChange={(e) => setUserId(e.target.value)}
+                    placeholder="Enter a unique user ID (e.g., USER123)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Choose a unique identifier that hasn't been used before
+                  </p>
+                </div>
+                <PlayfulButton
+                  type="submit"
+                  variant="primary"
+                  disabled={!userId.trim()}
+                >
+                  Start Survey
+                </PlayfulButton>
+              </form>
+            </PlayfulCard>
+          )}
+
+          {/* Survey Questions */}
+          {!showUserIdInput && (
+            <PlayfulCard>
             <div className="mb-6">
               <div className="flex justify-between items-center mb-4">
                 <span className="text-sm font-medium text-gray-600">
@@ -240,6 +311,7 @@ export default function VendorSurveyPublicPage() {
               </PlayfulButton>
             </div>
           </PlayfulCard>
+          )}
 
           <div className="mt-6 flex items-start gap-3 p-4 bg-white/50 border-2 border-navy/10 rounded-2xl">
             <div className="w-6 h-6 bg-violet/20 rounded-full flex items-center justify-center flex-shrink-0">

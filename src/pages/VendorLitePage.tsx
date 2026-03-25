@@ -25,7 +25,8 @@ export default function VendorLitePage() {
 
   const [surveyForm, setSurveyForm] = useState({
     title: '',
-    vendor_id: 0
+    vendor_id: 0,
+    pid: ''
   });
 
   const [questions, setQuestions] = useState([
@@ -36,15 +37,6 @@ export default function VendorLitePage() {
 
   useEffect(() => {
     fetchVendors();
-    // Load saved survey links from localStorage
-    const savedLinks = localStorage.getItem('vendorSurveyLinks');
-    if (savedLinks) {
-      try {
-        setVendorSurveyLinks(JSON.parse(savedLinks));
-      } catch (error) {
-        console.error('Error loading saved links:', error);
-      }
-    }
   }, []);
 
   useEffect(() => {
@@ -55,6 +47,20 @@ export default function VendorLitePage() {
     // Save survey links to localStorage whenever they change
     localStorage.setItem('vendorSurveyLinks', JSON.stringify(vendorSurveyLinks));
   }, [vendorSurveyLinks]);
+
+  // Load saved links after vendors are fetched
+  useEffect(() => {
+    if (vendors.length > 0) {
+      const savedLinks = localStorage.getItem('vendorSurveyLinks');
+      if (savedLinks) {
+        try {
+          setVendorSurveyLinks(JSON.parse(savedLinks));
+        } catch (error) {
+          console.error('Error loading saved links:', error);
+        }
+      }
+    }
+  }, [vendors.length]);
 
   const fetchVendors = async () => {
     try {
@@ -149,6 +155,7 @@ export default function VendorLitePage() {
         body: JSON.stringify({
           title: surveyForm.title,
           vendor_id: selectedVendor,
+          pid: surveyForm.pid,
           questions: validQuestions
         }),
       });
@@ -167,7 +174,7 @@ export default function VendorLitePage() {
         }));
         
         // Reset form
-        setSurveyForm({ title: '', vendor_id: 0 });
+        setSurveyForm({ title: '', vendor_id: 0, pid: '' });
         setSelectedVendor("");
         setQuestions([{ text: '', options: [''] }]);
         setShowCreateSurvey(false);
@@ -336,6 +343,17 @@ export default function VendorLitePage() {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">PID (Project ID)</label>
+                <input
+                  type="text"
+                  required
+                  value={surveyForm.pid}
+                  onChange={(e) => setSurveyForm({ ...surveyForm, pid: e.target.value })}
+                  placeholder="Enter project ID (e.g., PROJ123)"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                />
               </div>
 
               {/* Questions Section */}

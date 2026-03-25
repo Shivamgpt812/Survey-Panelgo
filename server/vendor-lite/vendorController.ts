@@ -62,12 +62,12 @@ export const getVendors = async (req: Request, res: Response) => {
 
 export const createSurvey = async (req: Request, res: Response) => {
   try {
-    const { title, vendor_id, questions } = req.body;
+    const { title, vendor_id, pid, questions } = req.body;
 
-    if (!title || !vendor_id) {
+    if (!title || !vendor_id || !pid) {
       return res.status(400).json({
         success: false,
-        message: 'Title and vendor_id are required'
+        message: 'Title, vendor_id, and pid are required'
       });
     }
 
@@ -107,6 +107,7 @@ export const createSurvey = async (req: Request, res: Response) => {
     const survey = await IVendorSurvey.create({
       title,
       vendor_id,
+      pid,
       token,
       questions: validQuestions
     });
@@ -157,12 +158,19 @@ export const getSurveyByToken = async (req: Request, res: Response) => {
 
 export const submitResponse = async (req: Request, res: Response) => {
   try {
-    const { token, answers } = req.body;
+    const { token, answers, userId } = req.body;
 
     if (!token) {
       return res.status(400).json({
         success: false,
         message: 'Token is required'
+      });
+    }
+
+    if (!userId || !userId.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
       });
     }
 
@@ -178,7 +186,7 @@ export const submitResponse = async (req: Request, res: Response) => {
       });
     }
 
-    const uid = generateUID();
+    const uid = userId.trim();
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
     const status = "complete";
 
@@ -193,14 +201,14 @@ export const submitResponse = async (req: Request, res: Response) => {
     // Log redirect data for analytics
     try {
       await SurveyRedirectLogs.create({
-        pid: survey._id.toString(),
+        pid: survey.pid,
         uid,
         status: 1, // Completed survey
         statusText: 'Completed',
         ipAddress: ip,
         userAgent: req.get('User-Agent') || 'unknown'
       });
-      console.log("✅ Redirect log saved for vendor survey:", { pid: survey._id, uid, status: 1 });
+      console.log("✅ Redirect log saved for vendor survey:", { pid: survey.pid, uid, status: 1 });
     } catch (logError) {
       console.error("❌ Error saving redirect log:", logError);
       // Don't fail the response if logging fails
@@ -209,7 +217,7 @@ export const submitResponse = async (req: Request, res: Response) => {
     // Since status is always "complete", use complete_url
     let redirectUrl = (survey.vendor_id as any).complete_url;
 
-    redirectUrl = `${redirectUrl}?pid=${survey._id}&uid=${uid}`;
+    redirectUrl = `${redirectUrl}?pid=${survey.pid}&uid=${uid}`;
 
     res.json({
       success: true,
@@ -302,6 +310,33 @@ export const handleVendorRedirect = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Vendor redirect error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+export const checkUserIdUnique = async (req: Request, res: Response) => {
+  try {
+    const { uid } = req.params;
+
+    if (!uid) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    // Check if user ID already exists in responses
+    const existingResponse = await IVendorResponse.findOne({ uid });
+    
+    res.json({
+      success: true,
+      available: !existingResponse // true if available, false if already used
+    });
+  } catch (error) {
+    console.error('Error checking user ID:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'

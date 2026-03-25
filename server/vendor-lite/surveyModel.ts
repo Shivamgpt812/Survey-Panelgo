@@ -4,6 +4,7 @@ import IVendor from './vendorModel.js';
 export interface IVendorSurvey extends Document {
   title: string;
   token: string;
+  pid: string;
   vendor_id: mongoose.Types.ObjectId;
   questions: Array<{
     text: string;
@@ -22,6 +23,10 @@ const VendorSurveySchema = new Schema<IVendorSurvey>({
     type: String,
     required: true,
     unique: true,
+  },
+  pid: {
+    type: String,
+    required: true,
   },
   vendor_id: {
     type: Schema.Types.ObjectId,
