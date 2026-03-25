@@ -129,39 +129,26 @@ router.get("/external/return", (req, res) => {
     try {
         const { status, token, rid, transactionId } = req.query;
 
-        if (!token) return res.status(400).send("Missing token");
-
         const surveys = loadSurveys();
         const survey = surveys[token as string];
 
-        if (!survey) {
-            return res.send("Invalid survey");
-        }
+        if (!survey) return res.send("Invalid survey");
 
         let redirectUrl = "";
 
-        if (status === "complete") {
-            redirectUrl = survey.vendor.complete_url || survey.vendor.complete;
-        } else if (status === "terminate") {
-            redirectUrl = survey.vendor.terminate_url || survey.vendor.terminate;
-        } else if (status === "quota") {
-            redirectUrl = survey.vendor.quota_full_url || survey.vendor.quota_full;
-        }
+        if (status === "complete") redirectUrl = survey.vendor.complete_url;
+        if (status === "terminate") redirectUrl = survey.vendor.terminate_url;
+        if (status === "quota") redirectUrl = survey.vendor.quota_full_url;
 
         if (!redirectUrl) {
-            console.error("No redirect URL found for status:", status);
-            return res.send("Redirect configuration missing for this vendor.");
+            return res.send("Redirect configuration missing");
         }
 
         const sep = redirectUrl.includes("?") ? "&" : "?";
-        redirectUrl += `${sep}rid=${rid}&transactionId=${transactionId}&token=${token}&status=${status}`;
-
-        console.log(`🔀 External Return Flow (${status}):`, redirectUrl);
+        redirectUrl += `${sep}rid=${rid}&transactionId=${transactionId}`;
 
         res.redirect(redirectUrl);
-
     } catch (err) {
-        console.error("Return error:", err);
         res.send("Return error");
     }
 });
