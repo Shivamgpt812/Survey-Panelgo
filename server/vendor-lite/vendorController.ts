@@ -415,11 +415,19 @@ export const submitResponse = async (req: Request, res: Response) => {
 
         // Return terminate redirect URL
         const vendor = survey.vendor_id as any;
-        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=${uid}&status=2&reason=pre-screener-failed`;
+        let terminateUrl = vendor.terminate_url;
+        
+        // Check if terminateUrl already has query parameters
+        const hasQueryParams = terminateUrl.includes('?');
+        if (hasQueryParams) {
+          terminateUrl = `${terminateUrl}&pid=${survey.pid}&uid=${uid}&status=2&reason=pre-screener-failed`;
+        } else {
+          terminateUrl = `${terminateUrl}?pid=${survey.pid}&uid=${uid}&status=2&reason=pre-screener-failed`;
+        }
         
         return res.json({
           success: true,
-          redirectUrl,
+          redirectUrl: terminateUrl,
           terminated: true,
           reason: 'Failed pre-screener criteria',
           failedCriteria: validation.failedCriteria
@@ -457,6 +465,10 @@ export const submitResponse = async (req: Request, res: Response) => {
 
     // Since status is always "complete", use complete_url
     let redirectUrl = (survey.vendor_id as any).complete_url;
+    
+    console.log("=== VENDOR URL DEBUG ===");
+    console.log("Vendor complete_url:", redirectUrl);
+    console.log("Vendor complete_url type:", typeof redirectUrl);
 
     // Use PID from survey, fallback to URL PID if survey PID is missing or invalid
     const finalPid = (survey.pid && survey.pid.length > 0) ? survey.pid : urlPid;
@@ -465,7 +477,13 @@ export const submitResponse = async (req: Request, res: Response) => {
     console.log("PID from URL parameters:", urlPid);
     console.log("Final PID being used:", finalPid);
 
-    redirectUrl = `${redirectUrl}?pid=${finalPid}&uid=${uid}`;
+    // Check if redirectUrl already has query parameters
+    const hasQueryParams = redirectUrl.includes('?');
+    if (hasQueryParams) {
+      redirectUrl = `${redirectUrl}&pid=${finalPid}&uid=${uid}`;
+    } else {
+      redirectUrl = `${redirectUrl}?pid=${finalPid}&uid=${uid}`;
+    }
     
     console.log("=== REDIRECT URL DEBUG ===");
     console.log("Survey PID:", survey.pid);
