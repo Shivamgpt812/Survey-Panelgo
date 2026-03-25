@@ -81,16 +81,17 @@ export const createSurvey = async (req: Request, res: Response) => {
     // Validate questions structure
     const validQuestions = questions.filter((q: any) => 
       q.text && 
-      q.options && 
-      Array.isArray(q.options) && 
-      q.options.length > 0 &&
-      q.options.some((opt: string) => opt.trim())
+      q.type && 
+      (
+        (q.type === 'multiple-choice' && q.options && Array.isArray(q.options) && q.options.length > 0 && q.options.some((opt: string) => opt.trim())) ||
+        (q.type !== 'multiple-choice')
+      )
     );
 
     if (validQuestions.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'At least one valid question with options is required'
+        message: 'At least one valid question is required. Multiple-choice questions must have options.'
       });
     }
 
