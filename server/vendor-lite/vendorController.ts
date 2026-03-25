@@ -292,7 +292,7 @@ export const validatePreScreener = async (req: Request, res: Response) => {
 
         // Return terminate redirect URL
         const vendor = survey.vendor_id as any;
-        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=${userId || 'pre-screener-validation'}&status=terminated`;
+        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=${userId || 'pre-screener-validation'}&status=2&reason=pre-screener-failed`;
         
         return res.json({
           success: true,
@@ -338,7 +338,7 @@ export const validatePreScreener = async (req: Request, res: Response) => {
         
         // Return terminate redirect URL
         const vendor = survey.vendor_id as any;
-        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=${userId || 'validation-error'}&status=terminated`;
+        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=${userId || 'validation-error'}&status=2&reason=validation-error`;
         
         return res.json({
           success: true,
@@ -417,32 +417,13 @@ export const submitResponse = async (req: Request, res: Response) => {
         const vendor = survey.vendor_id as any;
         let terminateUrl = vendor.terminate_url;
         
-        console.log("=== TERMINATE URL DEBUG ===");
-        console.log("Vendor terminate_url:", terminateUrl);
-        console.log("Vendor terminate_url type:", typeof terminateUrl);
-        
-        // Parse existing URL and add/update our parameters
-        try {
-          if (typeof terminateUrl !== 'string') {
-            throw new Error('terminateUrl must be a string');
-          }
-          const url = new URL(terminateUrl);
-          url.searchParams.set('pid', survey.pid);
-          url.searchParams.set('uid', uid);
-          url.searchParams.set('status', 'terminated');
-          terminateUrl = url.toString();
-        } catch (error) {
-          // Fallback if URL parsing fails
-          console.log("URL parsing failed, using fallback logic");
-          const hasQueryParams = terminateUrl.includes('?');
-          if (hasQueryParams) {
-            terminateUrl = `${terminateUrl}&pid=${survey.pid}&uid=${uid}&status=terminated`;
-          } else {
-            terminateUrl = `${terminateUrl}?pid=${survey.pid}&uid=${uid}&status=terminated`;
-          }
+        // Check if terminateUrl already has query parameters
+        const hasQueryParams = terminateUrl.includes('?');
+        if (hasQueryParams) {
+          terminateUrl = `${terminateUrl}&pid=${survey.pid}&uid=${uid}&status=2&reason=pre-screener-failed`;
+        } else {
+          terminateUrl = `${terminateUrl}?pid=${survey.pid}&uid=${uid}&status=2&reason=pre-screener-failed`;
         }
-        
-        console.log("Final terminate URL:", terminateUrl);
         
         return res.json({
           success: true,
@@ -490,31 +471,18 @@ export const submitResponse = async (req: Request, res: Response) => {
     console.log("Vendor complete_url type:", typeof redirectUrl);
 
     // Use PID from survey, fallback to URL PID if survey PID is missing or invalid
-    const finalPid = (survey.pid && survey.pid.length > 0) ? survey.pid : (urlPid as string) || '';
+    const finalPid = (survey.pid && survey.pid.length > 0) ? survey.pid : urlPid;
     console.log("=== PID COMPARISON DEBUG ===");
     console.log("Survey PID from database:", survey.pid);
     console.log("PID from URL parameters:", urlPid);
     console.log("Final PID being used:", finalPid);
 
-    // Parse existing URL and add/update our parameters
-    try {
-      if (typeof redirectUrl !== 'string') {
-        throw new Error('redirectUrl must be a string');
-      }
-      const url = new URL(redirectUrl);
-      url.searchParams.set('pid', finalPid);
-      url.searchParams.set('uid', uid);
-      url.searchParams.set('status', 'complete');
-      redirectUrl = url.toString();
-    } catch (error) {
-      // Fallback if URL parsing fails
-      console.log("URL parsing failed, using fallback logic");
-      const hasQueryParams = redirectUrl.includes('?');
-      if (hasQueryParams) {
-        redirectUrl = `${redirectUrl}&pid=${finalPid}&uid=${uid}&status=complete`;
-      } else {
-        redirectUrl = `${redirectUrl}?pid=${finalPid}&uid=${uid}&status=complete`;
-      }
+    // Check if redirectUrl already has query parameters
+    const hasQueryParams = redirectUrl.includes('?');
+    if (hasQueryParams) {
+      redirectUrl = `${redirectUrl}&pid=${finalPid}&uid=${uid}`;
+    } else {
+      redirectUrl = `${redirectUrl}?pid=${finalPid}&uid=${uid}`;
     }
     
     console.log("=== REDIRECT URL DEBUG ===");
