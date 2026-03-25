@@ -147,6 +147,8 @@ export default function VendorLitePage() {
   };
 
   const deleteVendor = async (vendorId: string) => {
+    console.log('Attempting to delete vendor:', vendorId);
+    
     if (!confirm('Are you sure you want to delete this vendor? This action cannot be undone.')) {
       return;
     }
@@ -156,6 +158,9 @@ export default function VendorLitePage() {
       const response = await fetch(`/api/vendor-lite/vendors/${vendorId}`, {
         method: 'DELETE',
       });
+      
+      console.log('Delete response status:', response.status);
+      console.log('Delete response ok:', response.ok);
 
       if (response.ok) {
         setVendors(vendors.filter(vendor => vendor.id !== vendorId));
@@ -165,13 +170,15 @@ export default function VendorLitePage() {
           delete newLinks[vendorId];
           return newLinks;
         });
+        alert('Vendor deleted successfully!');
       } else {
         const data = await response.json();
-        alert('Error: ' + data.message);
+        console.log('Delete error response:', data);
+        alert('Error: ' + (data.message || 'Failed to delete vendor'));
       }
     } catch (error) {
       console.error('Error deleting vendor:', error);
-      alert('Error deleting vendor');
+      alert('Error: Failed to delete vendor');
     } finally {
       setLoading(false);
     }
