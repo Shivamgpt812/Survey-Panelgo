@@ -18,6 +18,7 @@ import { SurveyTracking } from './models/SurveyTracking.js';
 import { SurveyRedirectLogs } from './models/SurveyRedirectLogs.js';
 import { preScreenerTemplates } from './preScreenerTemplates.js';
 import { REDIRECT_URLS, getStatusText, isValidStatus } from './config/redirectConfig.js';
+import vendorRoutes from './vendor-lite/vendorRoutes.js';
 import {
   optionalAuth,
   requireAuth,
@@ -48,6 +49,9 @@ app.use(express.json({ limit: '2mb' }));
 app.get('/api/health', (_req, res) => {
   res.send('Backend running');
 });
+
+// ---------- Vendor Lite Routes (Isolated System) ----------
+app.use('/vendor-lite', vendorRoutes);
 
 // ---------- Vendor Survey Routes (No Login Required) ----------
 app.get('/s/:token', async (req, res) => {
