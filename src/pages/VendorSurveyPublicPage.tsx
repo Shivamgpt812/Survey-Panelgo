@@ -135,6 +135,11 @@ export default function VendorSurveyPublicPage() {
   const handlePreScreenerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log("=== PRE SCREENER VALIDATION DEBUG ===");
+    console.log("userId:", userId);
+    console.log("token:", token);
+    console.log("preScreenerAnswers:", preScreenerAnswers);
+    
     // Submit pre-screener answers for validation
     try {
       const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
@@ -155,16 +160,23 @@ export default function VendorSurveyPublicPage() {
       });
 
       const data = await response.json();
+      console.log("Pre-screener validation response:", data);
+      console.log("Success:", data.success);
+      console.log("Terminated:", data.terminated);
+      console.log("Redirect URL:", data.redirectUrl);
       
       if (data.success && !data.terminated) {
         // Passed pre-screener, show survey questions
+        console.log("Pre-screener PASSED - showing survey questions");
         setShowPreScreener(false);
       } else if (data.terminated) {
         // Failed pre-screener, redirect to terminate URL
+        console.log("Pre-screener FAILED - redirecting to terminate URL");
         alert(`You do not meet the survey criteria: ${data.reason}`);
         window.location.href = data.redirectUrl;
       } else {
         // Any validation error should terminate the user
+        console.log("Pre-screener validation ERROR - terminating");
         alert('You do not meet the survey criteria. Thank you for your interest.');
         // Try to get the survey details to redirect to terminate URL
         try {
@@ -224,6 +236,11 @@ export default function VendorSurveyPublicPage() {
   };
 
   const handleSubmit = async () => {
+    console.log("=== VENDOR SURVEY SUBMISSION DEBUG ===");
+    console.log("userId:", userId);
+    console.log("token:", token);
+    console.log("answers:", answers);
+    
     setSubmitting(true);
 
     try {
@@ -249,10 +266,15 @@ export default function VendorSurveyPublicPage() {
 
       const data = await response.json();
       console.log("🚀 Survey submitted:", data);
+      console.log("Response success:", data.success);
+      console.log("Redirect URL:", data.redirectUrl);
+      console.log("Terminated:", data.terminated);
 
       if (data.success && data.redirectUrl) {
+        console.log("Redirecting to:", data.redirectUrl);
         window.location.href = data.redirectUrl;
       } else {
+        console.error("Submission failed:", data);
         alert('Error submitting survey');
       }
     } catch (error) {
