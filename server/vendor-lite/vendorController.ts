@@ -417,6 +417,10 @@ export const submitResponse = async (req: Request, res: Response) => {
         const vendor = survey.vendor_id as any;
         let terminateUrl = vendor.terminate_url;
         
+        console.log("=== TERMINATE URL DEBUG ===");
+        console.log("Vendor terminate_url:", terminateUrl);
+        console.log("Vendor terminate_url type:", typeof terminateUrl);
+        
         // Check if terminateUrl already has query parameters
         const hasQueryParams = terminateUrl.includes('?');
         if (hasQueryParams) {
@@ -424,6 +428,8 @@ export const submitResponse = async (req: Request, res: Response) => {
         } else {
           terminateUrl = `${terminateUrl}?pid=${survey.pid}&uid=${uid}&status=2&reason=pre-screener-failed`;
         }
+        
+        console.log("Final terminate URL:", terminateUrl);
         
         return res.json({
           success: true,
