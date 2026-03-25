@@ -22,6 +22,7 @@ export default function VendorLitePage() {
   const [loading, setLoading] = useState(false);
   const [showCreateVendor, setShowCreateVendor] = useState(false);
   const [showCreateSurvey, setShowCreateSurvey] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState("");
 
   const [vendorForm, setVendorForm] = useState({
     name: '',
@@ -39,13 +40,27 @@ export default function VendorLitePage() {
     fetchVendors();
   }, []);
 
+  useEffect(() => {
+    console.log("📦 Vendors state updated:", vendors);
+  }, [vendors]);
+
   const fetchVendors = async () => {
     try {
-      const response = await fetch('http://localhost:3000/vendor-lite/vendors');
+      const response = await fetch('http://localhost:3000/vendor-lite/vendor');
       const data = await response.json();
-      if (data.success) {
-        setVendors(data.vendors);
-      }
+      console.log("📦 Vendors fetched:", data);
+      
+      // Handle both array and wrapped response formats
+      const vendorsArray = Array.isArray(data) ? data : (data.vendors || []);
+      
+      // Transform _id to id for frontend compatibility
+      const transformedVendors = vendorsArray.map((vendor: any) => ({
+        ...vendor,
+        id: vendor._id || vendor.id
+      }));
+      
+      console.log("🔄 Transformed vendors:", transformedVendors);
+      setVendors(transformedVendors);
     } catch (error) {
       console.error('Error fetching vendors:', error);
     }
@@ -81,6 +96,16 @@ export default function VendorLitePage() {
 
   const createSurvey = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    console.log("📊 Survey Form:", surveyForm);
+    console.log("🎯 Selected Vendor:", selectedVendor);
+    console.log("📦 Available Vendors:", vendors);
+    
+    if (!selectedVendor) {
+      alert("Please select a vendor");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -89,12 +114,18 @@ export default function VendorLitePage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(surveyForm),
+        body: JSON.stringify({
+          title: surveyForm.title,
+          vendor_id: selectedVendor
+        }),
       });
 
       const data = await response.json();
+      console.log("🚀 Survey Created:", data);
+      
       if (data.success) {
         setSurveyForm({ title: '', vendor_id: 0 });
+        setSelectedVendor("");
         setShowCreateSurvey(false);
         fetchVendors();
       } else {
@@ -211,8 +242,12 @@ export default function VendorLitePage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Select Vendor</label>
                 <select
                   required
-                  value={surveyForm.vendor_id}
-                  onChange={(e) => setSurveyForm({ ...surveyForm, vendor_id: parseInt(e.target.value) })}
+                  value={selectedVendor}
+                  onChange={(e) => {
+                    console.log("✅ Selected Vendor:", e.target.value);
+                    setSelectedVendor(e.target.value);
+                    setSurveyForm({ ...surveyForm, vendor_id: parseInt(e.target.value) });
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
                 >
                   <option value="">Select a vendor</option>
@@ -256,6 +291,7 @@ export default function VendorLitePage() {
                   variant="secondary"
                   onClick={() => {
                     setSurveyForm({ ...surveyForm, vendor_id: vendor.id });
+                    setSelectedVendor(vendor.id.toString());
                     setShowCreateSurvey(true);
                   }}
                 >

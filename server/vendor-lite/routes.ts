@@ -11,6 +11,7 @@ import {
 const router = Router();
 
 router.post('/vendor', createVendor);
+router.get('/vendor', getVendors);  // Add GET route for /vendor
 router.get('/vendors', getVendors);
 
 router.post('/survey', createSurvey);
