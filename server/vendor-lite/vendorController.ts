@@ -421,12 +421,26 @@ export const submitResponse = async (req: Request, res: Response) => {
         console.log("Vendor terminate_url:", terminateUrl);
         console.log("Vendor terminate_url type:", typeof terminateUrl);
         
-        // Check if terminateUrl already has query parameters
-        const hasQueryParams = terminateUrl.includes('?');
-        if (hasQueryParams) {
-          terminateUrl = `${terminateUrl}&pid=${survey.pid}&uid=${uid}&status=2&reason=pre-screener-failed`;
-        } else {
-          terminateUrl = `${terminateUrl}?pid=${survey.pid}&uid=${uid}&status=2&reason=pre-screener-failed`;
+        // Parse existing URL and add/update our parameters
+        try {
+          if (typeof terminateUrl !== 'string') {
+            throw new Error('terminateUrl must be a string');
+          }
+          const url = new URL(terminateUrl);
+          url.searchParams.set('pid', survey.pid);
+          url.searchParams.set('uid', uid);
+          url.searchParams.set('status', '2');
+          url.searchParams.set('reason', 'pre-screener-failed');
+          terminateUrl = url.toString();
+        } catch (error) {
+          // Fallback if URL parsing fails
+          console.log("URL parsing failed, using fallback logic");
+          const hasQueryParams = terminateUrl.includes('?');
+          if (hasQueryParams) {
+            terminateUrl = `${terminateUrl}&pid=${survey.pid}&uid=${uid}&status=2&reason=pre-screener-failed`;
+          } else {
+            terminateUrl = `${terminateUrl}?pid=${survey.pid}&uid=${uid}&status=2&reason=pre-screener-failed`;
+          }
         }
         
         console.log("Final terminate URL:", terminateUrl);
@@ -483,12 +497,24 @@ export const submitResponse = async (req: Request, res: Response) => {
     console.log("PID from URL parameters:", urlPid);
     console.log("Final PID being used:", finalPid);
 
-    // Check if redirectUrl already has query parameters
-    const hasQueryParams = redirectUrl.includes('?');
-    if (hasQueryParams) {
-      redirectUrl = `${redirectUrl}&pid=${finalPid}&uid=${uid}`;
-    } else {
-      redirectUrl = `${redirectUrl}?pid=${finalPid}&uid=${uid}`;
+    // Parse existing URL and add/update our parameters
+    try {
+      if (typeof redirectUrl !== 'string') {
+        throw new Error('redirectUrl must be a string');
+      }
+      const url = new URL(redirectUrl);
+      url.searchParams.set('pid', finalPid);
+      url.searchParams.set('uid', uid);
+      redirectUrl = url.toString();
+    } catch (error) {
+      // Fallback if URL parsing fails
+      console.log("URL parsing failed, using fallback logic");
+      const hasQueryParams = redirectUrl.includes('?');
+      if (hasQueryParams) {
+        redirectUrl = `${redirectUrl}&pid=${finalPid}&uid=${uid}`;
+      } else {
+        redirectUrl = `${redirectUrl}?pid=${finalPid}&uid=${uid}`;
+      }
     }
     
     console.log("=== REDIRECT URL DEBUG ===");
