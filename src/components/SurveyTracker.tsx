@@ -26,12 +26,22 @@ export function useSurveyTracker(surveyId: string) {
   const BACKEND_URL = "https://survey-panelgo.onrender.com";
 
   const startTracking = async () => {
-    if (!surveyId) return null;
+    console.log("=== START TRACKING DEBUG ===");
+    console.log("surveyId:", surveyId);
+    console.log("token:", token);
+    
+    if (!surveyId) {
+      console.log("ERROR: No surveyId provided");
+      return null;
+    }
 
     try {
       setLoading(true);
+      console.log("Calling startSurveyTracking API...");
       const response = await startSurveyTracking(surveyId, token);
+      console.log("startSurveyTracking response:", response);
       setTrackingData(response);
+      console.log("Tracking data set successfully");
       return response;
     } catch (error) {
       console.error('Failed to start survey tracking:', error);

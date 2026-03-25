@@ -38,8 +38,21 @@ const InternalSurveyPageWithTracking: React.FC = () => {
 
   // Start tracking when survey loads
   useEffect(() => {
+    console.log("=== TRACKING START DEBUG ===");
+    console.log("survey:", survey);
+    console.log("surveyId:", surveyId);
+    console.log("trackingData:", trackingData);
+    console.log("trackingLoading:", trackingLoading);
+    
     if (survey && surveyId && !trackingData) {
-      startTracking();
+      console.log("Starting tracking...");
+      startTracking().then(result => {
+        console.log("Tracking started successfully:", result);
+      }).catch(error => {
+        console.error("Failed to start tracking:", error);
+      });
+    } else {
+      console.log("Not starting tracking - conditions not met");
     }
   }, [survey, surveyId, trackingData, startTracking]);
 
