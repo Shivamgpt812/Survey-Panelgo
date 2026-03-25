@@ -9,6 +9,12 @@ interface Vendor {
   quota_full_url: string;
 }
 
+interface Question {
+  text: string;
+  options: string[];
+  type: 'multiple-choice' | 'rating' | 'text';
+}
+
 export default function VendorLitePage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,8 +53,8 @@ export default function VendorLitePage() {
     }
   ]);
 
-  const [questions, setQuestions] = useState([
-    { text: '', options: [''] }
+  const [questions, setQuestions] = useState<Question[]>([
+    { text: '', options: [''], type: 'multiple-choice' }
   ]);
   const [generatedLink, setGeneratedLink] = useState('');
   const [vendorSurveyLinks, setVendorSurveyLinks] = useState<Record<string, string>>({});
@@ -152,9 +158,9 @@ export default function VendorLitePage() {
     }
 
     // Validate questions
-    const validQuestions = questions.filter(q => q.text.trim() && q.options.some(o => o.trim()));
+    const validQuestions = questions.filter(q => q.text.trim() && ((q.type === 'multiple-choice' && q.options.some(o => o.trim())) || (q.type !== 'multiple-choice')));
     if (validQuestions.length === 0) {
-      alert("Please add at least one question with one option");
+      alert("Please add at least one question");
       return;
     }
 
@@ -195,7 +201,7 @@ export default function VendorLitePage() {
         // Reset form
         setSurveyForm({ title: '', vendor_id: 0, pid: '' });
         setSelectedVendor("");
-        setQuestions([{ text: '', options: [''] }]);
+        setQuestions([{ text: '', options: [''], type: 'multiple-choice' }]);
         setShowCreateSurvey(false);
         fetchVendors();
       } else {
@@ -213,13 +219,21 @@ export default function VendorLitePage() {
   };
 
   const addQuestion = () => {
-    setQuestions([...questions, { text: '', options: [''] }]);
+    setQuestions([...questions, { text: '', options: [''], type: 'multiple-choice' }]);
   };
 
-  const updateQuestion = (index: number, field: 'text' | 'options', value: string | string[]) => {
+  const updateQuestion = (index: number, field: 'text' | 'options' | 'type', value: string | string[] | 'multiple-choice' | 'rating' | 'text') => {
     const updated = [...questions];
     if (field === 'text') {
       updated[index].text = value as string;
+    } else if (field === 'type') {
+      updated[index].type = value as 'multiple-choice' | 'rating' | 'text';
+      // Reset options when changing type
+      if (value === 'multiple-choice') {
+        updated[index].options = [''];
+      } else {
+        updated[index].options = [];
+      }
     } else {
       updated[index].options = value as string[];
     }
@@ -479,40 +493,72 @@ export default function VendorLitePage() {
                 </div>
                 
                 {questions.map((question, questionIndex) => (
-                  <div key={questionIndex} className="mb-4 p-4 border border-gray-200 rounded-lg">
-                    <div className="mb-3">
+                  <div key={questionIndex} className="mb-6 p-6 bg-gray-50 border-2 border-gray-200 rounded-xl">
+                    <div className="mb-4">
                       <input
                         type="text"
                         placeholder="Enter question text"
                         value={question.text}
                         onChange={(e) => updateQuestion(questionIndex, 'text', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                        className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
                       />
                     </div>
                     
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <label className="block text-sm font-medium text-gray-700">Options</label>
-                        <button
-                          type="button"
-                          onClick={() => addOption(questionIndex)}
-                          className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                        >
-                          + Add Option
-                        </button>
-                      </div>
-                      
-                      {question.options.map((option, optionIndex) => (
-                        <input
-                          key={optionIndex}
-                          type="text"
-                          placeholder={`Option ${optionIndex + 1}`}
-                          value={option}
-                          onChange={(e) => updateOption(questionIndex, optionIndex, e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
-                        />
-                      ))}
+                    <div className="mb-4">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Question Type</label>
+                      <select
+                        value={question.type}
+                        onChange={(e) => updateQuestion(questionIndex, 'type', e.target.value)}
+                        className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
+                      >
+                        <option value="multiple-choice">Multiple Choice</option>
+                        <option value="rating">Rating (1-5 Stars)</option>
+                        <option value="text">Text Box</option>
+                      </select>
                     </div>
+                    
+                    {/* Show options only for multiple-choice questions */}
+                    {question.type === 'multiple-choice' && (
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <label className="block text-sm font-semibold text-gray-700">Options</label>
+                          <button
+                            type="button"
+                            onClick={() => addOption(questionIndex)}
+                            className="px-3 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                          >
+                            + Add Option
+                          </button>
+                        </div>
+                        
+                        {question.options.map((option, optionIndex) => (
+                          <input
+                            key={optionIndex}
+                            type="text"
+                            placeholder={`Option ${optionIndex + 1}`}
+                            value={option}
+                            onChange={(e) => updateOption(questionIndex, optionIndex, e.target.value)}
+                            className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
+                          />
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Show rating scale for rating questions */}
+                    {question.type === 'rating' && (
+                      <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                        <p className="text-sm font-semibold text-gray-700 mb-2">Rating Scale: 1-5 Stars</p>
+                        <p className="text-sm text-gray-600">Users will be able to rate from 1 to 5 stars</p>
+                      </div>
+                    )}
+                    
+                    {/* Show info for text questions */}
+                    {question.type === 'text' && (
+                      <div className="p-4 bg-green-50 border-2 border-green-200 rounded-xl">
+                        <p className="text-sm font-semibold text-gray-700 mb-2">Open Text Answer</p>
+                        <p className="text-sm text-gray-600">Users will be able to type a text response</p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
