@@ -331,11 +331,11 @@ export default function VendorSurveyPublicPage() {
 
           {/* User ID Input */}
           {showUserIdInput && (
-            <PlayfulCard className="mb-6">
-              <h2 className="text-xl font-jakarta font-semibold text-navy mb-4">Enter Your User ID</h2>
-              <form onSubmit={handleUserIdSubmit} className="space-y-4">
+            <PlayfulCard className="mb-8">
+              <h2 className="text-2xl font-jakarta font-semibold text-navy mb-6">Enter Your User ID</h2>
+              <form onSubmit={handleUserIdSubmit} className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     User ID <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -344,9 +344,9 @@ export default function VendorSurveyPublicPage() {
                     value={userId}
                     onChange={(e) => setUserId(e.target.value)}
                     placeholder="Enter a unique user ID (e.g., USER123)"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                    className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-sm text-gray-500 mt-2">
                     Choose a unique identifier that hasn't been used before
                   </p>
                 </div>
@@ -354,6 +354,8 @@ export default function VendorSurveyPublicPage() {
                   type="submit"
                   variant="primary"
                   disabled={!userId.trim()}
+                  isLoading={submitting}
+                  className="w-full py-3 text-lg"
                 >
                   Start Survey
                 </PlayfulButton>
@@ -363,13 +365,13 @@ export default function VendorSurveyPublicPage() {
 
           {/* Pre-Screener Questions */}
           {showPreScreener && survey?.preScreenerQuestions?.length > 0 && (
-            <PlayfulCard className="mb-6">
-              <h2 className="text-xl font-jakarta font-semibold text-navy mb-4">Pre-Screener Questions</h2>
-              <form onSubmit={handlePreScreenerSubmit} className="space-y-4">
+            <PlayfulCard className="mb-8">
+              <h2 className="text-2xl font-jakarta font-semibold text-navy mb-6">Pre-Screener Questions</h2>
+              <form onSubmit={handlePreScreenerSubmit} className="space-y-6">
                 {survey.preScreenerQuestions.map((preScreen: any, index: number) => (
-                  <div key={index} className="mb-4 p-4 border border-gray-200 rounded-lg">
-                    <div className="mb-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div key={index} className="p-6 bg-gray-50 border-2 border-gray-200 rounded-xl">
+                    <div className="mb-4">
+                      <label className="block text-base font-semibold text-gray-700 mb-3">
                         {preScreen.question} <span className="text-red-500">*</span>
                       </label>
                       
@@ -380,14 +382,14 @@ export default function VendorSurveyPublicPage() {
                           value={preScreenerAnswers[preScreen.type] || ''}
                           onChange={(e) => handlePreScreenerAnswer(preScreen.type, e.target.value)}
                           placeholder="Enter your age"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                          className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
                         />
                       ) : preScreen.type === 'gender' ? (
                         <select
                           required
                           value={preScreenerAnswers[preScreen.type] || ''}
                           onChange={(e) => handlePreScreenerAnswer(preScreen.type, e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                          className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
                         >
                           <option value="">Select your gender</option>
                           {preScreen.options?.map((option: string) => (
@@ -403,6 +405,8 @@ export default function VendorSurveyPublicPage() {
                   type="submit"
                   variant="primary"
                   disabled={!Object.keys(preScreenerAnswers).length || Object.keys(preScreenerAnswers).length < survey.preScreenerQuestions.filter((q: { enabled: boolean }) => q.enabled).length}
+                  isLoading={submitting}
+                  className="w-full py-3 text-lg"
                 >
                   Submit Pre-Screener
                 </PlayfulButton>
@@ -412,72 +416,75 @@ export default function VendorSurveyPublicPage() {
 
           {/* Survey Questions */}
           {!showUserIdInput && !showPreScreener && (
-            <PlayfulCard>
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-sm font-medium text-gray-600">
-                  Question {currentStep + 1} of {survey?.questions?.length || 0}
-                </span>
-                <span className="text-sm font-medium text-violet">
-                  {survey?.questions ? Math.round(((currentStep + 1) / survey.questions.length) * 100) : 0}% Complete
-                </span>
+            <PlayfulCard className="mb-8">
+              <div className="mb-8">
+                <div className="flex justify-between items-center mb-6">
+                  <span className="text-base font-semibold text-gray-600">
+                    Question {currentStep + 1} of {survey?.questions?.length || 0}
+                  </span>
+                  <span className="text-base font-semibold text-violet">
+                    {survey?.questions ? Math.round(((currentStep + 1) / survey.questions.length) * 100) : 0}% Complete
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div 
+                    className="bg-gradient-to-r from-violet to-pink h-3 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${survey?.questions ? ((currentStep + 1) / survey.questions.length) * 100 : 0}%` }}
+                  ></div>
+                </div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-gradient-to-r from-violet to-pink h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${survey?.questions ? ((currentStep + 1) / survey.questions.length) * 100 : 0}%` }}
-                ></div>
+
+              <div className="mb-10">
+                <h2 className="text-2xl font-jakarta font-semibold text-navy mb-8">
+                  {currentQuestion?.text}
+                </h2>
+
+                <div className="space-y-4">
+                  {currentQuestion?.options?.map((option: string, optionIndex: number) => (
+                    <label key={optionIndex} className="flex items-center p-5 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-violet hover:bg-violet/5 transition-all duration-200 group">
+                      <input
+                        type="radio"
+                        name={`q_${currentStep}`}
+                        value={option}
+                        checked={answers[`q_${currentStep}`] === option}
+                        onChange={(e) => handleAnswerChange(`q_${currentStep}`, e.target.value)}
+                        className="w-5 h-5 text-violet focus:ring-violet focus:ring-2"
+                      />
+                      <span className="text-lg text-gray-700 group-hover:text-violet transition-colors ml-4">{option}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="mb-8">
-              <h2 className="text-xl font-jakarta font-semibold text-navy mb-6">
-                {currentQuestion?.text}
-              </h2>
+              <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+                <button
+                  onClick={handlePrevious}
+                  disabled={currentStep === 0}
+                  className="px-6 py-3 font-jakarta font-semibold text-navy hover:text-violet disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:bg-gray-50 rounded-xl disabled:hover:bg-transparent"
+                >
+                  ← Previous
+                </button>
 
-              {currentQuestion?.options?.map((option: string, optionIndex: number) => (
-                <label key={optionIndex} className="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-violet transition-colors mb-3">
-                  <input
-                    type="radio"
-                    name={`q_${currentStep}`}
-                    value={option}
-                    checked={answers[`q_${currentStep}`] === option}
-                    onChange={(e) => handleAnswerChange(`q_${currentStep}`, e.target.value)}
-                    className="mr-3 text-violet focus:ring-violet"
-                  />
-                  <span className="text-gray-700">{option}</span>
-                </label>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-between pt-4">
-              <button
-                onClick={handlePrevious}
-                disabled={currentStep === 0}
-                className="px-4 py-2 font-jakarta font-medium text-navy hover:text-violet disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Previous
-              </button>
-
-              <PlayfulButton
-                variant="primary"
-                onClick={handleNext}
-                disabled={getCurrentAnswer() === null || submitting}
-                isLoading={submitting}
-              >
-                {isLastQuestion ? 'Submit Survey' : 'Next Question'}
-              </PlayfulButton>
-            </div>
-          </PlayfulCard>
+                <PlayfulButton
+                  variant="primary"
+                  onClick={handleNext}
+                  disabled={getCurrentAnswer() === null || submitting}
+                  isLoading={submitting}
+                  className="px-8 py-3 text-lg"
+                >
+                  {isLastQuestion ? 'Submit Survey' : 'Next Question →'}
+                </PlayfulButton>
+              </div>
+            </PlayfulCard>
           )}
 
-          <div className="mt-6 flex items-start gap-3 p-4 bg-white/50 border-2 border-navy/10 rounded-2xl">
-            <div className="w-6 h-6 bg-violet/20 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-violet text-sm">ℹ️</span>
+          <div className="mt-8 flex items-start gap-4 p-6 bg-white/60 backdrop-blur border-2 border-navy/10 rounded-2xl">
+            <div className="w-8 h-8 bg-violet/20 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-violet text-base">ℹ️</span>
             </div>
             <div>
-              <p className="font-jakarta text-sm text-navy">
-                <span className="font-semibold">Your feedback matters!</span> This survey helps us improve our products and services for you.
+              <p className="font-jakarta text-base text-navy leading-relaxed">
+                <span className="font-bold">Your feedback matters!</span> This survey helps us improve our products and services for you. Your responses are valuable and appreciated.
               </p>
             </div>
           </div>
