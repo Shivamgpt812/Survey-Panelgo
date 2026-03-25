@@ -401,11 +401,11 @@ export default function VendorLitePage() {
 
     const sep = cleanUrl.includes("?") ? "&" : "?";
     const finalUrl = cleanUrl
-      + `${sep}complete=${buildReturnUrl("complete")}`
-      + `&terminate=${buildReturnUrl("terminate")}`
-      + `&quotafull=${buildReturnUrl("quota")}`;
+      + `${sep}return_url=${buildReturnUrl("complete")}`
+      + `&fail_url=${buildReturnUrl("terminate")}`
+      + `&overquota_url=${buildReturnUrl("quota")}`;
 
-    console.log("🚀 FINAL URL (Routing back to /external/return after cleaning):", finalUrl);
+    console.log("🚀 FINAL URL (with industry standard return params):", finalUrl);
     window.location.href = finalUrl;
   };
 
