@@ -9,13 +9,6 @@ interface Vendor {
   quota_full_url: string;
 }
 
-interface VendorSurvey {
-  id: number;
-  title: string;
-  token: string;
-  vendor_id: number;
-}
-
 export default function VendorLitePage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(false);
