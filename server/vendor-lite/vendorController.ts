@@ -163,13 +163,8 @@ export const submitResponse = async (req: Request, res: Response) => {
       answers
     });
 
+    // Since status is always "complete", use complete_url
     let redirectUrl = (survey.vendor_id as any).complete_url;
-
-    if (status === "terminate") {
-      redirectUrl = (survey.vendor_id as any).terminate_url;
-    } else if (status === "quotafull") {
-      redirectUrl = (survey.vendor_id as any).quota_full_url;
-    }
 
     redirectUrl = `${redirectUrl}?pid=${survey._id}&uid=${uid}`;
 
