@@ -26,6 +26,24 @@ export default function VendorSurveyPublicPage() {
     }
   }, [token]);
 
+  // Handle external survey redirect
+  useEffect(() => {
+    if (survey?.externalLink) {
+      console.log("=== EXTERNAL SURVEY REDIRECT DEBUG ===");
+      console.log("Survey data:", survey);
+      console.log("External link found:", survey.externalLink);
+      console.log("Survey type:", survey.type);
+      
+      // Add a small delay to ensure component renders
+      const timer = setTimeout(() => {
+        console.log("Executing redirect to:", survey.externalLink);
+        window.location.href = survey.externalLink;
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [survey?.externalLink, survey]);
+
   useEffect(() => {
     // Auto-start survey flow when survey is loaded and we have URL parameters
     if (survey && pid && uid) {
@@ -301,21 +319,6 @@ export default function VendorSurveyPublicPage() {
 
   // Handle external surveys - redirect to external link
   if (survey.externalLink) {
-    useEffect(() => {
-      console.log("=== EXTERNAL SURVEY REDIRECT DEBUG ===");
-      console.log("Survey data:", survey);
-      console.log("External link found:", survey.externalLink);
-      console.log("Survey type:", survey.type);
-      
-      // Add a small delay to ensure the component renders
-      const timer = setTimeout(() => {
-        console.log("Executing redirect to:", survey.externalLink);
-        window.location.href = survey.externalLink;
-      }, 1000);
-      
-      return () => clearTimeout(timer);
-    }, [survey.externalLink, survey]);
-    
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-50 via-pink-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
