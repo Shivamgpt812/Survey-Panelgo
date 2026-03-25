@@ -521,6 +521,23 @@ export const handleVendorComplete = async (req: Request, res: Response) => {
   }
 };
 
+export const handleVendorTerminate = async (req: Request, res: Response) => {
+  try {
+    const { pid, uid, status = '2' } = req.query; // Default to terminated status
+
+    console.log("Vendor Terminate HIT:", { pid, uid, status });
+
+    // Forward to the main redirect handler
+    return handleVendorRedirect(req, res);
+  } catch (error) {
+    console.error('Vendor terminate error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
 export const handleVendorRedirect = async (req: Request, res: Response) => {
   try {
     const { pid, uid, status } = req.query;
