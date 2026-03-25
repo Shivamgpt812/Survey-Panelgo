@@ -467,7 +467,7 @@ export const handleVendorRedirect = async (req: Request, res: Response) => {
     }
 
     // Get survey and vendor info
-    const survey = await IVendorSurvey.findById(pid).populate({
+    const survey = await IVendorSurvey.findOne({ pid: pid }).populate({
       path: 'vendor_id',
       model: 'VendorLite'
     });
