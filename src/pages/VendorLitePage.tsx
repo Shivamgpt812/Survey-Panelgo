@@ -380,24 +380,34 @@ export default function VendorLitePage() {
 
     // PASS → External Survey with control parameters
     const returnBase = "https://survey-panelgo.onrender.com/external/return";
+
+    let cleanUrl = extSurvey.externalUrl;
+
+    // REMOVE old params completely to prevent conflicts
+    cleanUrl = cleanUrl.replace(/&?complete=[^&]*/g, "");
+    cleanUrl = cleanUrl.replace(/&?terminate=[^&]*/g, "");
+    cleanUrl = cleanUrl.replace(/&?quotafull=[^&]*/g, "");
+
+    // REPLACE placeholders
+    cleanUrl = cleanUrl
+      .replace("[#transaction_id#]", transactionId)
+      .replace("[#userid#]", rid);
+
+    // Build our controlled return URLs
     const buildReturnUrl = (status: string) => {
       const url = `${returnBase}?status=${status}&token=${token}&rid=${rid}&transactionId=${transactionId}`;
       return encodeURIComponent(url);
     };
 
-    let finalUrl = extSurvey.externalUrl
-      .replace("[#transaction_id#]", transactionId)
-      .replace("[#userid#]", rid);
-
-    const sep = finalUrl.includes("?") ? "&" : "?";
-    finalUrl += `${sep}complete=${buildReturnUrl("complete")}`
+    const sep = cleanUrl.includes("?") ? "&" : "?";
+    const finalUrl = cleanUrl
+      + `${sep}complete=${buildReturnUrl("complete")}`
       + `&terminate=${buildReturnUrl("terminate")}`
       + `&quotafull=${buildReturnUrl("quota")}`;
 
-    console.log("🚀 Redirecting respondent to external survey:", finalUrl);
+    console.log("🚀 FINAL URL (Routing back to /external/return after cleaning):", finalUrl);
     window.location.href = finalUrl;
   };
-
 
   const updateOption = (questionIndex: number, optionIndex: number, value: string) => {
     const updated = [...questions];
