@@ -30,38 +30,24 @@ export default function VendorSurveyPublicPage() {
   // If the respondent arrived via /external/router, localStorage will have
   // ext_rid and ext_transactionId which must be forwarded to the external URL.
   useEffect(() => {
-    if (survey?.externalLink) {
-      console.log("=== EXTERNAL SURVEY REDIRECT DEBUG ===");
-      console.log("Survey data:", survey);
-      console.log("External link found:", survey.externalLink);
-      console.log("Survey type:", survey.type);
-
+    // ONLY auto-redirect for OLD internal surveys that have externalLink set 
+    // AND don't have questions. The NEW external flow HAS questions (prescreener).
+    if (survey?.externalLink && !survey.questions?.length && !survey.isExternalFlow) {
+      console.log("=== EXTERNAL SURVEY REDIRECT DEBUG (OLD FLOW) ===");
+      // ... same as before ...
       const rid = localStorage.getItem('ext_rid') || '';
       const transactionId = localStorage.getItem('ext_transactionId') || '';
 
-      // Build final URL, appending rid + transactionId when available
       const buildExternalUrl = (base: string) => {
         const url = new URL(base);
         if (rid) url.searchParams.set('rid', rid);
         if (transactionId) url.searchParams.set('transactionId', transactionId);
-        // Also forward uid so the panel can track the individual respondent
         if (uid) url.searchParams.set('uid', uid);
         return url.toString();
       };
 
       const finalUrl = buildExternalUrl(survey.externalLink);
-      console.log("🚀 External Redirect URL (with respondent params):", finalUrl);
-
-      // Add a small delay to ensure component renders
-      const timer = setTimeout(() => {
-        // Clean up stored params after use
-        localStorage.removeItem('ext_rid');
-        localStorage.removeItem('ext_transactionId');
-        localStorage.removeItem('ext_token');
-        window.location.href = finalUrl;
-      }, 1000);
-
-      return () => clearTimeout(timer);
+      window.location.href = finalUrl;
     }
   }, [survey?.externalLink, survey]);
 
@@ -97,6 +83,32 @@ export default function VendorSurveyPublicPage() {
         isProduction,
         finalApiUrl: apiUrl
       });
+
+      // Try external survey data first if it looks like an external token or if mode=external is in localStorage
+      const isExternalToken = token && !/^[0-9a-fA-F]{24}$/.test(token);
+      if (isExternalToken || localStorage.getItem('ext_token') === token) {
+        try {
+          const extRes = await fetch(`${apiUrl}/external/data/${token}`);
+          const extData = await extRes.json();
+          if (extData.success) {
+            // Transform for compatibility with public page expectations
+            const enrichedSurvey = {
+              ...extData.survey,
+              isExternalFlow: true,
+              pid: 'EXTERNAL',
+              questions: extData.survey.questions.map((q: any) => ({
+                ...q,
+                type: 'text'
+              }))
+            };
+            setSurvey(enrichedSurvey);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.log("Not an external survey or external endpoint failed, trying internal...");
+        }
+      }
 
       // Try production API first, fallback to localhost if it fails
       let response;
@@ -273,15 +285,38 @@ export default function VendorSurveyPublicPage() {
 
     setSubmitting(true);
 
+    // If it's the new external flow, use the requested redirect logic
+    if (survey?.isExternalFlow) {
+      const rid = localStorage.getItem("ext_rid") || uid;
+      const transactionId = localStorage.getItem("ext_transactionId") || '';
+
+      if (!survey.externalUrl) {
+        alert("External URL not found");
+        setSubmitting(false);
+        return;
+      }
+
+      const finalUrl = survey.externalUrl
+        .replace("[#transaction_id#]", transactionId)
+        .replace("[#userid#]", rid);
+
+      console.log("🚀 External flow submission redirecting to:", finalUrl);
+
+      // Clean up
+      localStorage.removeItem('ext_rid');
+      localStorage.removeItem('ext_transactionId');
+      localStorage.removeItem('ext_token');
+
+      window.location.href = finalUrl;
+      return;
+    }
+
     try {
-      // Better environment detection for Netlify
+      // ... existing internal submission logic ...
       const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
       const apiUrl = isProduction
         ? 'https://survey-panelgo.onrender.com'
         : 'http://localhost:3000';
-
-      console.log("🚀 Submitting survey to:", apiUrl);
-      console.log("🚀 PID being sent:", pid);
 
       const response = await fetch(`${apiUrl}/vendor-lite/submit?pid=${encodeURIComponent(pid)}`, {
         method: 'POST',
@@ -297,16 +332,9 @@ export default function VendorSurveyPublicPage() {
       });
 
       const data = await response.json();
-      console.log("🚀 Survey submitted:", data);
-      console.log("Response success:", data.success);
-      console.log("Redirect URL:", data.redirectUrl);
-      console.log("Terminated:", data.terminated);
-
       if (data.success && data.redirectUrl) {
-        console.log("Redirecting to:", data.redirectUrl);
         window.location.href = data.redirectUrl;
       } else {
-        console.error("Submission failed:", data);
         alert('Error submitting survey');
       }
     } catch (error) {
@@ -338,8 +366,8 @@ export default function VendorSurveyPublicPage() {
     );
   }
 
-  // Handle external surveys - redirect to external link
-  if (survey.externalLink) {
+  // Handle legacy external surveys - redirect to external link
+  if (survey.externalLink && !survey.questions?.length && !survey.isExternalFlow) {
     const rid = localStorage.getItem('ext_rid') || '';
     const transactionId = localStorage.getItem('ext_transactionId') || '';
     const buildExternalUrl = (base: string) => {

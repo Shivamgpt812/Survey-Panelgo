@@ -40,6 +40,9 @@ export default function VendorLitePage() {
       localStorage.setItem('ext_token', token);
 
       setIsExternalMode(true);
+
+      // Redirect to the public survey page where the prescreener will run
+      window.location.href = `/v/${token}?pid=EXTERNAL&uid=${rid}`;
     }
   }, [searchParams]);
 
@@ -56,13 +59,21 @@ export default function VendorLitePage() {
     quota_full_url: ''
   });
 
-  const [surveyForm, setSurveyForm] = useState({
+  const [surveyForm, setSurveyForm] = useState<{
+    title: string;
+    vendor_id: number;
+    pid: string;
+    type: 'internal' | 'external';
+    externalLink: string;
+  }>({
     title: '',
     vendor_id: 0,
     pid: '',
     type: 'internal',
     externalLink: ''
   });
+
+  const [extQuestions, setExtQuestions] = useState([{ text: "" }]);
 
   const [preScreenerQuestions, setPreScreenerQuestions] = useState([
     {
@@ -181,7 +192,7 @@ export default function VendorLitePage() {
     console.log("📦 Available Vendors:", vendors);
     console.log("❓ Questions:", questions);
 
-    if (!selectedVendor) {
+    if (surveyForm.type === 'internal' && !selectedVendor) {
       alert("Please select a vendor");
       return;
     }
@@ -202,43 +213,83 @@ export default function VendorLitePage() {
         ? 'https://survey-panelgo.onrender.com'
         : 'http://localhost:3000';
 
-      const response = await fetch(`${apiUrl}/vendor-lite/survey`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: surveyForm.title,
-          vendor_id: selectedVendor,
-          pid: surveyForm.pid,
-          preScreenerQuestions: preScreenerQuestions.filter(q => q.enabled),
-          questions: surveyForm.type === 'internal' ? questions.filter(q => q.text.trim() && ((q.type === 'multiple-choice' && q.options.some(o => o.trim())) || (q.type !== 'multiple-choice'))) : [],
-          type: surveyForm.type,
-          externalLink: surveyForm.type === 'external' ? surveyForm.externalLink : undefined
-        }),
-      });
+      if (surveyForm.type === 'internal') {
+        const response = await fetch(`${apiUrl}/vendor-lite/survey`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: surveyForm.title,
+            vendor_id: selectedVendor,
+            pid: surveyForm.pid,
+            preScreenerQuestions: preScreenerQuestions.filter(q => q.enabled),
+            questions: questions.filter(q => q.text.trim() && ((q.type === 'multiple-choice' && q.options.some(o => o.trim())) || (q.type !== 'multiple-choice'))),
+            type: surveyForm.type,
+            externalLink: undefined
+          }),
+        });
 
-      const data = await response.json();
-      console.log("🚀 Survey Created:", data);
+        const data = await response.json();
+        console.log("🚀 Survey Created:", data);
 
-      if (data.success) {
-        const link = getPublicSurveyLink(data.token, surveyForm.pid);
-        setGeneratedLink(link);
+        if (data.success) {
+          const link = getPublicSurveyLink(data.token, surveyForm.pid);
+          setGeneratedLink(link);
 
-        // Save link to vendor's survey links
-        setVendorSurveyLinks(prev => ({
-          ...prev,
-          [selectedVendor]: link
-        }));
+          // Save link to vendor's survey links
+          setVendorSurveyLinks(prev => ({
+            ...prev,
+            [selectedVendor]: link
+          }));
 
-        // Reset form
-        setSurveyForm({ title: '', vendor_id: 0, pid: '', type: 'internal', externalLink: '' });
-        setSelectedVendor("");
-        setQuestions([{ text: '', options: [''], type: 'multiple-choice' }]);
-        setShowCreateSurvey(false);
-        fetchVendors();
+          // Reset form
+          setSurveyForm({
+            title: '',
+            vendor_id: 0,
+            pid: '',
+            type: 'internal' as 'internal' | 'external',
+            externalLink: ''
+          });
+          setSelectedVendor("");
+          setQuestions([{ text: '', options: [''], type: 'multiple-choice' }]);
+          setShowCreateSurvey(false);
+          fetchVendors();
+        } else {
+          alert('Error: ' + data.message);
+        }
       } else {
-        alert('Error: ' + data.message);
+        // External survey flow
+        const response = await fetch(`${apiUrl}/external/create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            title: surveyForm.title,
+            externalUrl: surveyForm.externalLink,
+            questions: extQuestions
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          const link = `${window.location.origin.replace("netlify.app", "onrender.com")}/external/router?token=${data.token}`;
+          setGeneratedLink(link); // Reusing UI link display
+
+          // Reset
+          setSurveyForm({
+            title: '',
+            vendor_id: 0,
+            pid: '',
+            type: 'internal',
+            externalLink: ''
+          });
+          setExtQuestions([{ text: "" }]);
+          setShowCreateSurvey(false);
+        } else {
+          alert('Error: ' + data.message);
+        }
       }
     } catch (error) {
       console.error('Error creating survey:', error);
@@ -419,7 +470,7 @@ export default function VendorLitePage() {
                       name="surveyType"
                       value="internal"
                       checked={surveyForm.type === 'internal'}
-                      onChange={(e) => setSurveyForm({ ...surveyForm, type: e.target.value })}
+                      onChange={(e) => setSurveyForm({ ...surveyForm, type: e.target.value as 'internal' | 'external' })}
                       className="mr-3 text-violet focus:ring-violet"
                     />
                     <div>
@@ -433,7 +484,7 @@ export default function VendorLitePage() {
                       name="surveyType"
                       value="external"
                       checked={surveyForm.type === 'external'}
-                      onChange={(e) => setSurveyForm({ ...surveyForm, type: e.target.value })}
+                      onChange={(e) => setSurveyForm({ ...surveyForm, type: e.target.value as 'internal' | 'external' })}
                       className="mr-3 text-violet focus:ring-violet"
                     />
                     <div>
@@ -487,19 +538,57 @@ export default function VendorLitePage() {
 
               {/* External Link Input - Only show for external surveys */}
               {surveyForm.type === 'external' && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">External Survey Link</label>
-                  <input
-                    type="url"
-                    required
-                    value={surveyForm.externalLink}
-                    onChange={(e) => setSurveyForm({ ...surveyForm, externalLink: e.target.value })}
-                    placeholder="https://external-survey.com/survey-link"
-                    className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
-                  />
-                  <p className="text-sm text-gray-500 mt-2">
-                    Users will be redirected to this external survey link
-                  </p>
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">External Survey Link</label>
+                    <input
+                      type="url"
+                      required
+                      value={surveyForm.externalLink}
+                      onChange={(e) => setSurveyForm({ ...surveyForm, externalLink: e.target.value })}
+                      placeholder="https://external-survey.com/survey-link"
+                      className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
+                    />
+                    <p className="text-sm text-gray-500 mt-2">
+                      Users will be redirected to this external survey link
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">Prescreener Questions (External)</label>
+                    <div className="space-y-3">
+                      {extQuestions.map((q, i) => (
+                        <div key={i} className="flex gap-2">
+                          <input
+                            placeholder="Enter prescreener question"
+                            value={q.text}
+                            onChange={(e) => {
+                              const updated = [...extQuestions];
+                              updated[i].text = e.target.value;
+                              setExtQuestions(updated);
+                            }}
+                            className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet"
+                          />
+                          {extQuestions.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setExtQuestions(extQuestions.filter((_, idx) => idx !== i))}
+                              className="px-3 text-red-500 hover:bg-red-50 rounded-xl"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setExtQuestions([...extQuestions, { text: "" }])}
+                        className="text-violet font-semibold hover:underline"
+                      >
+                        + Add Question
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
 
