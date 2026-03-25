@@ -379,38 +379,16 @@ export default function VendorLitePage() {
     }
 
     // PASS → External Survey with control parameters
+    // 🔥 TEST MODE: Verification for SurveysGenie dynamic PID support
+    let finalUrl = "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjU2&r=39498030&source=17&PID=" + rid;
     const base = "https://survey-panelgo.onrender.com/external/redirect";
 
-    let cleanUrl = extSurvey.externalUrl;
+    finalUrl +=
+      `&return_url=${encodeURIComponent(`${base}/complete?rid=${rid}&transactionId=${transactionId}`)}` +
+      `&fail_url=${encodeURIComponent(`${base}/terminate?rid=${rid}&transactionId=${transactionId}`)}` +
+      `&overquota_url=${encodeURIComponent(`${base}/quota?rid=${rid}&transactionId=${transactionId}`)}`;
 
-    // REMOVE OLD REDIRECT PARAMS (prevent conflicts)
-    cleanUrl = cleanUrl.replace(/&?return_url=[^&]*/g, "");
-    cleanUrl = cleanUrl.replace(/&?fail_url=[^&]*/g, "");
-    cleanUrl = cleanUrl.replace(/&?overquota_url=[^&]*/g, "");
-
-    // REPLACE placeholders
-    cleanUrl = cleanUrl
-      .replace("[#transaction_id#]", transactionId)
-      .replace("[#userid#]", rid);
-
-    // Build our controlled return URLs using the /redirect/:status path
-    const buildReturnUrl = (status: string) => {
-      const url = `${base}/${status}?token=${token}&rid=${rid}&transactionId=${transactionId}`;
-      return encodeURIComponent(url);
-    };
-
-    const sep = cleanUrl.includes("?") ? "&" : "?";
-    const finalUrl = cleanUrl
-      + `${sep}return_url=${buildReturnUrl("complete")}`
-      + `&fail_url=${buildReturnUrl("terminate")}`
-      + `&overquota_url=${buildReturnUrl("quota")}`;
-
-    console.log("🚀 FINAL REDIRECT (External Flow):");
-    console.log("RID:", rid);
-    console.log("TRANSACTION:", transactionId);
-    console.log("TOKEN:", token);
-    console.log("URL:", finalUrl);
-
+    console.log("🚀 TEST URL:", finalUrl);
     window.location.href = finalUrl;
   };
 

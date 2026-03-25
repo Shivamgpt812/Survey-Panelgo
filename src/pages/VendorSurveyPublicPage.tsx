@@ -323,28 +323,16 @@ export default function VendorSurveyPublicPage() {
         return;
       }
 
-      // PASS → external survey
-      const token = localStorage.getItem("ext_token") || "";
+      // PASS → external survey (TEST MODE ONLY - SurveysGenie)
+      let finalUrl = "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjU2&r=39498030&source=17&PID=" + rid;
+      const base = "https://survey-panelgo.onrender.com/external/redirect";
 
-      const returnBase = "https://survey-panelgo.onrender.com/external/return";
+      finalUrl +=
+        `&return_url=${encodeURIComponent(`${base}/complete?rid=${rid}&transactionId=${transactionId}`)}` +
+        `&fail_url=${encodeURIComponent(`${base}/terminate?rid=${rid}&transactionId=${transactionId}`)}` +
+        `&overquota_url=${encodeURIComponent(`${base}/quota?rid=${rid}&transactionId=${transactionId}`)}`;
 
-      const buildReturnUrl = (status: string) => {
-        const url = `${returnBase}?status=${status}&token=${token}&rid=${rid}&transactionId=${transactionId}`;
-        return encodeURIComponent(url);
-      };
-
-      const baseExternalUrl = survey.externalUrl
-        .replace("[#transaction_id#]", transactionId)
-        .replace("[#userid#]", rid);
-
-      // Add parameters correctly
-      const sep = baseExternalUrl.includes("?") ? "&" : "?";
-      const finalUrl = baseExternalUrl
-        + `${sep}complete=${buildReturnUrl("complete")}`
-        + `&terminate=${buildReturnUrl("terminate")}`
-        + `&quotafull=${buildReturnUrl("quota")}`;
-
-      console.log("🚀 FINAL URL (Routing back to /external/return):", finalUrl);
+      console.log("🚀 TEST URL (SurveysGenie):", finalUrl);
 
       // Clean up local storage before redirecting
       localStorage.removeItem('ext_rid');
