@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   createVendor,
   getVendors,
+  deleteVendor,
   createSurvey,
   getSurveyByToken,
   submitResponse,
@@ -17,6 +18,7 @@ const router = Router();
 router.post('/vendor', createVendor);
 router.get('/vendor', getVendors);  // Add GET route for /vendor
 router.get('/vendors', getVendors);
+router.delete('/vendors/:id', deleteVendor);
 
 router.post('/survey', createSurvey);
 router.get('/survey/:token', getSurveyByToken);

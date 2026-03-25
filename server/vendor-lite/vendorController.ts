@@ -60,6 +60,39 @@ export const getVendors = async (req: Request, res: Response) => {
   }
 };
 
+export const deleteVendor = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vendor ID is required'
+      });
+    }
+
+    const vendor = await IVendor.findByIdAndDelete(id);
+    
+    if (!vendor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Vendor deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting vendor:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
 export const createSurvey = async (req: Request, res: Response) => {
   try {
     const { title, vendor_id, pid, preScreenerQuestions, questions, type, externalLink } = req.body;
