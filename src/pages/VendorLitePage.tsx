@@ -790,18 +790,13 @@ export default function VendorLitePage() {
                 </div>
               )}
 
-              {/* Delete Vendor Button - Always Visible */}
-              <div className="mt-4 pt-4 border-t-2 border-red-200">
+              {/* Delete Vendor Button */}
+              <div className="mt-4 flex justify-end">
                 <button
-                  onClick={() => {
-                    if (confirm('Are you sure you want to delete this vendor? This action cannot be undone.')) {
-                      alert('Delete vendor: ' + vendor.id);
-                    }
-                  }}
-                  className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-bold text-lg shadow-lg"
-                  style={{ backgroundColor: '#dc2626', color: 'white', border: '2px solid #991b1b' }}
+                  onClick={() => deleteVendor(vendor.id)}
+                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors font-semibold text-sm"
                 >
-                  🗑️ DELETE VENDOR
+                  🗑️ Delete
                 </button>
               </div>
             </PlayfulCard>
