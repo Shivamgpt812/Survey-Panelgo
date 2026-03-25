@@ -146,6 +146,37 @@ export default function VendorLitePage() {
     }
   };
 
+  const deleteVendor = async (vendorId: string) => {
+    if (!confirm('Are you sure you want to delete this vendor? This action cannot be undone.')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/vendor-lite/vendors/${vendorId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setVendors(vendors.filter(vendor => vendor.id !== vendorId));
+        // Also remove any associated survey links
+        setVendorSurveyLinks(prev => {
+          const newLinks = { ...prev };
+          delete newLinks[vendorId];
+          return newLinks;
+        });
+      } else {
+        const data = await response.json();
+        alert('Error: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Error deleting vendor:', error);
+      alert('Error deleting vendor');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const createSurvey = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -682,17 +713,27 @@ export default function VendorLitePage() {
                   <h3 className="text-xl font-jakarta font-semibold text-navy mb-2">{vendor.name}</h3>
                   <p className="text-sm text-gray-600">ID: {vendor.id}</p>
                 </div>
-                <PlayfulButton
-                  variant="secondary"
-                  onClick={() => {
-                    setSurveyForm({ ...surveyForm, vendor_id: parseInt(vendor.id) });
-                    setSelectedVendor(vendor.id);
-                    setShowCreateSurvey(true);
-                  }}
-                  className="shrink-0"
-                >
-                  Create Survey
-                </PlayfulButton>
+                <div className="flex gap-2">
+                  <PlayfulButton
+                    variant="secondary"
+                    onClick={() => {
+                      setSurveyForm({ ...surveyForm, vendor_id: parseInt(vendor.id) });
+                      setSelectedVendor(vendor.id);
+                      setShowCreateSurvey(true);
+                    }}
+                    className="shrink-0"
+                  >
+                    Create Survey
+                  </PlayfulButton>
+                  <PlayfulButton
+                    variant="accent"
+                    onClick={() => deleteVendor(vendor.id)}
+                    className="shrink-0"
+                    disabled={loading}
+                  >
+                    🗑️ Delete
+                  </PlayfulButton>
+                </div>
               </div>
 
               <div className="space-y-4 mb-6">
