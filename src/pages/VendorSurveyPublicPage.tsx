@@ -1,29 +1,6 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PlayfulCard, PlayfulButton } from '@/components/ui/playful';
-
-interface Vendor {
-  id: number;
-  name: string;
-  complete_url: string;
-  terminate_url: string;
-  quota_full_url: string;
-}
-
-interface VendorSurvey {
-  id: number;
-  title: string;
-  token: string;
-  vendor_id: number;
-  Vendor: Vendor;
-}
-
-interface SurveyQuestion {
-  id: string;
-  question: string;
-  type: 'radio' | 'checkbox' | 'text';
-  options?: string[];
-}
 
 export default function VendorSurveyPublicPage() {
   const { token } = useParams<{ token: string }>();
@@ -70,7 +47,6 @@ export default function VendorSurveyPublicPage() {
 
   const getCurrentAnswer = () => {
     if (!survey?.questions || survey.questions.length === 0) return null;
-    const question = survey.questions[currentStep];
     return answers[`q_${currentStep}`];
   };
 

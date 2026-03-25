@@ -1,13 +1,12 @@
-import { useState, useEffect } from 'react';
-import { PlayfulCard, PlayfulButton } from '@/components/ui/playful';
+import React, { useState, useEffect } from 'react';
+import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
 
 interface Vendor {
-  id: number;
+  id: string;
   name: string;
   complete_url: string;
   terminate_url: string;
   quota_full_url: string;
-  VendorSurveys?: VendorSurvey[];
 }
 
 interface VendorSurvey {
@@ -269,11 +268,27 @@ export default function VendorLitePage() {
           </PlayfulCard>
         )}
 
-const updateOption = (questionIndex: number, optionIndex: number, value: string) => {
-const updated = [...questions];
-updated[questionIndex].options[optionIndex] = value;
-setQuestions(updated);
-};
+        <div className="mb-6">
+          <PlayfulButton
+            variant="primary"
+            onClick={() => setShowCreateSurvey(true)}
+          >
+            Create New Survey
+          </PlayfulButton>
+        </div>
+
+        {showCreateSurvey && (
+          <PlayfulCard className="mb-6">
+            <h3 className="text-xl font-jakarta font-semibold text-navy mb-4">Create New Survey</h3>
+            <form onSubmit={createSurvey} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Survey Title</label>
+                <input
+                  type="text"
+                  required
+                  value={surveyForm.title}
+                  onChange={(e) => setSurveyForm({ ...surveyForm, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
                 />
               </div>
               <div>
@@ -348,6 +363,7 @@ setQuestions(updated);
                   </div>
                 ))}
               </div>
+
               <div className="flex gap-2">
                 <PlayfulButton
                   type="submit"
@@ -412,8 +428,8 @@ setQuestions(updated);
                 <PlayfulButton
                   variant="secondary"
                   onClick={() => {
-                    setSurveyForm({ ...surveyForm, vendor_id: vendor.id });
-                    setSelectedVendor(vendor.id.toString());
+                    setSurveyForm({ ...surveyForm, vendor_id: parseInt(vendor.id) });
+                    setSelectedVendor(vendor.id);
                     setShowCreateSurvey(true);
                   }}
                 >
@@ -441,32 +457,6 @@ setQuestions(updated);
                   </a>
                 </div>
               </div>
-
-              {vendor.VendorSurveys && vendor.VendorSurveys.length > 0 && (
-                <div className="border-t pt-4">
-                  <h4 className="font-medium text-navy mb-2">Surveys</h4>
-                  <div className="space-y-2">
-                    {vendor.VendorSurveys.map((survey) => (
-                      <div key={survey.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="font-medium">{survey.title}</p>
-                          <p className="text-sm text-gray-600">Token: {survey.token}</p>
-                        </div>
-                        <div className="text-right">
-                          <a
-                            href={getPublicSurveyLink(survey.token)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline block"
-                          >
-                            {getPublicSurveyLink(survey.token)}
-                          </a>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </PlayfulCard>
           ))}
         </div>

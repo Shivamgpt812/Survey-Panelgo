@@ -1,10 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ToastProvider } from '@/hooks/useToast';
 import { AdminRoute, UserRoute } from '@/components/auth/ProtectedRoute';
 import { LandingPage, AuthPage, DashboardPage, SurveyPage, RewardsPage, InternalSurveyPage, ServicesPage, ServiceDetailPage, BlogPage, AboutPage, BlogDetailPage, CountryDetailPage, CountryHeroSection, SuccessPage, TerminatedPage, QuotaFullPage, SecurityBlockPage } from '@/pages';
-import SurveyResult from '@/pages/SurveyResult';
 import SurveySuccess from '@/pages/SurveySuccess';
 import SurveyTerminated from '@/pages/SurveyTerminated';
 import SurveyQuota from '@/pages/SurveyQuota';

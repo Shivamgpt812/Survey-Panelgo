@@ -78,12 +78,12 @@ export const createSurvey = async (req: Request, res: Response) => {
     }
 
     // Validate questions structure
-    const validQuestions = questions.filter(q => 
+    const validQuestions = questions.filter((q: any) => 
       q.text && 
       q.options && 
       Array.isArray(q.options) && 
       q.options.length > 0 &&
-      q.options.some(opt => opt.trim())
+      q.options.some((opt: string) => opt.trim())
     );
 
     if (validQuestions.length === 0) {
