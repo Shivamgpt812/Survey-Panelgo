@@ -191,7 +191,7 @@ export default function VendorLitePage() {
       console.log("🚀 Survey Created:", data);
       
       if (data.success) {
-        const link = getPublicSurveyLink(data.token);
+        const link = getPublicSurveyLink(data.token, surveyForm.pid);
         setGeneratedLink(link);
         
         // Save link to vendor's survey links
@@ -216,8 +216,10 @@ export default function VendorLitePage() {
     }
   };
 
-  const getPublicSurveyLink = (token: string) => {
-    return `${window.location.origin}/v/${token}`;
+  const getPublicSurveyLink = (token: string, pid: string) => {
+    // Generate a random UID for the survey
+    const uid = Math.random().toString(36).substring(2, 10).toUpperCase();
+    return `${window.location.origin}/v/${token}?pid=${pid}&uid=${uid}`;
   };
 
   const addQuestion = () => {

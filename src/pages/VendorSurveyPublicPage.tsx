@@ -1,19 +1,22 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { PlayfulCard, PlayfulButton } from '@/components/ui/playful';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 export default function VendorSurveyPublicPage() {
   const { token } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  
+  // Get PID and UID from URL parameters
+  const pid = searchParams.get('pid') || '';
+  const uid = searchParams.get('uid') || '';
   
   const [survey, setSurvey] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
-  const [userId, setUserId] = useState('');
-  const [showUserIdInput, setShowUserIdInput] = useState(true);
   const [showPreScreener, setShowPreScreener] = useState(false);
   const [preScreenerAnswers, setPreScreenerAnswers] = useState<Record<string, any>>({});
 
@@ -22,6 +25,16 @@ export default function VendorSurveyPublicPage() {
       fetchSurvey();
     }
   }, [token]);
+
+  useEffect(() => {
+    // Auto-start survey flow when survey is loaded and we have URL parameters
+    if (survey && pid && uid) {
+      // Show pre-screener if survey has pre-screener questions, otherwise show survey
+      if (survey?.preScreenerQuestions?.length > 0) {
+        setShowPreScreener(true);
+      }
+    }
+  }, [survey, pid, uid]);
 
   const fetchSurvey = async () => {
     try {
@@ -87,44 +100,6 @@ export default function VendorSurveyPublicPage() {
     }));
   };
 
-  const checkUserIdUnique = async (uid: string): Promise<boolean> => {
-    try {
-      const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
-      const apiUrl = isProduction 
-        ? 'https://survey-panelgo.onrender.com' 
-        : 'http://localhost:3000';
-
-      const response = await fetch(`${apiUrl}/vendor-lite/check-uid/${uid}`);
-      const data = await response.json();
-      return data.available; // true if available, false if already used
-    } catch (error) {
-      console.error('Error checking user ID:', error);
-      return false;
-    }
-  };
-
-  const handleUserIdSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!userId.trim()) {
-      alert('Please enter a user ID');
-      return;
-    }
-
-    const isUnique = await checkUserIdUnique(userId.trim());
-    
-    if (!isUnique) {
-      alert('This user ID is already taken. Please choose a different one.');
-      return;
-    }
-
-    setShowUserIdInput(false);
-    // Show pre-screener if survey has pre-screener questions
-    if (survey?.preScreenerQuestions?.length > 0) {
-      setShowPreScreener(true);
-    }
-  };
-
   const handlePreScreenerAnswer = (questionType: string, value: any) => {
     setPreScreenerAnswers(prev => ({
       ...prev,
@@ -136,7 +111,7 @@ export default function VendorSurveyPublicPage() {
     e.preventDefault();
     
     console.log("=== PRE SCREENER VALIDATION DEBUG ===");
-    console.log("userId:", userId);
+    console.log("uid:", uid);
     console.log("token:", token);
     console.log("preScreenerAnswers:", preScreenerAnswers);
     
@@ -155,7 +130,7 @@ export default function VendorSurveyPublicPage() {
         body: JSON.stringify({
           token,
           preScreenerAnswers,
-          userId
+          uid
         }),
       });
 
@@ -183,7 +158,7 @@ export default function VendorSurveyPublicPage() {
           const surveyResponse = await fetch(`${apiUrl}/vendor-lite/survey/${token}`);
           const surveyData = await surveyResponse.json();
           if (surveyData.success && surveyData.survey.vendor_id) {
-            window.location.href = `${surveyData.survey.vendor_id.terminate_url}?pid=${surveyData.survey.pid}&uid=${userId}&status=2&reason=validation-error`;
+            window.location.href = `${surveyData.survey.vendor_id.terminate_url}?pid=${surveyData.survey.pid}&uid=${uid}&status=2&reason=validation-error`;
           } else {
             // Fallback to a generic terminated page
             window.location.href = '/survey-result/terminated';
@@ -206,7 +181,7 @@ export default function VendorSurveyPublicPage() {
         const surveyResponse = await fetch(`${apiUrl}/vendor-lite/survey/${token}`);
         const surveyData = await surveyResponse.json();
         if (surveyData.success && surveyData.survey.vendor_id) {
-          window.location.href = `${surveyData.survey.vendor_id.terminate_url}?pid=${surveyData.survey.pid}&uid=${userId}&status=2&reason=validation-error`;
+          window.location.href = `${surveyData.survey.vendor_id.terminate_url}?pid=${surveyData.survey.pid}&uid=${uid}&status=2&reason=validation-error`;
         } else {
           window.location.href = '/survey-result/terminated';
         }
@@ -246,7 +221,7 @@ export default function VendorSurveyPublicPage() {
 
   const handleSubmit = async () => {
     console.log("=== VENDOR SURVEY SUBMISSION DEBUG ===");
-    console.log("userId:", userId);
+    console.log("uid:", uid);
     console.log("token:", token);
     console.log("answers:", answers);
     
@@ -269,7 +244,7 @@ export default function VendorSurveyPublicPage() {
         body: JSON.stringify({
           token,
           answers,
-          userId: userId.trim(),
+          uid: uid.trim(),
           preScreenerAnswers
         }),
       });
@@ -388,69 +363,6 @@ export default function VendorSurveyPublicPage() {
             </div>
           </div>
 
-          {/* User ID Input */}
-          {showUserIdInput && (
-            <div className="bg-white rounded-3xl shadow-2xl border border-white/20 backdrop-blur-lg p-10 mb-12">
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-violet-600 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <h2 className="text-3xl font-jakarta font-bold text-navy mb-2">Welcome to the Survey</h2>
-                <p className="text-gray-600">Please enter your unique identifier to begin</p>
-              </div>
-              <form onSubmit={handleUserIdSubmit} className="space-y-6">
-                <div className="relative">
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    <span className="flex items-center">
-                      <svg className="w-4 h-4 mr-2 text-violet" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      User ID
-                    </span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      required
-                      value={userId}
-                      onChange={(e) => setUserId(e.target.value)}
-                      placeholder="Enter a unique user ID (e.g., USER123)"
-                      className="w-full px-6 py-5 text-lg border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-violet/20 focus:border-violet transition-all pl-14 bg-gray-50 shadow-sm"
-                    />
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 bg-violet rounded-full flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-3 flex items-center">
-                    <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Choose a unique identifier that hasn't been used before
-                  </p>
-                </div>
-                <PlayfulButton
-                  type="submit"
-                  variant="primary"
-                  disabled={!userId.trim()}
-                  isLoading={submitting}
-                  className="w-full py-5 text-lg font-semibold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                >
-                  <span className="flex items-center justify-center">
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                    Start Survey
-                  </span>
-                </PlayfulButton>
-              </form>
-            </div>
-          )}
-
           {/* Pre-Screener Questions */}
           {showPreScreener && survey?.preScreenerQuestions?.length > 0 && (
             <PlayfulCard className="mb-12">
@@ -503,7 +415,7 @@ export default function VendorSurveyPublicPage() {
           )}
 
           {/* Survey Questions */}
-          {!showUserIdInput && !showPreScreener && (
+          {!showPreScreener && (
             <div className="bg-white rounded-3xl shadow-2xl border border-white/20 backdrop-blur-lg p-8">
               <div className="mb-8">
                 <div className="flex justify-between items-center mb-6">
