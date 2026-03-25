@@ -162,6 +162,8 @@ export const getSurveyByToken = async (req: Request, res: Response) => {
     console.log("=== SURVEY RETRIEVAL DEBUG ===");
     console.log("Survey Token:", token);
     console.log("Survey PID:", survey.pid);
+    console.log("Survey PID Type:", typeof survey.pid);
+    console.log("Survey PID Length:", survey.pid ? survey.pid.length : 'undefined');
     console.log("Survey Title:", survey.title);
     console.log("Full Survey Object:", JSON.stringify(survey, null, 2));
 
@@ -456,8 +458,8 @@ export const submitResponse = async (req: Request, res: Response) => {
     // Since status is always "complete", use complete_url
     let redirectUrl = (survey.vendor_id as any).complete_url;
 
-    // Use PID from survey, fallback to URL PID if survey PID is missing
-    const finalPid = survey.pid || urlPid;
+    // Use PID from survey, fallback to URL PID if survey PID is missing or invalid
+    const finalPid = (survey.pid && survey.pid.length > 0) ? survey.pid : urlPid;
     console.log("=== PID COMPARISON DEBUG ===");
     console.log("Survey PID from database:", survey.pid);
     console.log("PID from URL parameters:", urlPid);
