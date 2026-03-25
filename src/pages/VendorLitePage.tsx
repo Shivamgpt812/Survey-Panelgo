@@ -713,7 +713,7 @@ export default function VendorLitePage() {
                   <h3 className="text-xl font-jakarta font-semibold text-navy mb-2">{vendor.name}</h3>
                   <p className="text-sm text-gray-600">ID: {vendor.id}</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <PlayfulButton
                     variant="secondary"
                     onClick={() => {
@@ -725,14 +725,14 @@ export default function VendorLitePage() {
                   >
                     Create Survey
                   </PlayfulButton>
-                  <PlayfulButton
-                    variant="secondary"
+                  <button
                     onClick={() => deleteVendor(vendor.id)}
-                    className="shrink-0 bg-red-500 text-white hover:bg-red-600 border-red-600"
                     disabled={loading}
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm"
+                    style={{ backgroundColor: '#ef4444', color: 'white', border: 'none' }}
                   >
                     🗑️ Delete
-                  </PlayfulButton>
+                  </button>
                 </div>
               </div>
 
