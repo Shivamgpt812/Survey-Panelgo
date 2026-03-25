@@ -287,8 +287,8 @@ export default function VendorSurveyPublicPage() {
 
     // If it's the new external flow, use the requested redirect logic
     if (survey?.isExternalFlow) {
-      const rid = localStorage.getItem("ext_rid") || uid;
-      const transactionId = localStorage.getItem("ext_transactionId") || '';
+      const rid = localStorage.getItem("ext_rid") || "";
+      const transactionId = localStorage.getItem("ext_transactionId") || "";
 
       if (!survey.externalUrl) {
         alert("External URL not found");
@@ -296,11 +296,39 @@ export default function VendorSurveyPublicPage() {
         return;
       }
 
+      // PART 5: PRESCREENER VALIDATION
+      let passed = true;
+      if (survey.questions && survey.questions.length > 0) {
+        survey.questions.forEach((q: any, i: number) => {
+          const userAnswer = answers[`q_${i}`];
+          if (userAnswer !== q.correctAnswer) {
+            passed = false;
+          }
+        });
+      }
+
+      // FAIL → vendor terminate
+      if (!passed) {
+        console.log("❌ Prescreener failed. Terminating...");
+        const terminateBase = survey.vendor?.terminate_url || "/survey-result/terminated";
+        const sep = terminateBase.includes("?") ? "&" : "?";
+        const failUrl = `${terminateBase}${sep}rid=${rid}&transactionId=${transactionId}&status=2`;
+
+        // Clean up
+        localStorage.removeItem('ext_rid');
+        localStorage.removeItem('ext_transactionId');
+        localStorage.removeItem('ext_token');
+
+        window.location.href = failUrl;
+        return;
+      }
+
+      // PASS → external survey
       const finalUrl = survey.externalUrl
         .replace("[#transaction_id#]", transactionId)
         .replace("[#userid#]", rid);
 
-      console.log("🚀 External flow submission redirecting to:", finalUrl);
+      console.log("🚀 Prescreener passed! Redirecting to external survey:", finalUrl);
 
       // Clean up
       localStorage.removeItem('ext_rid');
