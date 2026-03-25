@@ -6,6 +6,7 @@ export interface IVendorSurvey extends Document {
   token: string;
   pid: string;
   vendor_id: mongoose.Types.ObjectId;
+  type: 'internal' | 'external';
   preScreenerQuestions: Array<{
     type: string;
     question: string;
@@ -37,6 +38,12 @@ const VendorSurveySchema = new Schema<IVendorSurvey>({
   pid: {
     type: String,
     required: true,
+  },
+  type: {
+    type: String,
+    required: true,
+    enum: ['internal', 'external'],
+    default: 'internal'
   },
   preScreenerQuestions: [{
     type: {

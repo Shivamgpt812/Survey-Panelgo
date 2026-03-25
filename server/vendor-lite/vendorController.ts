@@ -118,15 +118,25 @@ export const createSurvey = async (req: Request, res: Response) => {
 
     const token = generateRandomToken();
 
+    console.log("=== SURVEY CREATION DEBUG ===");
+    console.log("Type:", type);
+    console.log("External Link:", externalLink);
+    console.log("PreScreener Questions:", preScreenerQuestions);
+    console.log("Valid Questions:", validQuestions);
+
     const survey = await IVendorSurvey.create({
       title,
       vendor_id,
       pid,
+      type: type || 'internal',
       preScreenerQuestions: preScreenerQuestions || [],
       token,
       questions: type === 'external' ? [] : validQuestions,
       externalLink: type === 'external' ? externalLink : undefined
     });
+
+    console.log("=== CREATED SURVEY DEBUG ===");
+    console.log("Created survey:", JSON.stringify(survey, null, 2));
 
     res.json({
       success: true,
@@ -165,6 +175,8 @@ export const getSurveyByToken = async (req: Request, res: Response) => {
     console.log("Survey PID Type:", typeof survey.pid);
     console.log("Survey PID Length:", survey.pid ? survey.pid.length : 'undefined');
     console.log("Survey Title:", survey.title);
+    console.log("Survey External Link:", survey.externalLink);
+    console.log("Survey Type:", survey.type);
     console.log("Full Survey Object:", JSON.stringify(survey, null, 2));
 
     res.json({
