@@ -726,9 +726,9 @@ export default function VendorLitePage() {
                     Create Survey
                   </PlayfulButton>
                   <PlayfulButton
-                    variant="accent"
+                    variant="secondary"
                     onClick={() => deleteVendor(vendor.id)}
-                    className="shrink-0"
+                    className="shrink-0 bg-red-500 text-white hover:bg-red-600 border-red-600"
                     disabled={loading}
                   >
                     🗑️ Delete
