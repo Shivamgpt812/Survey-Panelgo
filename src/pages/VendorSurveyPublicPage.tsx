@@ -332,10 +332,15 @@ export default function VendorSurveyPublicPage() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gradient-to-br from-violet-50 via-pink-50 to-blue-50">
-        <div className="max-w-4xl mx-auto px-8 py-8">
-          <div className="mb-8 text-center">
-            <h1 className="text-3xl font-jakarta font-bold text-navy mb-2">{survey.title}</h1>
-            <p className="text-gray-600">Powered by {survey.vendor_id?.name || 'Unknown Vendor'}</p>
+        <div className="max-w-3xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <div className="mb-6">
+              <div className="w-20 h-20 bg-gradient-to-r from-violet to-pink rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
+                <span className="text-white text-3xl font-bold">📋</span>
+              </div>
+            </div>
+            <h1 className="text-4xl font-jakarta font-bold text-navy mb-3">{survey.title}</h1>
+            <p className="text-lg text-gray-600">Powered by <span className="font-semibold text-violet">{survey.vendor_id?.name || 'Unknown Vendor'}</span></p>
           </div>
 
           {/* User ID Input */}
@@ -425,90 +430,132 @@ export default function VendorSurveyPublicPage() {
 
           {/* Survey Questions */}
           {!showUserIdInput && !showPreScreener && (
-            <PlayfulCard className="mb-12">
-              <div className="mb-10">
-                <div className="flex justify-between items-center mb-8">
-                  <span className="text-base font-semibold text-gray-600">
-                    Question {currentStep + 1} of {survey?.questions?.length || 0}
-                  </span>
-                  <span className="text-base font-semibold text-violet">
-                    {survey?.questions ? Math.round(((currentStep + 1) / survey.questions.length) * 100) : 0}% Complete
-                  </span>
+            <div className="bg-white rounded-3xl shadow-2xl border border-white/20 backdrop-blur-lg p-8">
+              <div className="mb-8">
+                <div className="flex justify-between items-center mb-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-violet/10 rounded-full flex items-center justify-center">
+                      <span className="text-violet font-semibold">{currentStep + 1}</span>
+                    </div>
+                    <span className="text-lg font-semibold text-gray-700">
+                      Question {currentStep + 1} of {survey?.questions?.length || 0}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <span className="text-green-600 text-sm font-bold">✓</span>
+                    </div>
+                    <span className="text-lg font-bold text-green-600">
+                      {survey?.questions ? Math.round(((currentStep + 1) / survey.questions.length) * 100) : 0}%
+                    </span>
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
+                <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden">
                   <div 
-                    className="bg-gradient-to-r from-violet to-pink h-3 rounded-full transition-all duration-500 ease-out"
+                    className="bg-gradient-to-r from-violet via-purple to-pink h-4 rounded-full transition-all duration-700 ease-out shadow-lg"
                     style={{ width: `${survey?.questions ? ((currentStep + 1) / survey.questions.length) * 100 : 0}%` }}
-                  ></div>
+                  >
+                    <div className="h-full bg-white/20 animate-pulse"></div>
+                  </div>
                 </div>
               </div>
 
-              <div className="mb-12">
-                <h2 className="text-2xl font-jakarta font-semibold text-navy mb-10">
-                  {currentQuestion?.text}
-                </h2>
+              <div className="mb-10">
+                <div className="bg-gradient-to-r from-violet/5 to-pink/5 rounded-2xl p-6 mb-8">
+                  <h2 className="text-2xl font-jakarta font-bold text-navy leading-relaxed">
+                    {currentQuestion?.text}
+                  </h2>
+                </div>
 
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {currentQuestion?.type === 'text' ? (
-                    <div>
+                    <div className="relative">
                       <textarea
                         name={`q_${currentStep}`}
                         value={answers[`q_${currentStep}`] || ''}
                         onChange={(e) => handleAnswerChange(`q_${currentStep}`, e.target.value)}
-                        placeholder="Enter your answer here..."
-                        className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all resize-none"
-                        rows={4}
+                        placeholder="Share your thoughts here..."
+                        className="w-full px-6 py-5 text-lg border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-violet/20 focus:border-violet transition-all resize-none bg-white shadow-sm"
+                        rows={5}
                       />
+                      <div className="absolute top-3 right-3">
+                        <div className="w-2 h-2 bg-violet rounded-full animate-pulse"></div>
+                      </div>
                     </div>
                   ) : currentQuestion?.type === 'rating' ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-center space-x-3">
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-center space-x-4">
                         {[1, 2, 3, 4, 5].map((rating) => (
                           <button
                             key={rating}
                             type="button"
                             onClick={() => handleAnswerChange(`q_${currentStep}`, rating)}
-                            className={`w-16 h-16 rounded-full text-2xl font-bold border-2 transition-all duration-200 ${
+                            className={`group relative w-20 h-20 rounded-2xl text-2xl font-bold border-2 transition-all duration-300 transform hover:scale-110 ${
                               answers[`q_${currentStep}`] === rating
-                                ? 'bg-violet text-white border-violet'
-                                : 'bg-white text-gray-600 border-gray-300 hover:border-violet hover:bg-violet/10'
+                                ? 'bg-gradient-to-r from-violet to-pink text-white border-violet shadow-lg scale-105'
+                                : 'bg-white text-gray-600 border-gray-300 hover:border-violet hover:bg-violet/10 hover:shadow-md'
                             }`}
                           >
                             {rating}
+                            {answers[`q_${currentStep}`] === rating && (
+                              <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                <span className="text-white text-xs">✓</span>
+                              </div>
+                            )}
                           </button>
                         ))}
                       </div>
-                      <div className="flex justify-between text-sm text-gray-500 px-4">
-                        <span>Poor</span>
-                        <span>Excellent</span>
+                      <div className="flex justify-between text-sm text-gray-500 px-8">
+                        <span className="flex items-center"><span className="mr-2">😞</span> Poor</span>
+                        <span className="flex items-center"><span className="mr-2">😐</span> Average</span>
+                        <span className="flex items-center"><span className="mr-2">😊</span> Excellent</span>
                       </div>
                     </div>
                   ) : (
                     // Multiple choice
-                    currentQuestion?.options?.map((option: string, optionIndex: number) => (
-                      <label key={optionIndex} className="flex items-center p-6 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-violet hover:bg-violet/5 transition-all duration-200 group">
-                        <input
-                          type="radio"
-                          name={`q_${currentStep}`}
-                          value={option}
-                          checked={answers[`q_${currentStep}`] === option}
-                          onChange={(e) => handleAnswerChange(`q_${currentStep}`, e.target.value)}
-                          className="w-5 h-5 text-violet focus:ring-violet focus:ring-2"
-                        />
-                        <span className="text-lg text-gray-700 group-hover:text-violet transition-colors ml-5">{option}</span>
-                      </label>
-                    ))
+                    <div className="space-y-3">
+                      {currentQuestion?.options?.map((option: string, optionIndex: number) => (
+                        <label key={optionIndex} className="group relative flex items-center p-6 border-2 border-gray-200 rounded-2xl cursor-pointer hover:border-violet hover:bg-gradient-to-r hover:from-violet/5 hover:to-pink/5 transition-all duration-300 bg-white shadow-sm hover:shadow-lg">
+                          <div className="flex items-center flex-1">
+                            <div className="relative">
+                              <input
+                                type="radio"
+                                name={`q_${currentStep}`}
+                                value={option}
+                                checked={answers[`q_${currentStep}`] === option}
+                                onChange={(e) => handleAnswerChange(`q_${currentStep}`, e.target.value)}
+                                className="w-6 h-6 text-violet focus:ring-violet focus:ring-4 focus:ring-violet/20"
+                              />
+                              {answers[`q_${currentStep}`] === option && (
+                                <div className="absolute inset-0 w-6 h-6 bg-violet rounded-full flex items-center justify-center pointer-events-none">
+                                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-lg text-gray-700 group-hover:text-violet transition-colors ml-5 font-medium">{option}</span>
+                          </div>
+                          {answers[`q_${currentStep}`] === option && (
+                            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                              <span className="text-green-600 text-sm font-bold">✓</span>
+                            </div>
+                          )}
+                        </label>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-8 border-t border-gray-200">
+              <div className="flex items-center justify-between pt-8 border-t border-gray-100">
                 <button
                   onClick={handlePrevious}
                   disabled={currentStep === 0}
-                  className="px-8 py-4 font-jakarta font-semibold text-navy hover:text-violet disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:bg-gray-50 rounded-xl disabled:hover:bg-transparent"
+                  className="group px-8 py-4 font-jakarta font-semibold text-gray-600 hover:text-violet disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:bg-gray-50 rounded-2xl disabled:hover:bg-transparent flex items-center space-x-2"
                 >
-                  ← Previous
+                  <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  <span>Previous</span>
                 </button>
 
                 <PlayfulButton
@@ -516,21 +563,36 @@ export default function VendorSurveyPublicPage() {
                   onClick={handleNext}
                   disabled={getCurrentAnswer() === null || submitting}
                   isLoading={submitting}
-                  className="px-10 py-4 text-lg"
+                  className="px-12 py-4 text-lg font-semibold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                 >
-                  {isLastQuestion ? 'Submit Survey' : 'Next Question →'}
+                  {isLastQuestion ? (
+                    <span className="flex items-center space-x-2">
+                      <span>Submit Survey</span>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </span>
+                  ) : (
+                    <span className="flex items-center space-x-2">
+                      <span>Next</span>
+                      <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </span>
+                  )}
                 </PlayfulButton>
               </div>
-            </PlayfulCard>
+            </div>
           )}
 
-          <div className="mt-12 flex items-start gap-6 p-8 bg-white/60 backdrop-blur border-2 border-navy/10 rounded-2xl">
-            <div className="w-10 h-10 bg-violet/20 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-violet text-lg">ℹ️</span>
+          <div className="mt-16 flex items-start gap-6 p-8 bg-white/80 backdrop-blur-lg border border-white/20 rounded-3xl shadow-xl">
+            <div className="w-12 h-12 bg-gradient-to-r from-violet to-pink rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
+              <span className="text-white text-2xl">💡</span>
             </div>
             <div>
-              <p className="font-jakarta text-base text-navy leading-relaxed">
-                <span className="font-bold">Your feedback matters!</span> This survey helps us improve our products and services for you. Your responses are valuable and appreciated.
+              <h3 className="font-jakarta text-xl font-bold text-navy mb-3">Your Feedback Matters!</h3>
+              <p className="font-jakarta text-base text-gray-600 leading-relaxed">
+                This survey helps us improve our products and services for you. Your responses are valuable and appreciated. Thank you for taking the time to share your thoughts with us.
               </p>
             </div>
           </div>
