@@ -43,7 +43,11 @@ export default function VendorLitePage() {
 
   const fetchVendors = async () => {
     try {
-      const response = await fetch('http://localhost:3000/vendor-lite/vendor');
+      const apiUrl = import.meta.env.PROD 
+        ? 'https://survey-panelgo.onrender.com' 
+        : 'http://localhost:3000';
+      
+      const response = await fetch(`${apiUrl}/vendor-lite/vendor`);
       const data = await response.json();
       console.log("📦 Vendors fetched:", data);
       
@@ -68,7 +72,11 @@ export default function VendorLitePage() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/vendor-lite/vendor', {
+      const apiUrl = import.meta.env.PROD 
+        ? 'https://survey-panelgo.onrender.com' 
+        : 'http://localhost:3000';
+
+      const response = await fetch(`${apiUrl}/vendor-lite/vendor`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -114,7 +122,11 @@ export default function VendorLitePage() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/vendor-lite/survey', {
+      const apiUrl = import.meta.env.PROD 
+        ? 'https://survey-panelgo.onrender.com' 
+        : 'http://localhost:3000';
+
+      const response = await fetch(`${apiUrl}/vendor-lite/survey`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

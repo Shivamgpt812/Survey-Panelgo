@@ -44,7 +44,6 @@ const PreScreenerPage: React.FC = () => {
   // Check for vendor session
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [vendor, setVendor] = useState<Vendor | undefined>(undefined);
-  const [isVendorFlow, setIsVendorFlow] = useState(false);
 
   const [answers, setAnswers] = useState<PreScreenerAnswer[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
@@ -70,11 +69,9 @@ const PreScreenerPage: React.FC = () => {
   // Load vendor session on mount
   useEffect(() => {
     const storedVendorId = getVendorSession();
-    const isVendorFlow = sessionStorage.getItem('surveypanelgo_vendor_flow') === 'true';
     
     if (storedVendorId) {
       setVendorId(storedVendorId);
-      setIsVendorFlow(isVendorFlow);
       void apiGet<{ vendors: Vendor[] }>('/api/vendors').then(({ vendors }) => {
         const vendorData = vendors.find((v) => v.id === storedVendorId);
         setVendor(vendorData);
