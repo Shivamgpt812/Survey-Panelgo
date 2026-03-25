@@ -19,11 +19,10 @@ interface Question {
 export default function VendorLitePage() {
   const [searchParams] = useSearchParams();
 
-  // ── External-mode state ──────────────────────────────────────────────────
-  // When a respondent lands here via /external/router, the URL will contain
-  // ?mode=external&rid=...&transactionId=...  We store those values so the
-  // submit flow in VendorSurveyPublicPage can append them to the external URL.
   const [isExternalMode, setIsExternalMode] = useState(false);
+  const [extSurvey, setExtSurvey] = useState<any>(null);
+  const [extAnswers, setExtAnswers] = useState<Record<string, string>>({});
+  const [extCurrentStep, setExtCurrentStep] = useState(0);
 
   useEffect(() => {
     const mode = searchParams.get('mode');
@@ -32,17 +31,30 @@ export default function VendorLitePage() {
       const transactionId = searchParams.get('transactionId') || '';
       const token = searchParams.get('token') || '';
 
-      console.log('🚀 External Entry detected:', { rid, transactionId, token });
+      console.log('🚀 External Entry detected (staying on same page):', { rid, transactionId, token });
 
-      // Persist so VendorSurveyPublicPage can read them on submit
+      // Persist values
       localStorage.setItem('ext_rid', rid);
       localStorage.setItem('ext_transactionId', transactionId);
       localStorage.setItem('ext_token', token);
 
       setIsExternalMode(true);
 
-      // Redirect to the public survey page where the prescreener will run
-      window.location.href = `/v/${token}?pid=EXTERNAL&uid=${rid}`;
+      // Load survey data directly into this component
+      const apiUrl = import.meta.env.PROD
+        ? 'https://survey-panelgo.onrender.com'
+        : 'http://localhost:3000';
+
+      fetch(`${apiUrl}/external/data/${token}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setExtSurvey(data.survey);
+          } else {
+            alert("Survey not found");
+          }
+        })
+        .catch(err => console.error("Error fetching external survey:", err));
     }
   }, [searchParams]);
 
@@ -334,10 +346,58 @@ export default function VendorLitePage() {
   };
 
   const addOption = (questionIndex: number) => {
-    const updated = [...questions];
-    updated[questionIndex].options.push('');
-    setQuestions(updated);
+    const newQuestions = [...questions];
+    newQuestions[questionIndex].options.push('');
+    setQuestions(newQuestions);
   };
+
+  /**
+   * Respondent Handle Submit (External Flow)
+   */
+  const handleExtSubmit = () => {
+    if (!extSurvey) return;
+
+    const rid = localStorage.getItem("ext_rid") || "";
+    const transactionId = localStorage.getItem("ext_transactionId") || "";
+    const token = localStorage.getItem("ext_token") || "";
+
+    // PART 5: PRESCREENER VALIDATION
+    let passed = true;
+    (extSurvey.questions || []).forEach((q: any, i: number) => {
+      if ((extAnswers[`q_${i}`] || '').trim() !== (q.correctAnswer || '').trim()) {
+        passed = false;
+      }
+    });
+
+    // FAIL → vendor terminate URL
+    if (!passed) {
+      console.log("❌ External Prescreener Failed");
+      const terminateBase = extSurvey.vendor?.terminate_url || "/survey-result/terminated";
+      const sep = terminateBase.includes("?") ? "&" : "?";
+      window.location.href = `${terminateBase}${sep}rid=${rid}&transactionId=${transactionId}&status=2`;
+      return;
+    }
+
+    // PASS → External Survey with control parameters
+    const returnBase = "https://survey-panelgo.onrender.com/external/return";
+    const buildReturnUrl = (status: string) => {
+      const url = `${returnBase}?status=${status}&token=${token}&rid=${rid}&transactionId=${transactionId}`;
+      return encodeURIComponent(url);
+    };
+
+    let finalUrl = extSurvey.externalUrl
+      .replace("[#transaction_id#]", transactionId)
+      .replace("[#userid#]", rid);
+
+    const sep = finalUrl.includes("?") ? "&" : "?";
+    finalUrl += `${sep}complete=${buildReturnUrl("complete")}`
+      + `&terminate=${buildReturnUrl("terminate")}`
+      + `&quotafull=${buildReturnUrl("quota")}`;
+
+    console.log("🚀 Redirecting respondent to external survey:", finalUrl);
+    window.location.href = finalUrl;
+  };
+
 
   const updateOption = (questionIndex: number, optionIndex: number, value: string) => {
     const updated = [...questions];
@@ -357,22 +417,75 @@ export default function VendorLitePage() {
     setPreScreenerQuestions(updated);
   };
 
+  // ---------------------------------------------------------------------------
+  // RESPONDENT UI (EXTERNAL FLOW ONLY)
+  // ---------------------------------------------------------------------------
+  if (isExternalMode) {
+    if (!extSurvey) return <div className="min-h-screen bg-violet-50 flex items-center justify-center font-jakarta font-bold text-violet">Loading Prescreener...</div>;
+
+    const currentQuestion = extSurvey.questions[extCurrentStep];
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-pink-50 flex items-center justify-center p-4">
+        <PlayfulCard className="max-w-2xl w-full p-8 md:p-12 shadow-2xl">
+          <div className="mb-8 text-center md:text-left">
+            <h2 className="text-3xl font-jakarta font-bold text-navy mb-2">{extSurvey.title}</h2>
+            <div className="h-1 w-20 bg-gradient-to-r from-violet to-pink rounded-full mb-6 mx-auto md:mx-0"></div>
+            <p className="text-gray-500 font-medium">Question {extCurrentStep + 1} of {extSurvey.questions.length}</p>
+          </div>
+
+          <div className="mb-10">
+            <div className="bg-violet/5 p-6 rounded-2xl mb-6">
+              <h3 className="text-xl font-bold text-gray-800">{currentQuestion.text}</h3>
+            </div>
+            <input
+              type="text"
+              placeholder="Your answer..."
+              value={extAnswers[`q_${extCurrentStep}`] || ''}
+              onChange={(e) => setExtAnswers({ ...extAnswers, [`q_${extCurrentStep}`]: e.target.value })}
+              onKeyPress={(e) => e.key === 'Enter' && (extAnswers[`q_${extCurrentStep}`] || '').trim() && (extCurrentStep < extSurvey.questions.length - 1 ? setExtCurrentStep(extCurrentStep + 1) : handleExtSubmit())}
+              className="w-full px-6 py-4 text-lg border-2 border-violet/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-violet/10 focus:border-violet transition-all bg-white shadow-sm"
+              autoFocus
+            />
+          </div>
+
+          <div className="flex justify-between items-center">
+            {extCurrentStep > 0 && (
+              <button
+                onClick={() => setExtCurrentStep(extCurrentStep - 1)}
+                className="text-gray-500 font-semibold hover:text-violet transition-colors flex items-center"
+              >
+                <span className="mr-2">←</span> Previous
+              </button>
+            )}
+            <div className="ml-auto">
+              {extCurrentStep < extSurvey.questions.length - 1 ? (
+                <PlayfulButton
+                  variant="primary"
+                  onClick={() => setExtCurrentStep(extCurrentStep + 1)}
+                  disabled={!(extAnswers[`q_${extCurrentStep}`] || '').trim()}
+                >
+                  Next Question →
+                </PlayfulButton>
+              ) : (
+                <PlayfulButton
+                  variant="primary"
+                  onClick={handleExtSubmit}
+                  disabled={!(extAnswers[`q_${extCurrentStep}`] || '').trim()}
+                >
+                  Finish & Start Survey
+                </PlayfulButton>
+              )}
+            </div>
+          </div>
+        </PlayfulCard>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-pink-50 to-blue-50 p-6">
       <div className="max-w-6xl mx-auto">
-
-        {/* ── External-mode respondent banner ────────────────────────────── */}
-        {isExternalMode && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3">
-            <span className="text-2xl">🔗</span>
-            <div>
-              <p className="font-semibold text-blue-800">You arrived via an external survey link.</p>
-              <p className="text-sm text-blue-600 mt-1">
-                Your respondent details have been captured. The survey will start shortly.
-              </p>
-            </div>
-          </div>
-        )}
 
         <div className="mb-8">
           <h1 className="text-4xl font-jakarta font-bold text-navy mb-2">Vendor Survey System</h1>
