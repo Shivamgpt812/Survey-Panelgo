@@ -265,6 +265,42 @@ export const validatePreScreener = async (req: Request, res: Response) => {
 
   } catch (error) {
     console.error('Error validating pre-screener:', error);
+    
+    // Log the validation error as terminated
+    try {
+      // Try to get survey details for logging
+      const survey = await IVendorSurvey.findOne({ token: req.body.token }).populate({
+        path: 'vendor_id',
+        model: 'VendorLite'
+      });
+      
+      if (survey) {
+        const ip = req.ip || req.connection.remoteAddress || 'unknown';
+        await SurveyRedirectLogs.create({
+          pid: survey.pid,
+          uid: 'validation-error',
+          status: 2, // Terminated
+          statusText: 'Terminated - Validation Error',
+          ipAddress: ip,
+          userAgent: req.get('User-Agent') || 'unknown'
+        });
+        console.log("✅ Validation error logged:", { pid: survey.pid, status: 2 });
+        
+        // Return terminate redirect URL
+        const vendor = survey.vendor_id as any;
+        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=validation-error&status=2&reason=validation-error`;
+        
+        return res.json({
+          success: true,
+          redirectUrl,
+          terminated: true,
+          reason: 'Validation error occurred'
+        });
+      }
+    } catch (logError) {
+      console.error("❌ Error logging validation failure:", logError);
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Internal server error'

@@ -163,11 +163,44 @@ export default function VendorSurveyPublicPage() {
         alert(`You do not meet the survey criteria: ${data.reason}`);
         window.location.href = data.redirectUrl;
       } else {
-        alert('Error validating pre-screener: ' + (data.message || 'Unknown error'));
+        // Any validation error should terminate the user
+        alert('You do not meet the survey criteria. Thank you for your interest.');
+        // Try to get the survey details to redirect to terminate URL
+        try {
+          const surveyResponse = await fetch(`${apiUrl}/vendor-lite/survey/${token}`);
+          const surveyData = await surveyResponse.json();
+          if (surveyData.success && surveyData.survey.vendor_id) {
+            window.location.href = `${surveyData.survey.vendor_id.terminate_url}?pid=${surveyData.survey.pid}&uid=${userId}&status=2&reason=validation-error`;
+          } else {
+            // Fallback to a generic terminated page
+            window.location.href = '/survey-result/terminated';
+          }
+        } catch (fallbackError) {
+          console.error('Fallback redirect error:', fallbackError);
+          window.location.href = '/survey-result/terminated';
+        }
       }
     } catch (error) {
       console.error('Error validating pre-screener:', error);
-      alert('Error validating pre-screener. Please try again.');
+      // Any error should terminate the user
+      alert('There was an issue validating your responses. Thank you for your interest.');
+      try {
+        const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
+        const apiUrl = isProduction 
+          ? 'https://survey-panelgo.onrender.com' 
+          : 'http://localhost:3000';
+        
+        const surveyResponse = await fetch(`${apiUrl}/vendor-lite/survey/${token}`);
+        const surveyData = await surveyResponse.json();
+        if (surveyData.success && surveyData.survey.vendor_id) {
+          window.location.href = `${surveyData.survey.vendor_id.terminate_url}?pid=${surveyData.survey.pid}&uid=${userId}&status=2&reason=validation-error`;
+        } else {
+          window.location.href = '/survey-result/terminated';
+        }
+      } catch (fallbackError) {
+        console.error('Fallback redirect error:', fallbackError);
+        window.location.href = '/survey-result/terminated';
+      }
     }
   };
 
@@ -354,7 +387,7 @@ export default function VendorSurveyPublicPage() {
           )}
 
           {/* Survey Questions */}
-          {!showUserIdInput && (
+          {!showUserIdInput && !showPreScreener && (
             <PlayfulCard>
             <div className="mb-6">
               <div className="flex justify-between items-center mb-4">
