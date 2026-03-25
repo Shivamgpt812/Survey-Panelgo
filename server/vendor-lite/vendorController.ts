@@ -163,6 +163,7 @@ export const getSurveyByToken = async (req: Request, res: Response) => {
     console.log("Survey Token:", token);
     console.log("Survey PID:", survey.pid);
     console.log("Survey Title:", survey.title);
+    console.log("Full Survey Object:", JSON.stringify(survey, null, 2));
 
     res.json({
       success: true,
@@ -358,6 +359,7 @@ export const validatePreScreener = async (req: Request, res: Response) => {
 export const submitResponse = async (req: Request, res: Response) => {
   try {
     const { token, answers, userId, preScreenerAnswers } = req.body;
+    const { pid: urlPid } = req.query; // Get PID from URL query params
 
     if (!token) {
       return res.status(400).json({
@@ -454,7 +456,14 @@ export const submitResponse = async (req: Request, res: Response) => {
     // Since status is always "complete", use complete_url
     let redirectUrl = (survey.vendor_id as any).complete_url;
 
-    redirectUrl = `${redirectUrl}?pid=${survey.pid}&uid=${uid}`;
+    // Use PID from survey, fallback to URL PID if survey PID is missing
+    const finalPid = survey.pid || urlPid;
+    console.log("=== PID COMPARISON DEBUG ===");
+    console.log("Survey PID from database:", survey.pid);
+    console.log("PID from URL parameters:", urlPid);
+    console.log("Final PID being used:", finalPid);
+
+    redirectUrl = `${redirectUrl}?pid=${finalPid}&uid=${uid}`;
     
     console.log("=== REDIRECT URL DEBUG ===");
     console.log("Survey PID:", survey.pid);
