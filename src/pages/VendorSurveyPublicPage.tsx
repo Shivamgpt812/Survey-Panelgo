@@ -334,33 +334,63 @@ export default function VendorSurveyPublicPage() {
       <div className="min-h-screen bg-gradient-to-br from-violet-50 via-pink-50 to-blue-50">
         <div className="max-w-3xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <div className="mb-6">
-              <div className="w-20 h-20 bg-gradient-to-r from-violet to-pink rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
-                <span className="text-white text-3xl font-bold">📋</span>
+            <div className="mb-8">
+              <div className="w-32 h-32 mx-auto mb-6 flex items-center justify-center shadow-2xl rounded-2xl overflow-hidden bg-white p-4 border border-gray-100">
+                <img 
+                  src="/logo.png" 
+                  alt="Survey Panelgo Logo" 
+                  className="w-full h-full object-contain"
+                />
               </div>
             </div>
-            <h1 className="text-4xl font-jakarta font-bold text-navy mb-3">{survey.title}</h1>
-            <p className="text-lg text-gray-600">Powered by <span className="font-semibold text-violet">{survey.vendor_id?.name || 'Unknown Vendor'}</span></p>
+            <div className="bg-gradient-to-r from-violet/10 to-pink/10 rounded-3xl p-8 mb-6 border border-violet/20">
+              <h1 className="text-4xl font-jakarta font-bold text-navy mb-3">{survey.title}</h1>
+              <p className="text-lg text-gray-700">Powered by <span className="font-bold text-violet bg-white px-3 py-1 rounded-full">{survey.vendor_id?.name || 'Unknown Vendor'}</span></p>
+            </div>
           </div>
 
           {/* User ID Input */}
           {showUserIdInput && (
-            <PlayfulCard className="mb-12">
-              <h2 className="text-2xl font-jakarta font-semibold text-navy mb-8">Enter Your User ID</h2>
-              <form onSubmit={handleUserIdSubmit} className="space-y-8">
-                <div>
+            <div className="bg-white rounded-3xl shadow-2xl border border-white/20 backdrop-blur-lg p-10 mb-12">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-violet-600 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <h2 className="text-3xl font-jakarta font-bold text-navy mb-2">Welcome to the Survey</h2>
+                <p className="text-gray-600">Please enter your unique identifier to begin</p>
+              </div>
+              <form onSubmit={handleUserIdSubmit} className="space-y-6">
+                <div className="relative">
                   <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    User ID <span className="text-red-500">*</span>
+                    <span className="flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-violet" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      User ID
+                    </span>
+                    <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <input
-                    type="text"
-                    required
-                    value={userId}
-                    onChange={(e) => setUserId(e.target.value)}
-                    placeholder="Enter a unique user ID (e.g., USER123)"
-                    className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
-                  />
-                  <p className="text-sm text-gray-500 mt-3">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      value={userId}
+                      onChange={(e) => setUserId(e.target.value)}
+                      placeholder="Enter a unique user ID (e.g., USER123)"
+                      className="w-full px-6 py-5 text-lg border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-violet/20 focus:border-violet transition-all pl-14 bg-gray-50 shadow-sm"
+                    />
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 bg-violet rounded-full flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-3 flex items-center">
+                    <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                     Choose a unique identifier that hasn't been used before
                   </p>
                 </div>
@@ -369,12 +399,17 @@ export default function VendorSurveyPublicPage() {
                   variant="primary"
                   disabled={!userId.trim()}
                   isLoading={submitting}
-                  className="w-full py-4 text-lg"
+                  className="w-full py-5 text-lg font-semibold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                 >
-                  Start Survey
+                  <span className="flex items-center justify-center">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                    Start Survey
+                  </span>
                 </PlayfulButton>
               </form>
-            </PlayfulCard>
+            </div>
           )}
 
           {/* Pre-Screener Questions */}
