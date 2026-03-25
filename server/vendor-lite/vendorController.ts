@@ -451,6 +451,23 @@ export const submitResponse = async (req: Request, res: Response) => {
   }
 };
 
+export const handleVendorComplete = async (req: Request, res: Response) => {
+  try {
+    const { pid, uid, status = '1' } = req.query; // Default to completed status
+
+    console.log("Vendor Complete HIT:", { pid, uid, status });
+
+    // Forward to the main redirect handler
+    return handleVendorRedirect(req, res);
+  } catch (error) {
+    console.error('Vendor complete error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
 export const handleVendorRedirect = async (req: Request, res: Response) => {
   try {
     const { pid, uid, status } = req.query;
