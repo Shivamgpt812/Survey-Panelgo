@@ -52,6 +52,7 @@ function AppContent() {
         {/* Vendor Lite Routes */}
         <Route path="/vendor-lite" element={<VendorLitePage />} />
         <Route path="/vendor-lite/survey/:token" element={<VendorSurveyPublicPage />} />
+        <Route path="/v/:token" element={<VendorSurveyPublicPage />} />
 
         {/* User Routes */}
         <Route

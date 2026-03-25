@@ -28,43 +28,12 @@ interface SurveyQuestion {
 export default function VendorSurveyPublicPage() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const [survey, setSurvey] = useState<VendorSurvey | null>(null);
+  
+  const [survey, setSurvey] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
-
-  const sampleQuestions: SurveyQuestion[] = [
-    {
-      id: 'q1',
-      question: 'What is your age group?',
-      type: 'radio',
-      options: ['18-24', '25-34', '35-44', '45-54', '55+']
-    },
-    {
-      id: 'q2',
-      question: 'What is your gender?',
-      type: 'radio',
-      options: ['Male', 'Female', 'Non-binary', 'Prefer not to say']
-    },
-    {
-      id: 'q3',
-      question: 'Which devices do you use regularly? (Select all that apply)',
-      type: 'checkbox',
-      options: ['Smartphone', 'Tablet', 'Laptop', 'Desktop', 'Smart TV']
-    },
-    {
-      id: 'q4',
-      question: 'How satisfied are you with our service?',
-      type: 'radio',
-      options: ['Very Satisfied', 'Satisfied', 'Neutral', 'Dissatisfied', 'Very Dissatisfied']
-    },
-    {
-      id: 'q5',
-      question: 'Any additional comments?',
-      type: 'text'
-    }
-  ];
 
   useEffect(() => {
     if (token) {
@@ -100,12 +69,14 @@ export default function VendorSurveyPublicPage() {
   };
 
   const getCurrentAnswer = () => {
-    const question = sampleQuestions[currentStep];
-    return answers[question.id];
+    if (!survey?.questions || survey.questions.length === 0) return null;
+    const question = survey.questions[currentStep];
+    return answers[`q_${currentStep}`];
   };
 
   const handleNext = () => {
-    if (currentStep < sampleQuestions.length - 1) {
+    if (!survey?.questions) return;
+    if (currentStep < survey.questions.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
       handleSubmit();
@@ -168,8 +139,8 @@ export default function VendorSurveyPublicPage() {
     );
   }
 
-  const currentQuestion = sampleQuestions[currentStep];
-  const isLastQuestion = currentStep === sampleQuestions.length - 1;
+  const currentQuestion = survey?.questions?.[currentStep];
+  const isLastQuestion = survey?.questions ? currentStep === survey.questions.length - 1 : false;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-pink-50 to-blue-50 p-6">
@@ -183,76 +154,38 @@ export default function VendorSurveyPublicPage() {
           <div className="mb-6">
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm font-medium text-gray-600">
-                Question {currentStep + 1} of {sampleQuestions.length}
+                Question {currentStep + 1} of {survey?.questions?.length || 0}
               </span>
               <span className="text-sm font-medium text-violet">
-                {Math.round(((currentStep + 1) / sampleQuestions.length) * 100)}% Complete
+                {survey?.questions ? Math.round(((currentStep + 1) / survey.questions.length) * 100) : 0}% Complete
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
                 className="bg-gradient-to-r from-violet to-pink h-2 rounded-full transition-all duration-300"
-                style={{ width: `${((currentStep + 1) / sampleQuestions.length) * 100}%` }}
+                style={{ width: `${survey?.questions ? ((currentStep + 1) / survey.questions.length) * 100 : 0}%` }}
               ></div>
             </div>
           </div>
 
           <div className="mb-8">
             <h2 className="text-xl font-jakarta font-semibold text-navy mb-6">
-              {currentQuestion.question}
+              {currentQuestion?.text}
             </h2>
 
-            {currentQuestion.type === 'radio' && (
-              <div className="space-y-3">
-                {currentQuestion.options?.map((option) => (
-                  <label key={option} className="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-violet transition-colors">
-                    <input
-                      type="radio"
-                      name={currentQuestion.id}
-                      value={option}
-                      checked={answers[currentQuestion.id] === option}
-                      onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-                      className="mr-3 text-violet focus:ring-violet"
-                    />
-                    <span className="text-gray-700">{option}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-
-            {currentQuestion.type === 'checkbox' && (
-              <div className="space-y-3">
-                {currentQuestion.options?.map((option) => (
-                  <label key={option} className="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-violet transition-colors">
-                    <input
-                      type="checkbox"
-                      value={option}
-                      checked={answers[currentQuestion.id]?.includes(option) || false}
-                      onChange={(e) => {
-                        const currentValues = answers[currentQuestion.id] || [];
-                        if (e.target.checked) {
-                          handleAnswerChange(currentQuestion.id, [...currentValues, option]);
-                        } else {
-                          handleAnswerChange(currentQuestion.id, currentValues.filter((v: string) => v !== option));
-                        }
-                      }}
-                      className="mr-3 text-violet focus:ring-violet"
-                    />
-                    <span className="text-gray-700">{option}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-
-            {currentQuestion.type === 'text' && (
-              <textarea
-                value={answers[currentQuestion.id] || ''}
-                onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-violet resize-none"
-                rows={4}
-                placeholder="Enter your response here..."
-              />
-            )}
+            {currentQuestion?.options?.map((option: string, optionIndex: number) => (
+              <label key={optionIndex} className="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-violet transition-colors mb-3">
+                <input
+                  type="radio"
+                  name={`q_${currentStep}`}
+                  value={option}
+                  checked={answers[`q_${currentStep}`] === option}
+                  onChange={(e) => handleAnswerChange(`q_${currentStep}`, e.target.value)}
+                  className="mr-3 text-violet focus:ring-violet"
+                />
+                <span className="text-gray-700">{option}</span>
+              </label>
+            ))}
           </div>
 
           <div className="flex items-center justify-between pt-4">

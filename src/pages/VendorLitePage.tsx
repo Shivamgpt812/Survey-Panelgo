@@ -36,6 +36,11 @@ export default function VendorLitePage() {
     vendor_id: 0
   });
 
+  const [questions, setQuestions] = useState([
+    { text: '', options: [''] }
+  ]);
+  const [generatedLink, setGeneratedLink] = useState('');
+
   useEffect(() => {
     fetchVendors();
   }, []);
@@ -100,9 +105,17 @@ export default function VendorLitePage() {
     console.log("📊 Survey Form:", surveyForm);
     console.log("🎯 Selected Vendor:", selectedVendor);
     console.log("📦 Available Vendors:", vendors);
+    console.log("❓ Questions:", questions);
     
     if (!selectedVendor) {
       alert("Please select a vendor");
+      return;
+    }
+
+    // Validate questions
+    const validQuestions = questions.filter(q => q.text.trim() && q.options.some(o => o.trim()));
+    if (validQuestions.length === 0) {
+      alert("Please add at least one question with one option");
       return;
     }
 
@@ -116,7 +129,8 @@ export default function VendorLitePage() {
         },
         body: JSON.stringify({
           title: surveyForm.title,
-          vendor_id: selectedVendor
+          vendor_id: selectedVendor,
+          questions: validQuestions
         }),
       });
 
@@ -124,8 +138,13 @@ export default function VendorLitePage() {
       console.log("🚀 Survey Created:", data);
       
       if (data.success) {
+        const link = getPublicSurveyLink(data.token);
+        setGeneratedLink(link);
+        
+        // Reset form
         setSurveyForm({ title: '', vendor_id: 0 });
         setSelectedVendor("");
+        setQuestions([{ text: '', options: [''] }]);
         setShowCreateSurvey(false);
         fetchVendors();
       } else {
@@ -140,6 +159,32 @@ export default function VendorLitePage() {
 
   const getPublicSurveyLink = (token: string) => {
     return `${window.location.origin}/v/${token}`;
+  };
+
+  const addQuestion = () => {
+    setQuestions([...questions, { text: '', options: [''] }]);
+  };
+
+  const updateQuestion = (index: number, field: 'text' | 'options', value: string | string[]) => {
+    const updated = [...questions];
+    if (field === 'text') {
+      updated[index].text = value as string;
+    } else {
+      updated[index].options = value as string[];
+    }
+    setQuestions(updated);
+  };
+
+  const addOption = (questionIndex: number) => {
+    const updated = [...questions];
+    updated[questionIndex].options.push('');
+    setQuestions(updated);
+  };
+
+  const updateOption = (questionIndex: number, optionIndex: number, value: string) => {
+    const updated = [...questions];
+    updated[questionIndex].options[optionIndex] = value;
+    setQuestions(updated);
   };
 
   return (
@@ -224,18 +269,11 @@ export default function VendorLitePage() {
           </PlayfulCard>
         )}
 
-        {showCreateSurvey && (
-          <PlayfulCard className="mb-6">
-            <h3 className="text-xl font-jakarta font-semibold text-navy mb-4">Create New Survey</h3>
-            <form onSubmit={createSurvey} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Survey Title</label>
-                <input
-                  type="text"
-                  required
-                  value={surveyForm.title}
-                  onChange={(e) => setSurveyForm({ ...surveyForm, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+const updateOption = (questionIndex: number, optionIndex: number, value: string) => {
+const updated = [...questions];
+updated[questionIndex].options[optionIndex] = value;
+setQuestions(updated);
+};
                 />
               </div>
               <div>
@@ -258,6 +296,58 @@ export default function VendorLitePage() {
                   ))}
                 </select>
               </div>
+
+              {/* Questions Section */}
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <label className="block text-sm font-medium text-gray-700">Questions</label>
+                  <button
+                    type="button"
+                    onClick={addQuestion}
+                    className="px-3 py-1 text-sm bg-violet text-white rounded-lg hover:bg-violet/80 transition-colors"
+                  >
+                    + Add Question
+                  </button>
+                </div>
+                
+                {questions.map((question, questionIndex) => (
+                  <div key={questionIndex} className="mb-4 p-4 border border-gray-200 rounded-lg">
+                    <div className="mb-3">
+                      <input
+                        type="text"
+                        placeholder="Enter question text"
+                        value={question.text}
+                        onChange={(e) => updateQuestion(questionIndex, 'text', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="block text-sm font-medium text-gray-700">Options</label>
+                        <button
+                          type="button"
+                          onClick={() => addOption(questionIndex)}
+                          className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                        >
+                          + Add Option
+                        </button>
+                      </div>
+                      
+                      {question.options.map((option, optionIndex) => (
+                        <input
+                          key={optionIndex}
+                          type="text"
+                          placeholder={`Option ${optionIndex + 1}`}
+                          value={option}
+                          onChange={(e) => updateOption(questionIndex, optionIndex, e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
               <div className="flex gap-2">
                 <PlayfulButton
                   type="submit"
@@ -276,6 +366,38 @@ export default function VendorLitePage() {
                 </PlayfulButton>
               </div>
             </form>
+          </PlayfulCard>
+        )}
+
+        {/* Generated Link Section */}
+        {generatedLink && (
+          <PlayfulCard className="mb-6">
+            <h3 className="text-xl font-jakarta font-semibold text-navy mb-4">🎉 Survey Created Successfully!</h3>
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm font-medium text-green-800 mb-2">Public Survey Link:</p>
+              <a 
+                href={generatedLink} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800 underline break-all"
+              >
+                {generatedLink}
+              </a>
+              <div className="mt-3">
+                <button
+                  onClick={() => navigator.clipboard.writeText(generatedLink)}
+                  className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                >
+                  📋 Copy Link
+                </button>
+                <button
+                  onClick={() => setGeneratedLink('')}
+                  className="ml-2 px-3 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+                >
+                  ✕ Close
+                </button>
+              </div>
+            </div>
           </PlayfulCard>
         )}
 

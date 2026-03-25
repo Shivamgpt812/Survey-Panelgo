@@ -61,12 +61,35 @@ export const getVendors = async (req: Request, res: Response) => {
 
 export const createSurvey = async (req: Request, res: Response) => {
   try {
-    const { title, vendor_id } = req.body;
+    const { title, vendor_id, questions } = req.body;
 
     if (!title || !vendor_id) {
       return res.status(400).json({
         success: false,
         message: 'Title and vendor_id are required'
+      });
+    }
+
+    if (!questions || !Array.isArray(questions) || questions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one question is required'
+      });
+    }
+
+    // Validate questions structure
+    const validQuestions = questions.filter(q => 
+      q.text && 
+      q.options && 
+      Array.isArray(q.options) && 
+      q.options.length > 0 &&
+      q.options.some(opt => opt.trim())
+    );
+
+    if (validQuestions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one valid question with options is required'
       });
     }
 
@@ -83,11 +106,14 @@ export const createSurvey = async (req: Request, res: Response) => {
     const survey = await IVendorSurvey.create({
       title,
       vendor_id,
-      token
+      token,
+      questions: validQuestions
     });
 
     res.json({
       success: true,
+      token,
+      link: `/v/${token}`,
       survey
     });
   } catch (error) {

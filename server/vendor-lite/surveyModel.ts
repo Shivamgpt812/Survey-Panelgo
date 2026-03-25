@@ -5,6 +5,10 @@ export interface IVendorSurvey extends Document {
   title: string;
   token: string;
   vendor_id: mongoose.Types.ObjectId;
+  questions: Array<{
+    text: string;
+    options: string[];
+  }>;
   created_at: Date;
   updated_at: Date;
 }
@@ -24,6 +28,16 @@ const VendorSurveySchema = new Schema<IVendorSurvey>({
     ref: 'VendorLite',
     required: true,
   },
+  questions: [{
+    text: {
+      type: String,
+      required: true,
+    },
+    options: [{
+      type: String,
+      required: true,
+    }],
+  }],
 }, {
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
   collection: 'vendor_lite_surveys'
