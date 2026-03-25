@@ -50,7 +50,14 @@ const InternalSurveyPageWithTracking: React.FC = () => {
   const [showCelebration, setShowCelebration] = useState(false);
 
   const handleComplete = async () => {
-    if (!trackingData) return;
+    console.log("=== HANDLE COMPLETE DEBUG ===");
+    console.log("trackingData:", trackingData);
+    console.log("surveyId:", surveyId);
+    
+    if (!trackingData) {
+      console.log("ERROR: No tracking data available");
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -58,17 +65,21 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       // Submit the internal survey completion
       try {
         await apiPost('/api/internal-complete', { surveyId }, getStoredToken());
+        console.log("Internal completion API call successful");
       } catch (completionError: any) {
         // If survey is already completed, treat as success
         if (completionError?.response?.data?.error === 'Survey already completed') {
           console.log('Survey was already completed - proceeding with tracking');
         } else {
+          console.error("Internal completion API failed:", completionError);
           throw completionError; // Re-throw other errors
         }
       }
       
       // Complete tracking with 'completed' status
+      console.log("Calling completeTracking with status: 'completed'");
       await completeTracking('completed');
+      console.log("completeTracking completed successfully");
       
       // Show celebration and refresh user data
       setShowCelebration(true);
