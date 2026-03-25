@@ -378,7 +378,7 @@ export default function VendorSurveyPublicPage() {
                 <PlayfulButton
                   type="submit"
                   variant="primary"
-                  disabled={!Object.keys(preScreenerAnswers).length || Object.keys(preScreenerAnswers).length < survey.preScreenerQuestions.filter(q => q.enabled).length}
+                  disabled={!Object.keys(preScreenerAnswers).length || Object.keys(preScreenerAnswers).length < survey.preScreenerQuestions.filter((q: { enabled: boolean }) => q.enabled).length}
                 >
                   Submit Pre-Screener
                 </PlayfulButton>

@@ -221,7 +221,7 @@ export const validatePreScreener = async (req: Request, res: Response) => {
 
     // Validate pre-screener if present
     if (survey.preScreenerQuestions && survey.preScreenerQuestions.length > 0) {
-      const validation = validatePreScreener(survey.preScreenerQuestions, preScreenerAnswers || {});
+      const validation = validatePreScreenerAnswers(survey.preScreenerQuestions, preScreenerAnswers || {});
       
       if (!validation.passed) {
         // User failed pre-screener - log as terminated and redirect
@@ -340,7 +340,7 @@ export const submitResponse = async (req: Request, res: Response) => {
 
     // Validate pre-screener if present
     if (survey.preScreenerQuestions && survey.preScreenerQuestions.length > 0) {
-      const validation = validatePreScreener(survey.preScreenerQuestions, preScreenerAnswers || {});
+      const validation = validatePreScreenerAnswers(survey.preScreenerQuestions, preScreenerAnswers || {});
       
       if (!validation.passed) {
         // User failed pre-screener - log as terminated and redirect
