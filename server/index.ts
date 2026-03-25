@@ -616,7 +616,7 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
     }
 
     // STEP 3: Build Vendor Redirect URL
-    let redirectUrl = "";
+    let vendorUrl = "";
     
     if (vendorId) {
       console.log('🔗 BUILDING VENDOR REDIRECT URL...');
@@ -626,14 +626,14 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
         console.log('📋 Vendor redirect links:', vendor.redirectLinks);
         
         if (status === 'complete') {
-          redirectUrl = `${vendor.redirectLinks.complete}?pid=${uid}&uid=${uid}`;
-          console.log('✅ Complete redirect URL built:', redirectUrl);
+          vendorUrl = `${vendor.redirectLinks.complete}?pid=${uid}&uid=${uid}`;
+          console.log('✅ Complete redirect URL built:', vendorUrl);
         } else if (status === 'terminate') {
-          redirectUrl = `${vendor.redirectLinks.terminate}?pid=${uid}&uid=${uid}`;
-          console.log('❌ Terminate redirect URL built:', redirectUrl);
+          vendorUrl = `${vendor.redirectLinks.terminate}?pid=${uid}&uid=${uid}`;
+          console.log('❌ Terminate redirect URL built:', vendorUrl);
         } else if (status === 'quota_full') {
-          redirectUrl = `${vendor.redirectLinks.quotaFull}?pid=${uid}&uid=${uid}`;
-          console.log('🚫 Quota full redirect URL built:', redirectUrl);
+          vendorUrl = `${vendor.redirectLinks.quotaFull}?pid=${uid}&uid=${uid}`;
+          console.log('🚫 Quota full redirect URL built:', vendorUrl);
         }
       } else {
         console.log('❌ VENDOR NOT FOUND for ID:', vendorId);
@@ -642,20 +642,18 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
       console.log('👤 Non-vendor flow - no redirect URL built');
     }
 
-    // STEP 4: Return Redirect URL to Frontend
-    console.log('🚀 FINAL RESPONSE SUMMARY:');
-    console.log('User ID (UID):', uid);
-    console.log('Survey ID (PID):', survey._id.toString());
-    console.log('Status:', status);
-    console.log('Vendor ID:', vendorId || 'none');
-    console.log('Redirect URL:', redirectUrl || 'none');
-    console.log('Response Success:', true);
-    console.log('=====================================');
+    // STEP 4: Return Vendor URL to Frontend
+    console.log('🚀 FINAL REDIRECT FLOW:', {
+      uid,
+      pid: survey._id.toString(),
+      status,
+      vendorUrl: vendorUrl || 'none'
+    });
 
     res.status(201).json({ 
       success: true,
       response: response.toJSON(),
-      redirectUrl 
+      vendorUrl 
     });
   } catch (e) {
     console.error('❌ RESPONSE SUBMISSION ERROR:', e);

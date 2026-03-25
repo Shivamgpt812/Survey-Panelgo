@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Coins, Check, AlertCircle, Shield, PartyPopper } from 'lucide-react';
+import { ArrowLeft, Coins, Check, AlertCircle } from 'lucide-react';
 import { PlayfulButton, PlayfulCard, PlayfulBadge, PlayfulProgress } from '@/components/ui/playful';
-import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
-import type { Survey, User } from '@/types';
+import { DecorativeBlob, DotGrid } from '@/components/decorations';
+import type { Survey } from '@/types';
 import { apiGet, apiPost } from '@/lib/api';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { useToast } from '@/hooks/useToast';
@@ -16,8 +16,6 @@ const InternalSurveyPageWithTracking: React.FC = () => {
   const { surveyId } = useParams<{ surveyId: string }>();
   const { addToast } = useToast();
   const { refreshUser } = useAuth();
-
-  const BACKEND_URL = "https://survey-panelgo.onrender.com";
 
   const [survey, setSurvey] = useState<Survey | undefined>(undefined);
   const [loading, setLoading] = useState(true);
@@ -72,17 +70,8 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       await refreshUser();
       addToast('🎉 Survey completed successfully!', 'success');
       
-      // MANDATORY: Add final redirect to /api/redirect with proper params
-      const user = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
-      const pid = survey.id;
-      const uid = user?.id || user?._id;
-      
-      if (pid && uid) {
-        console.log("Redirecting with:", { pid, uid, status: 1 });
-        window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=1`;
-      } else {
-        console.error("Missing pid or uid for redirect");
-      }
+      // NOTE: completeTracking will handle redirect to result page
+      // No need for manual /api/redirect call
       
     } catch (error) {
       console.error('Failed to complete survey:', error);
@@ -90,21 +79,12 @@ const InternalSurveyPageWithTracking: React.FC = () => {
       // FAIL CASE: If tracking fails, still try to complete with terminated status
       try {
         await completeTracking('terminated');
-        
-        // Add redirect for terminated case
-        const user = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
-        const pid = survey?.id || survey?.pid;
-        const uid = user?.id || user?._id;
-        
-        if (pid && uid) {
-          console.log("Redirecting with:", { pid, uid, status: 2 });
-          window.location.href = `${BACKEND_URL}/api/redirect?pid=${pid}&uid=${uid}&status=2`;
-        } else {
-          console.error("Missing pid or uid for redirect");
-        }
+        // NOTE: completeTracking will handle redirect to result page
       } catch (trackingError) {
         console.error('Tracking also failed:', trackingError);
         addToast('Survey completed but tracking failed', 'warning');
+        // Fallback to dashboard if everything fails
+        navigate('/dashboard');
       }
     } finally {
       setIsSubmitting(false);
