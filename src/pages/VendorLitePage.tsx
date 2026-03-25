@@ -538,8 +538,7 @@ export default function VendorLitePage() {
               {/* Questions Section - Only show for internal surveys */}
               {surveyForm.type === 'internal' && (
                 <div>
-              <div>
-                <div className="flex justify-between items-center mb-3">
+                  <div className="flex justify-between items-center mb-3">
                   <label className="block text-sm font-medium text-gray-700">Questions</label>
                   <button
                     type="button"
