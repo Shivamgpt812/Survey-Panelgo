@@ -45,6 +45,39 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json({ limit: '2mb' }));
 
+// ---------- DEBUG: Auth Bypass for Vendor Routes ----------
+app.use((req, res, next) => {
+  console.log("🔍 AUTH CHECK:", {
+    path: req.path,
+    method: req.method,
+    hasUser: !!req.user,
+    cookies: req.cookies,
+    headers: {
+      'x-vendor-flow': req.headers['x-vendor-flow'],
+      'authorization': req.headers.authorization ? '***' : 'none'
+    }
+  });
+
+  // Bypass auth for vendor routes
+  if (req.path.startsWith('/s/') || req.path.startsWith('/api/vendor') || req.headers['x-vendor-flow'] === 'true') {
+    console.log("✅ AUTH BYPASSED for vendor route:", req.path);
+    return next();
+  }
+
+  // Don't block public routes either
+  if (req.path.startsWith('/api/health') || req.path.startsWith('/api/surveys') || req.path.startsWith('/api/redirect')) {
+    console.log("✅ AUTH BYPASSED for public route:", req.path);
+    return next();
+  }
+
+  if (!req.user && (req.path.startsWith('/api/') && !req.path.startsWith('/api/health') && !req.path.startsWith('/api/surveys') && !req.path.startsWith('/api/redirect') && !req.path.startsWith('/api/vendors'))) {
+    console.log("❌ AUTH BLOCKED → redirecting to login:", req.path);
+    return res.status(401).json({ message: "Auth required" });
+  }
+
+  next();
+});
+
 app.get('/api/health', (_req, res) => {
   res.send('Backend running');
 });
@@ -52,40 +85,50 @@ app.get('/api/health', (_req, res) => {
 // ---------- Vendor Survey Routes (No Login Required) ----------
 app.get('/s/:token', async (req, res) => {
   try {
-    console.log('=== VENDOR SURVEY ACCESS DEBUG ===');
-    console.log('Token:', req.params.token);
-    console.log('Headers:', req.headers);
+    console.log('=== 📥 VENDOR SURVEY LOAD DEBUG ===');
+    console.log('📍 Path:', req.path);
+    console.log('🔑 Token:', req.params.token);
+    console.log('🍪 Cookies:', req.cookies);
+    console.log('📋 Headers:', {
+      'x-vendor-flow': req.headers['x-vendor-flow'],
+      'user-agent': req.headers['user-agent'],
+      'referer': req.headers['referer']
+    });
     
     const { token } = req.params;
     
     if (!token) {
-      console.error('No token provided');
+      console.error('❌ No token provided');
       return res.status(400).json({ error: 'Survey token is required' });
     }
 
     // Find survey by token (assuming token is the survey ID for now)
     const survey = await Survey.findById(token);
     if (!survey) {
-      console.error('Survey not found for token:', token);
+      console.error('❌ Survey not found for token:', token);
       return res.status(404).json({ error: 'Survey not found' });
     }
 
     if (survey.status !== 'active') {
-      console.error('Survey not active:', survey.title);
+      console.error('❌ Survey not active:', survey.title);
       return res.status(404).json({ error: 'Survey not available' });
     }
 
-    // Generate UID for vendor user
+    // Generate UID for vendor user with debugging
+    console.log('🧠 Generating UID for vendor user...');
     const uid = getUIDForUser(req, res, null);
-    console.log('Generated UID for vendor user:', uid);
+    console.log('✅ Generated UID:', uid);
+    console.log('🍪 Vendor UID cookie:', req.cookies.vendor_uid);
 
-    console.log('Vendor survey access successful:', {
+    console.log('📊 Survey Load Summary:', {
       surveyId: survey._id,
       surveyTitle: survey.title,
       uid,
-      isVendor: true
+      isVendorFlow: true,
+      hasPreScreener: !!(survey.preScreener && survey.preScreener.length > 0),
+      isExternal: survey.isExternal
     });
-    console.log('================================');
+    console.log('=====================================');
 
     // Return survey data with vendor context
     res.json({
@@ -96,7 +139,12 @@ app.get('/s/:token', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ VENDOR SURVEY ACCESS ERROR:', error);
+    console.error('❌ VENDOR SURVEY LOAD ERROR:', {
+      message: error.message,
+      stack: error.stack,
+      token: req.params.token,
+      cookies: req.cookies
+    });
     res.status(500).json({ 
       error: 'Failed to load vendor survey',
       message: error instanceof Error ? error.message : 'Unknown error'
@@ -393,10 +441,16 @@ app.get('/api/responses', requireAdmin, async (_req, res) => {
 
 app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
   try {
-    console.log('=== RESPONSE SUBMISSION DEBUG ===');
-    console.log('Request body:', req.body);
-    console.log('Logged in user:', req.user?._id?.toString());
-    console.log('Headers:', req.headers);
+    console.log('=== 📤 RESPONSE SUBMISSION DEBUG ===');
+    console.log('📍 Path:', req.path);
+    console.log('📋 Request body:', req.body);
+    console.log('👤 Logged in user:', req.user?._id?.toString());
+    console.log('🍪 Cookies:', req.cookies);
+    console.log('📋 Headers:', {
+      'x-vendor-flow': req.headers['x-vendor-flow'],
+      'content-type': req.headers['content-type'],
+      'authorization': req.headers.authorization ? '***' : 'none'
+    });
     
     const { surveyId, status, vendorId, preScreenerAnswers, failureReason } = req.body as {
       surveyId?: string;
@@ -406,36 +460,47 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
       failureReason?: string;
     };
     
-    // Get UID for user (logged in or vendor)
+    // Get UID for user (logged in or vendor) with debugging
+    console.log('🧠 Resolving UID...');
     const uid = getUIDForUser(req, res, req.user);
-    console.log('Final UID for response:', uid);
-    console.log('User is logged in:', !!req.user);
-    console.log('User is vendor flow:', req.headers['x-vendor-flow'] === 'true');
+    console.log('✅ UID Resolution Summary:', {
+      fromUser: req.user?._id?.toString(),
+      fromVendorCookie: req.cookies.vendor_uid,
+      finalUID: uid,
+      isLoggedIn: !!req.user,
+      isVendorFlow: req.headers['x-vendor-flow'] === 'true'
+    });
 
     if (!surveyId || !status) {
-      console.error('Missing required fields:', { surveyId, status });
+      console.error('❌ Missing required fields:', { surveyId, status });
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     if (!uid) {
-      console.error('UID is missing - this should never happen with getUIDForUser');
+      console.error('❌ UID MISSING - THIS SHOULD NEVER HAPPEN');
+      console.error('❌ UID Debug Info:', {
+        hasUser: !!req.user,
+        userId: req.user?._id?.toString(),
+        hasVendorCookie: !!req.cookies.vendor_uid,
+        vendorCookieValue: req.cookies.vendor_uid
+      });
       return res.status(400).json({ error: 'UID missing - contact support' });
     }
 
     const survey = await Survey.findById(surveyId);
     if (!survey) {
-      console.error('Survey not found:', surveyId);
+      console.error('❌ Survey not found:', surveyId);
       return res.status(404).json({ message: 'Survey not found' });
     }
     const sid = survey._id.toString();
 
     // Only check for duplicates if user is logged in (not for vendor flow)
     if (req.user && status === 'complete') {
-      console.log('=== DUPLICATE CHECK DEBUG (LOGGED IN USER) ===');
-      console.log('User ID:', uid);
-      console.log('Survey ID:', sid);
-      console.log('Vendor ID:', vendorId);
-      console.log('Vendor ID type:', typeof vendorId);
+      console.log('=== 🔄 DUPLICATE CHECK DEBUG (LOGGED IN USER) ===');
+      console.log('👤 User ID:', uid);
+      console.log('📋 Survey ID:', sid);
+      console.log('🏪 Vendor ID:', vendorId);
+      console.log('📊 Vendor ID type:', typeof vendorId);
       
       // First, let's see all existing responses for this user+survey
       const allExisting = await Response.find({ 
@@ -443,7 +508,7 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
         userId: uid, 
         status: 'complete'
       });
-      console.log('All existing completions for this user+survey:', allExisting.length);
+      console.log('📈 All existing completions for this user+survey:', allExisting.length);
       allExisting.forEach(r => {
         console.log('- Response vendorId:', r.vendorId, 'type:', typeof r.vendorId);
       });
@@ -454,15 +519,16 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
         status: 'complete',
         vendorId: vendorId || null // Match vendorId exactly (null for non-vendor)
       });
-      console.log('Matching completion found:', existing ? 'YES' : 'NO');
+      console.log('🎯 Matching completion found:', existing ? 'YES' : 'NO');
       console.log('============================================');
       
       if (existing) {
+        console.log('❌ Duplicate completion blocked');
         res.status(400).json({ error: 'Survey already completed' });
         return;
       }
     } else {
-      console.log('Skipping duplicate check for vendor flow or non-complete status');
+      console.log('✅ Skipping duplicate check for vendor flow or non-complete status');
     }
 
     // Extract user information from pre-screener answers
@@ -489,6 +555,7 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
       return userInfo;
     };
 
+    console.log('💾 Creating response record...');
     const response = await Response.create({
       surveyId: survey._id.toString(),
       vendorId: vendorId || undefined,
@@ -505,19 +572,21 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
       userId: uid,
       vendorId,
       status,
-      isVendorFlow: !req.user
+      isVendorFlow: !req.user,
+      answersCount: preScreenerAnswers?.length || 0
     });
 
     // Update vendor completion tracking if this is a vendor completion
     if (status === 'complete' && vendorId) {
       try {
+        console.log('🏪 Updating vendor completion tracking...');
         await Vendor.findByIdAndUpdate(vendorId, {
           $addToSet: { completedSurveys: survey._id },
           $inc: { totalCompletions: 1 }
         });
-        console.log(`Vendor completion tracked: ${vendorId} for survey ${survey._id}`);
+        console.log(`✅ Vendor completion tracked: ${vendorId} for survey ${survey._id}`);
       } catch (vendorError) {
-        console.error('Failed to update vendor completion tracking:', vendorError);
+        console.error('❌ Failed to update vendor completion tracking:', vendorError);
       }
     }
 
@@ -543,10 +612,17 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
       });
     }
 
-    console.log('=== RESPONSE SUBMISSION SUCCESS ===');
+    console.log('=== 🎉 RESPONSE SUBMISSION SUCCESS ===');
     res.status(201).json({ response: response.toJSON() });
   } catch (e) {
-    console.error('❌ RESPONSE SUBMISSION ERROR:', e);
+    console.error('❌ RESPONSE SUBMISSION ERROR:', {
+      message: e instanceof Error ? e.message : 'Unknown error',
+      stack: e instanceof Error ? e.stack : 'No stack trace',
+      requestBody: req.body,
+      cookies: req.cookies,
+      hasUser: !!req.user,
+      userId: req.user?._id?.toString()
+    });
     res.status(500).json({ error: 'Failed to record response' });
   }
 });
