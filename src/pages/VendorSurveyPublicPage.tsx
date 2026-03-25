@@ -29,6 +29,11 @@ export default function VendorSurveyPublicPage() {
   useEffect(() => {
     // Auto-start survey flow when survey is loaded and we have URL parameters
     if (survey && pid && uid) {
+      console.log("=== URL PARAMETERS DEBUG ===");
+      console.log("PID from URL:", pid);
+      console.log("UID from URL:", uid);
+      console.log("Survey PID from survey:", survey.pid);
+      
       // Show pre-screener if survey has pre-screener questions, otherwise show survey
       if (survey?.preScreenerQuestions?.length > 0) {
         setShowPreScreener(true);

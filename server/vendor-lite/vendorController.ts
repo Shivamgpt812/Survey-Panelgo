@@ -159,6 +159,11 @@ export const getSurveyByToken = async (req: Request, res: Response) => {
       });
     }
 
+    console.log("=== SURVEY RETRIEVAL DEBUG ===");
+    console.log("Survey Token:", token);
+    console.log("Survey PID:", survey.pid);
+    console.log("Survey Title:", survey.title);
+
     res.json({
       success: true,
       survey
@@ -450,6 +455,11 @@ export const submitResponse = async (req: Request, res: Response) => {
     let redirectUrl = (survey.vendor_id as any).complete_url;
 
     redirectUrl = `${redirectUrl}?pid=${survey.pid}&uid=${uid}`;
+    
+    console.log("=== REDIRECT URL DEBUG ===");
+    console.log("Survey PID:", survey.pid);
+    console.log("User ID:", uid);
+    console.log("Complete URL:", redirectUrl);
 
     res.json({
       success: true,
