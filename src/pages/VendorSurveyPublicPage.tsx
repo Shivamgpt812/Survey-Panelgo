@@ -322,8 +322,8 @@ export default function VendorSurveyPublicPage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-pink-50 to-blue-50 p-6">
-        <div className="max-w-2xl mx-auto">
+      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-pink-50 to-blue-50">
+        <div className="max-w-4xl mx-auto px-8 py-8">
           <div className="mb-8 text-center">
             <h1 className="text-3xl font-jakarta font-bold text-navy mb-2">{survey.title}</h1>
             <p className="text-gray-600">Powered by {survey.vendor_id?.name || 'Unknown Vendor'}</p>
@@ -331,11 +331,11 @@ export default function VendorSurveyPublicPage() {
 
           {/* User ID Input */}
           {showUserIdInput && (
-            <PlayfulCard className="mb-8">
-              <h2 className="text-2xl font-jakarta font-semibold text-navy mb-6">Enter Your User ID</h2>
-              <form onSubmit={handleUserIdSubmit} className="space-y-6">
+            <PlayfulCard className="mb-12">
+              <h2 className="text-2xl font-jakarta font-semibold text-navy mb-8">Enter Your User ID</h2>
+              <form onSubmit={handleUserIdSubmit} className="space-y-8">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
                     User ID <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -344,9 +344,9 @@ export default function VendorSurveyPublicPage() {
                     value={userId}
                     onChange={(e) => setUserId(e.target.value)}
                     placeholder="Enter a unique user ID (e.g., USER123)"
-                    className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
+                    className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
                   />
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="text-sm text-gray-500 mt-3">
                     Choose a unique identifier that hasn't been used before
                   </p>
                 </div>
@@ -355,7 +355,7 @@ export default function VendorSurveyPublicPage() {
                   variant="primary"
                   disabled={!userId.trim()}
                   isLoading={submitting}
-                  className="w-full py-3 text-lg"
+                  className="w-full py-4 text-lg"
                 >
                   Start Survey
                 </PlayfulButton>
@@ -365,13 +365,13 @@ export default function VendorSurveyPublicPage() {
 
           {/* Pre-Screener Questions */}
           {showPreScreener && survey?.preScreenerQuestions?.length > 0 && (
-            <PlayfulCard className="mb-8">
-              <h2 className="text-2xl font-jakarta font-semibold text-navy mb-6">Pre-Screener Questions</h2>
-              <form onSubmit={handlePreScreenerSubmit} className="space-y-6">
+            <PlayfulCard className="mb-12">
+              <h2 className="text-2xl font-jakarta font-semibold text-navy mb-8">Pre-Screener Questions</h2>
+              <form onSubmit={handlePreScreenerSubmit} className="space-y-8">
                 {survey.preScreenerQuestions.map((preScreen: any, index: number) => (
-                  <div key={index} className="p-6 bg-gray-50 border-2 border-gray-200 rounded-xl">
-                    <div className="mb-4">
-                      <label className="block text-base font-semibold text-gray-700 mb-3">
+                  <div key={index} className="p-8 bg-gray-50 border-2 border-gray-200 rounded-xl">
+                    <div className="mb-6">
+                      <label className="block text-base font-semibold text-gray-700 mb-4">
                         {preScreen.question} <span className="text-red-500">*</span>
                       </label>
                       
@@ -382,14 +382,14 @@ export default function VendorSurveyPublicPage() {
                           value={preScreenerAnswers[preScreen.type] || ''}
                           onChange={(e) => handlePreScreenerAnswer(preScreen.type, e.target.value)}
                           placeholder="Enter your age"
-                          className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
+                          className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
                         />
                       ) : preScreen.type === 'gender' ? (
                         <select
                           required
                           value={preScreenerAnswers[preScreen.type] || ''}
                           onChange={(e) => handlePreScreenerAnswer(preScreen.type, e.target.value)}
-                          className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
+                          className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
                         >
                           <option value="">Select your gender</option>
                           {preScreen.options?.map((option: string) => (
@@ -406,7 +406,7 @@ export default function VendorSurveyPublicPage() {
                   variant="primary"
                   disabled={!Object.keys(preScreenerAnswers).length || Object.keys(preScreenerAnswers).length < survey.preScreenerQuestions.filter((q: { enabled: boolean }) => q.enabled).length}
                   isLoading={submitting}
-                  className="w-full py-3 text-lg"
+                  className="w-full py-4 text-lg"
                 >
                   Submit Pre-Screener
                 </PlayfulButton>
@@ -416,9 +416,9 @@ export default function VendorSurveyPublicPage() {
 
           {/* Survey Questions */}
           {!showUserIdInput && !showPreScreener && (
-            <PlayfulCard className="mb-8">
-              <div className="mb-8">
-                <div className="flex justify-between items-center mb-6">
+            <PlayfulCard className="mb-12">
+              <div className="mb-10">
+                <div className="flex justify-between items-center mb-8">
                   <span className="text-base font-semibold text-gray-600">
                     Question {currentStep + 1} of {survey?.questions?.length || 0}
                   </span>
@@ -434,14 +434,14 @@ export default function VendorSurveyPublicPage() {
                 </div>
               </div>
 
-              <div className="mb-10">
-                <h2 className="text-2xl font-jakarta font-semibold text-navy mb-8">
+              <div className="mb-12">
+                <h2 className="text-2xl font-jakarta font-semibold text-navy mb-10">
                   {currentQuestion?.text}
                 </h2>
 
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {currentQuestion?.options?.map((option: string, optionIndex: number) => (
-                    <label key={optionIndex} className="flex items-center p-5 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-violet hover:bg-violet/5 transition-all duration-200 group">
+                    <label key={optionIndex} className="flex items-center p-6 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-violet hover:bg-violet/5 transition-all duration-200 group">
                       <input
                         type="radio"
                         name={`q_${currentStep}`}
@@ -450,17 +450,17 @@ export default function VendorSurveyPublicPage() {
                         onChange={(e) => handleAnswerChange(`q_${currentStep}`, e.target.value)}
                         className="w-5 h-5 text-violet focus:ring-violet focus:ring-2"
                       />
-                      <span className="text-lg text-gray-700 group-hover:text-violet transition-colors ml-4">{option}</span>
+                      <span className="text-lg text-gray-700 group-hover:text-violet transition-colors ml-5">{option}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+              <div className="flex items-center justify-between pt-8 border-t border-gray-200">
                 <button
                   onClick={handlePrevious}
                   disabled={currentStep === 0}
-                  className="px-6 py-3 font-jakarta font-semibold text-navy hover:text-violet disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:bg-gray-50 rounded-xl disabled:hover:bg-transparent"
+                  className="px-8 py-4 font-jakarta font-semibold text-navy hover:text-violet disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:bg-gray-50 rounded-xl disabled:hover:bg-transparent"
                 >
                   ← Previous
                 </button>
@@ -470,7 +470,7 @@ export default function VendorSurveyPublicPage() {
                   onClick={handleNext}
                   disabled={getCurrentAnswer() === null || submitting}
                   isLoading={submitting}
-                  className="px-8 py-3 text-lg"
+                  className="px-10 py-4 text-lg"
                 >
                   {isLastQuestion ? 'Submit Survey' : 'Next Question →'}
                 </PlayfulButton>
@@ -478,9 +478,9 @@ export default function VendorSurveyPublicPage() {
             </PlayfulCard>
           )}
 
-          <div className="mt-8 flex items-start gap-4 p-6 bg-white/60 backdrop-blur border-2 border-navy/10 rounded-2xl">
-            <div className="w-8 h-8 bg-violet/20 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-violet text-base">ℹ️</span>
+          <div className="mt-12 flex items-start gap-6 p-8 bg-white/60 backdrop-blur border-2 border-navy/10 rounded-2xl">
+            <div className="w-10 h-10 bg-violet/20 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-violet text-lg">ℹ️</span>
             </div>
             <div>
               <p className="font-jakarta text-base text-navy leading-relaxed">
