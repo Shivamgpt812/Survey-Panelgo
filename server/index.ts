@@ -17,6 +17,7 @@ import { SurveyRedirectLogs } from './models/SurveyRedirectLogs.js';
 import { preScreenerTemplates } from './preScreenerTemplates.js';
 import { REDIRECT_URLS, getStatusText, isValidStatus } from './config/redirectConfig.js';
 import vendorLiteRoutes from './vendor-lite/routes.js';
+import externalRouter from './externalCreate.js';
 import {
   optionalAuth,
   requireAuth,
@@ -49,6 +50,10 @@ app.get('/api/health', (_req, res) => {
 
 // Vendor-lite routes
 app.use('/vendor-lite', vendorLiteRoutes);
+
+// External survey routes (isolated: POST /external/create, GET /external/router)
+app.use('/', externalRouter);
+console.log('✅ External routes mounted successfully');
 
 function userJson(u: InstanceType<typeof User>) {
   return u.toJSON() as Record<string, unknown>;
@@ -365,27 +370,27 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
       console.log('Survey ID:', sid);
       console.log('Vendor ID:', vendorId);
       console.log('Vendor ID type:', typeof vendorId);
-      
+
       // First, let's see all existing responses for this user+survey
-      const allExisting = await Response.find({ 
-        surveyId: sid, 
-        userId: userId, 
+      const allExisting = await Response.find({
+        surveyId: sid,
+        userId: userId,
         status: 'complete'
       });
       console.log('All existing completions for this user+survey:', allExisting.length);
       allExisting.forEach(r => {
         console.log('- Response vendorId:', r.vendorId, 'type:', typeof r.vendorId);
       });
-      
-      const existing = await Response.findOne({ 
-        surveyId: sid, 
-        userId: userId, 
+
+      const existing = await Response.findOne({
+        surveyId: sid,
+        userId: userId,
         status: 'complete',
         vendorId: vendorId || null // Match vendorId exactly (null for non-vendor)
       });
       console.log('Matching completion found:', existing ? 'YES' : 'NO');
       console.log('==========================');
-      
+
       if (existing) {
         res.status(400).json({ error: 'Survey already completed' });
         return;
@@ -395,11 +400,11 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
     // Extract user information from pre-screener answers
     const extractUserInfo = (answers: { questionId: string; value: string | number | boolean }[]) => {
       const userInfo: any = {};
-      
+
       answers.forEach(answer => {
         const questionId = answer.questionId.toLowerCase();
         const value = answer.value;
-        
+
         if (questionId.includes('age') && typeof value === 'number') {
           userInfo.age = value;
         } else if (questionId.includes('name') && typeof value === 'string') {
@@ -412,7 +417,7 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
           userInfo.location = value;
         }
       });
-      
+
       return userInfo;
     };
 
@@ -504,27 +509,27 @@ app.post('/api/internal-complete', requireAuth, async (req: AuthedRequest, res) 
     console.log('Survey ID:', sid);
     console.log('Vendor ID:', vendorId);
     console.log('Vendor ID type:', typeof vendorId);
-    
+
     // First, let's see all existing responses for this user+survey
-    const allExisting = await Response.find({ 
-      surveyId: sid, 
-      userId: uid, 
+    const allExisting = await Response.find({
+      surveyId: sid,
+      userId: uid,
       status: 'complete'
     });
     console.log('All existing completions for this user+survey:', allExisting.length);
     allExisting.forEach(r => {
       console.log('- Response vendorId:', r.vendorId, 'type:', typeof r.vendorId);
     });
-    
-    const existing = await Response.findOne({ 
-      surveyId: sid, 
-      userId: uid, 
+
+    const existing = await Response.findOne({
+      surveyId: sid,
+      userId: uid,
       status: 'complete',
       vendorId: vendorId || null // Match vendorId exactly (null for non-vendor)
     });
     console.log('Matching completion found:', existing ? 'YES' : 'NO');
     console.log('==============================');
-    
+
     if (existing) {
       res.status(400).json({ error: 'Survey already completed' });
       return;
@@ -589,15 +594,15 @@ app.post('/api/survey-tracking/start', optionalAuth, async (req: AuthedRequest, 
 
     // Generate unique click ID (PID)
     const clickId = `PID_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // Get user ID (authenticated or anonymous)
     const userId = req.user?._id?.toString() || `anonymous_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // Get real IP address
     const xForwardedFor = req.headers['x-forwarded-for'];
     const xRealIP = req.headers['x-real-ip'];
     let ipAddress = (req as any).ip || (req as any).connection?.remoteAddress || 'unknown';
-    
+
     if (Array.isArray(xForwardedFor)) {
       ipAddress = xForwardedFor[0];
     } else if (typeof xForwardedFor === 'string') {
@@ -605,15 +610,15 @@ app.post('/api/survey-tracking/start', optionalAuth, async (req: AuthedRequest, 
     } else if (xRealIP) {
       ipAddress = xRealIP as string;
     }
-    
+
     // Clean up IP address (remove ::ffff: prefix if present)
     ipAddress = ipAddress.replace(/^::ffff:/, '');
 
-    res.json({ 
-      clickId, 
-      userId, 
+    res.json({
+      clickId,
+      userId,
       ipAddress,
-      message: 'Survey tracking initialized' 
+      message: 'Survey tracking initialized'
     });
   } catch (e) {
     console.error(e);
@@ -624,7 +629,7 @@ app.post('/api/survey-tracking/start', optionalAuth, async (req: AuthedRequest, 
 app.post('/api/survey-tracking/complete', optionalAuth, async (req: AuthedRequest, res: any) => {
   try {
     const { surveyId, userId, clickId, status } = (req as any).body;
-    
+
     if (!surveyId || !userId || !clickId || !status) {
       res.status(400).json({ error: 'All fields are required: surveyId, userId, clickId, status' });
       return;
@@ -639,7 +644,7 @@ app.post('/api/survey-tracking/complete', optionalAuth, async (req: AuthedReques
     const xForwardedFor = req.headers['x-forwarded-for'];
     const xRealIP = req.headers['x-real-ip'];
     let ipAddress = (req as any).ip || (req as any).connection?.remoteAddress || 'unknown';
-    
+
     if (Array.isArray(xForwardedFor)) {
       ipAddress = xForwardedFor[0];
     } else if (typeof xForwardedFor === 'string') {
@@ -647,7 +652,7 @@ app.post('/api/survey-tracking/complete', optionalAuth, async (req: AuthedReques
     } else if (xRealIP) {
       ipAddress = xRealIP as string;
     }
-    
+
     // Clean up IP address
     ipAddress = ipAddress.replace(/^::ffff:/, '');
 
@@ -663,11 +668,11 @@ app.post('/api/survey-tracking/complete', optionalAuth, async (req: AuthedReques
 
     // Determine redirect URL based on status
     let redirectUrl = `/survey-result/${clickId}`;
-    
-    res.json({ 
+
+    res.json({
       tracking: tracking.toJSON(),
       redirectUrl,
-      message: 'Survey tracking completed successfully' 
+      message: 'Survey tracking completed successfully'
     });
   } catch (e) {
     console.error(e);
@@ -678,7 +683,7 @@ app.post('/api/survey-tracking/complete', optionalAuth, async (req: AuthedReques
 app.get('/api/survey-tracking/:clickId', async (req, res) => {
   try {
     const { clickId } = req.params;
-    
+
     const tracking = await SurveyTracking.findOne({ clickId });
     if (!tracking) {
       res.status(404).json({ error: 'Tracking record not found' });
@@ -695,7 +700,7 @@ app.get('/api/survey-tracking/:clickId', async (req, res) => {
 app.get('/api/survey-tracking', requireAdmin, async (_req: any, res) => {
   try {
     const logs = await SurveyTracking.find().sort({ timestamp: -1 });
-    res.json({ 
+    res.json({
       logs: logs.map(log => log.toJSON())
     });
   } catch (e) {
@@ -851,18 +856,18 @@ app.get('/api/analytics', requireAdmin, async (_req, res) => {
       {};
     console.log('Total responses found:', responses.length);
     console.log('Total vendors found:', vendors.length);
-    
+
     for (const v of vendors) {
       const vid = v._id.toString();
       const vr = responses.filter((r) => r.vendorId && r.vendorId.toString() === vid);
       console.log(`Vendor ${v.name} (${vid}): ${vr.length} responses`);
-      
+
       vendorAnalytics[vid] = {
         completes: vr.filter((r) => r.status === 'complete').length,
         terminates: vr.filter((r) => r.status === 'terminate').length,
         quotaFull: vr.filter((r) => r.status === 'quota_full').length,
       };
-      
+
       console.log(`Vendor ${v.name} analytics:`, vendorAnalytics[vid]);
     }
 
@@ -920,6 +925,7 @@ app.get('/api/export/responses.csv', requireAdmin, async (_req, res) => {
 
 // ---------- Frontend Static Serving (MUST BE LAST) ----------
 app.use(express.static('dist'));
+
 
 app.get('*', (req, res) => {
   res.sendFile(path.resolve('dist/index.html'));
