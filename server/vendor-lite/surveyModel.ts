@@ -6,6 +6,14 @@ export interface IVendorSurvey extends Document {
   token: string;
   pid: string;
   vendor_id: mongoose.Types.ObjectId;
+  preScreenerQuestions: Array<{
+    type: string;
+    question: string;
+    operator: string;
+    value: any;
+    options?: string[];
+    enabled: boolean;
+  }>;
   questions: Array<{
     text: string;
     options: string[];
@@ -28,6 +36,29 @@ const VendorSurveySchema = new Schema<IVendorSurvey>({
     type: String,
     required: true,
   },
+  preScreenerQuestions: [{
+    type: {
+      type: String,
+      required: true,
+    },
+    question: {
+      type: String,
+      required: true,
+    },
+    operator: {
+      type: String,
+      required: true,
+    },
+    value: {
+      type: Schema.Types.Mixed,
+      required: true,
+    },
+    options: [String],
+    enabled: {
+      type: Boolean,
+      required: true,
+    }
+  }],
   vendor_id: {
     type: Schema.Types.ObjectId,
     ref: 'VendorLite',

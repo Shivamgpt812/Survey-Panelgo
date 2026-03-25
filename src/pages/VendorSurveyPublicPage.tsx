@@ -14,6 +14,8 @@ export default function VendorSurveyPublicPage() {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [userId, setUserId] = useState('');
   const [showUserIdInput, setShowUserIdInput] = useState(true);
+  const [showPreScreener, setShowPreScreener] = useState(false);
+  const [preScreenerAnswers, setPreScreenerAnswers] = useState<Record<string, any>>({});
 
   useEffect(() => {
     if (token) {
@@ -117,6 +119,56 @@ export default function VendorSurveyPublicPage() {
     }
 
     setShowUserIdInput(false);
+    // Show pre-screener if survey has pre-screener questions
+    if (survey?.preScreenerQuestions?.length > 0) {
+      setShowPreScreener(true);
+    }
+  };
+
+  const handlePreScreenerAnswer = (questionType: string, value: any) => {
+    setPreScreenerAnswers(prev => ({
+      ...prev,
+      [questionType]: value
+    }));
+  };
+
+  const handlePreScreenerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Submit pre-screener answers for validation
+    try {
+      const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
+      const apiUrl = isProduction 
+        ? 'https://survey-panelgo.onrender.com' 
+        : 'http://localhost:3000';
+
+      const response = await fetch(`${apiUrl}/vendor-lite/validate-pre-screener`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          preScreenerAnswers
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success && !data.terminated) {
+        // Passed pre-screener, show survey questions
+        setShowPreScreener(false);
+      } else if (data.terminated) {
+        // Failed pre-screener, redirect to terminate URL
+        alert(`You do not meet the survey criteria: ${data.reason}`);
+        window.location.href = data.redirectUrl;
+      } else {
+        alert('Error validating pre-screener: ' + (data.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error validating pre-screener:', error);
+      alert('Error validating pre-screener. Please try again.');
+    }
   };
 
   const getCurrentAnswer = () => {
@@ -247,6 +299,55 @@ export default function VendorSurveyPublicPage() {
                   disabled={!userId.trim()}
                 >
                   Start Survey
+                </PlayfulButton>
+              </form>
+            </PlayfulCard>
+          )}
+
+          {/* Pre-Screener Questions */}
+          {showPreScreener && survey?.preScreenerQuestions?.length > 0 && (
+            <PlayfulCard className="mb-6">
+              <h2 className="text-xl font-jakarta font-semibold text-navy mb-4">Pre-Screener Questions</h2>
+              <form onSubmit={handlePreScreenerSubmit} className="space-y-4">
+                {survey.preScreenerQuestions.map((preScreen: any, index: number) => (
+                  <div key={index} className="mb-4 p-4 border border-gray-200 rounded-lg">
+                    <div className="mb-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {preScreen.question} <span className="text-red-500">*</span>
+                      </label>
+                      
+                      {preScreen.type === 'age' ? (
+                        <input
+                          type="number"
+                          required
+                          value={preScreenerAnswers[preScreen.type] || ''}
+                          onChange={(e) => handlePreScreenerAnswer(preScreen.type, e.target.value)}
+                          placeholder="Enter your age"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                        />
+                      ) : preScreen.type === 'gender' ? (
+                        <select
+                          required
+                          value={preScreenerAnswers[preScreen.type] || ''}
+                          onChange={(e) => handlePreScreenerAnswer(preScreen.type, e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                        >
+                          <option value="">Select your gender</option>
+                          {preScreen.options?.map((option: string) => (
+                            <option key={option} value={option}>{option}</option>
+                          ))}
+                        </select>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+                
+                <PlayfulButton
+                  type="submit"
+                  variant="primary"
+                  disabled={!Object.keys(preScreenerAnswers).length || Object.keys(preScreenerAnswers).length < survey.preScreenerQuestions.filter(q => q.enabled).length}
+                >
+                  Submit Pre-Screener
                 </PlayfulButton>
               </form>
             </PlayfulCard>

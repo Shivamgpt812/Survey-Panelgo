@@ -7,7 +7,8 @@ import {
   submitResponse,
   getSurveyResponses,
   handleVendorRedirect,
-  checkUserIdUnique
+  checkUserIdUnique,
+  validatePreScreener
 } from './vendorController';
 
 const router = Router();
@@ -23,5 +24,6 @@ router.get('/survey/:token/responses', getSurveyResponses);
 router.post('/submit', submitResponse);
 router.get('/redirect', handleVendorRedirect);
 router.get('/check-uid/:uid', checkUserIdUnique);
+router.post('/validate-pre-screener', validatePreScreener);
 
 export default router;

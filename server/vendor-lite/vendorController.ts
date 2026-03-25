@@ -62,7 +62,7 @@ export const getVendors = async (req: Request, res: Response) => {
 
 export const createSurvey = async (req: Request, res: Response) => {
   try {
-    const { title, vendor_id, pid, questions } = req.body;
+    const { title, vendor_id, pid, preScreenerQuestions, questions } = req.body;
 
     if (!title || !vendor_id || !pid) {
       return res.status(400).json({
@@ -108,6 +108,7 @@ export const createSurvey = async (req: Request, res: Response) => {
       title,
       vendor_id,
       pid,
+      preScreenerQuestions: preScreenerQuestions || [],
       token,
       questions: validQuestions
     });
@@ -156,9 +157,163 @@ export const getSurveyByToken = async (req: Request, res: Response) => {
   }
 };
 
+const validatePreScreenerAnswers = (preScreenerQuestions: any[], responses: any): { passed: boolean; failedCriteria?: any } => {
+  for (const question of preScreenerQuestions) {
+    if (!question.enabled) continue;
+    
+    const userAnswer = responses[question.type];
+    const requiredValue = question.value;
+    
+    let passed = false;
+    
+    if (question.type === 'age') {
+      const userAge = parseInt(userAnswer);
+      switch (question.operator) {
+        case '>=':
+          passed = userAge >= requiredValue;
+          break;
+        case '>':
+          passed = userAge > requiredValue;
+          break;
+        case '<=':
+          passed = userAge <= requiredValue;
+          break;
+        case '<':
+          passed = userAge < requiredValue;
+          break;
+        default:
+          passed = userAge >= requiredValue;
+      }
+    } else if (question.type === 'gender') {
+      passed = userAnswer === requiredValue;
+    }
+    
+    if (!passed) {
+      return { passed: false, failedCriteria: question };
+    }
+  }
+  
+  return { passed: true };
+};
+
+export const validatePreScreener = async (req: Request, res: Response) => {
+  try {
+    const { token, preScreenerAnswers } = req.body;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token is required'
+      });
+    }
+
+    const survey = await IVendorSurvey.findOne({ token }).populate({
+      path: 'vendor_id',
+      model: 'VendorLite'
+    });
+
+    if (!survey) {
+      return res.status(404).json({
+        success: false,
+        message: 'Survey not found'
+      });
+    }
+
+    // Validate pre-screener if present
+    if (survey.preScreenerQuestions && survey.preScreenerQuestions.length > 0) {
+      const validation = validatePreScreenerAnswers(survey.preScreenerQuestions, preScreenerAnswers || {});
+      
+      if (!validation.passed) {
+        // User failed pre-screener - log as terminated and redirect
+        const ip = req.ip || req.connection.remoteAddress || 'unknown';
+        
+        // Log the failed pre-screener attempt
+        try {
+          await SurveyRedirectLogs.create({
+            pid: survey.pid,
+            uid: 'pre-screener-validation', // Temporary UID
+            status: 2, // Terminated
+            statusText: 'Terminated - Failed Pre-Screener',
+            ipAddress: ip,
+            userAgent: req.get('User-Agent') || 'unknown'
+          });
+          console.log("✅ Pre-screener failure logged:", { pid: survey.pid, status: 2 });
+        } catch (logError) {
+          console.error("❌ Error logging pre-screener failure:", logError);
+        }
+
+        // Return terminate redirect URL
+        const vendor = survey.vendor_id as any;
+        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=pre-screener-validation&status=2&reason=pre-screener-failed`;
+        
+        return res.json({
+          success: true,
+          redirectUrl,
+          terminated: true,
+          reason: 'Failed pre-screener criteria',
+          failedCriteria: validation.failedCriteria
+        });
+      }
+    }
+
+    // Passed pre-screener
+    res.json({
+      success: true,
+      terminated: false,
+      message: 'Pre-screener validation passed'
+    });
+
+  } catch (error) {
+    console.error('Error validating pre-screener:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+const validatePreScreener = (preScreenerQuestions: any[], responses: any): { passed: boolean; failedCriteria?: any } => {
+  for (const question of preScreenerQuestions) {
+    if (!question.enabled) continue;
+    
+    const userAnswer = responses[question.type];
+    const requiredValue = question.value;
+    
+    let passed = false;
+    
+    if (question.type === 'age') {
+      const userAge = parseInt(userAnswer);
+      switch (question.operator) {
+        case '>=':
+          passed = userAge >= requiredValue;
+          break;
+        case '>':
+          passed = userAge > requiredValue;
+          break;
+        case '<=':
+          passed = userAge <= requiredValue;
+          break;
+        case '<':
+          passed = userAge < requiredValue;
+          break;
+        default:
+          passed = userAge >= requiredValue;
+      }
+    } else if (question.type === 'gender') {
+      passed = userAnswer === requiredValue;
+    }
+    
+    if (!passed) {
+      return { passed: false, failedCriteria: question };
+    }
+  }
+  
+  return { passed: true };
+};
+
 export const submitResponse = async (req: Request, res: Response) => {
   try {
-    const { token, answers, userId } = req.body;
+    const { token, answers, userId, preScreenerAnswers } = req.body;
 
     if (!token) {
       return res.status(400).json({
@@ -184,6 +339,44 @@ export const submitResponse = async (req: Request, res: Response) => {
         success: false,
         message: 'Survey not found'
       });
+    }
+
+    // Validate pre-screener if present
+    if (survey.preScreenerQuestions && survey.preScreenerQuestions.length > 0) {
+      const validation = validatePreScreenerAnswers(survey.preScreenerQuestions, preScreenerAnswers || {});
+      
+      if (!validation.passed) {
+        // User failed pre-screener - log as terminated and redirect
+        const uid = userId.trim();
+        const ip = req.ip || req.connection.remoteAddress || 'unknown';
+        
+        // Log the failed pre-screener attempt
+        try {
+          await SurveyRedirectLogs.create({
+            pid: survey.pid,
+            uid,
+            status: 2, // Terminated
+            statusText: 'Terminated - Failed Pre-Screener',
+            ipAddress: ip,
+            userAgent: req.get('User-Agent') || 'unknown'
+          });
+          console.log("✅ Pre-screener failure logged:", { pid: survey.pid, uid, status: 2 });
+        } catch (logError) {
+          console.error("❌ Error logging pre-screener failure:", logError);
+        }
+
+        // Return terminate redirect URL
+        const vendor = survey.vendor_id as any;
+        const redirectUrl = `${vendor.terminate_url}?pid=${survey.pid}&uid=${uid}&status=2&reason=pre-screener-failed`;
+        
+        return res.json({
+          success: true,
+          redirectUrl,
+          terminated: true,
+          reason: 'Failed pre-screener criteria',
+          failedCriteria: validation.failedCriteria
+        });
+      }
     }
 
     const uid = userId.trim();

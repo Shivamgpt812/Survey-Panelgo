@@ -29,6 +29,24 @@ export default function VendorLitePage() {
     pid: ''
   });
 
+  const [preScreenerQuestions, setPreScreenerQuestions] = useState([
+    { 
+      type: 'age', 
+      question: 'What is your age?', 
+      operator: '>=', 
+      value: 18,
+      enabled: false 
+    },
+    { 
+      type: 'gender', 
+      question: 'What is your gender?', 
+      operator: '=', 
+      value: '',
+      options: ['Male', 'Female', 'Other'],
+      enabled: false 
+    }
+  ]);
+
   const [questions, setQuestions] = useState([
     { text: '', options: [''] }
   ]);
@@ -156,6 +174,7 @@ export default function VendorLitePage() {
           title: surveyForm.title,
           vendor_id: selectedVendor,
           pid: surveyForm.pid,
+          preScreenerQuestions: preScreenerQuestions.filter(q => q.enabled),
           questions: validQuestions
         }),
       });
@@ -217,6 +236,18 @@ export default function VendorLitePage() {
     const updated = [...questions];
     updated[questionIndex].options[optionIndex] = value;
     setQuestions(updated);
+  };
+
+  const updatePreScreenerQuestion = (index: number, field: string, value: any) => {
+    const updated = [...preScreenerQuestions];
+    updated[index] = { ...updated[index], [field]: value };
+    setPreScreenerQuestions(updated);
+  };
+
+  const togglePreScreenerEnabled = (index: number) => {
+    const updated = [...preScreenerQuestions];
+    updated[index].enabled = !updated[index].enabled;
+    setPreScreenerQuestions(updated);
   };
 
   return (
@@ -354,6 +385,83 @@ export default function VendorLitePage() {
                   placeholder="Enter project ID (e.g., PROJ123)"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
                 />
+              </div>
+
+              {/* Pre-Screener Questions Section */}
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <label className="block text-sm font-medium text-gray-700">Pre-Screener Questions</label>
+                  <span className="text-xs text-gray-500">Set criteria to qualify users</span>
+                </div>
+                
+                {preScreenerQuestions.map((preScreen, index) => (
+                  <div key={index} className="mb-4 p-4 border border-gray-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={preScreen.enabled}
+                          onChange={() => togglePreScreenerEnabled(index)}
+                          className="mr-2 text-violet focus:ring-violet"
+                        />
+                        <label className="text-sm font-medium text-gray-700">
+                          {preScreen.type === 'age' ? 'Age Requirement' : 'Gender Requirement'}
+                        </label>
+                      </div>
+                    </div>
+                    
+                    {preScreen.enabled && (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Question</label>
+                          <input
+                            type="text"
+                            value={preScreen.question}
+                            onChange={(e) => updatePreScreenerQuestion(index, 'question', e.target.value)}
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
+                          />
+                        </div>
+                        
+                        {preScreen.type === 'age' ? (
+                          <div className="flex items-center space-x-2">
+                            <label className="text-xs font-medium text-gray-600">Must be</label>
+                            <select
+                              value={preScreen.operator}
+                              onChange={(e) => updatePreScreenerQuestion(index, 'operator', e.target.value)}
+                              className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
+                            >
+                              <option value=">=">&gt;= (At least)</option>
+                              <option value=">">&gt; (Greater than)</option>
+                              <option value="<=">&lt;= (At most)</option>
+                              <option value="<">&lt; (Less than)</option>
+                            </select>
+                            <input
+                              type="number"
+                              value={preScreen.value}
+                              onChange={(e) => updatePreScreenerQuestion(index, 'value', parseInt(e.target.value))}
+                              className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
+                            />
+                            <label className="text-xs font-medium text-gray-600">years old</label>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <label className="text-xs font-medium text-gray-600">Must be</label>
+                            <select
+                              value={preScreen.value}
+                              onChange={(e) => updatePreScreenerQuestion(index, 'value', e.target.value)}
+                              className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
+                            >
+                              <option value="">Select gender</option>
+                              {preScreen.options?.map((option: string) => (
+                                <option key={option} value={option}>{option}</option>
+                              )) || []}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
 
               {/* Questions Section */}
