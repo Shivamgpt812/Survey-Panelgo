@@ -159,11 +159,13 @@ export default function VendorLitePage() {
       return;
     }
 
-    // Validate questions
-    const validQuestions = questions.filter(q => q.text.trim() && ((q.type === 'multiple-choice' && q.options.some(o => o.trim())) || (q.type !== 'multiple-choice')));
-    if (validQuestions.length === 0) {
-      alert("Please add at least one question");
-      return;
+    // Validate questions - only for internal surveys
+    if (surveyForm.type === 'internal') {
+      const validQuestions = questions.filter(q => q.text.trim() && ((q.type === 'multiple-choice' && q.options.some(o => o.trim())) || (q.type !== 'multiple-choice')));
+      if (validQuestions.length === 0) {
+        alert("Please add at least one question");
+        return;
+      }
     }
 
     setLoading(true);
@@ -183,7 +185,9 @@ export default function VendorLitePage() {
           vendor_id: selectedVendor,
           pid: surveyForm.pid,
           preScreenerQuestions: preScreenerQuestions.filter(q => q.enabled),
-          questions: validQuestions
+          questions: surveyForm.type === 'internal' ? questions.filter(q => q.text.trim() && ((q.type === 'multiple-choice' && q.options.some(o => o.trim())) || (q.type !== 'multiple-choice'))) : [],
+          type: surveyForm.type,
+          externalLink: surveyForm.type === 'external' ? surveyForm.externalLink : undefined
         }),
       });
 
