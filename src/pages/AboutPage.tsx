@@ -55,6 +55,13 @@ const teamMembers: TeamMember[] = [
     image: '/team/Rohit Shreevastav.png',
     expertise: ['Operations', 'Quality Assurance', 'Scalability'],
   },
+  {
+    name: 'Rahul Chadhary',
+    role: 'Sales Manager',
+    bio: 'Rahul drives our sales strategy and client relationships, helping businesses leverage our research solutions to achieve their growth objectives.',
+    image: '/team/Rahul Chadhary.png',
+    expertise: ['Business Development', 'Client Relations', 'Revenue Growth'],
+  },
 ];
 
 const companyValues: CompanyValue[] = [
