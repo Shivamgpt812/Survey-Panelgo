@@ -287,7 +287,8 @@ export default function VendorLitePage() {
             title: surveyForm.title,
             externalUrl: surveyForm.externalLink,
             questions: extQuestions,
-            vendor: vendorObj
+            vendor: vendorObj,
+            projectId: surveyForm.pid
           })
         });
 
