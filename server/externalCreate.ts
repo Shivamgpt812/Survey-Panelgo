@@ -178,10 +178,9 @@ router.get('/external/data/:token', (req, res) => {
     }
 });
 
-// ---------------------------------------------------------------------------
 // GET /external/redirect/:status
 // ---------------------------------------------------------------------------
-router.get("/external/redirect/:status", (req, res) => {
+router.get("/external/redirect/:status", async (req, res) => {
     try {
         const { status } = req.params;
         const { rid, token, transactionId } = req.query;
@@ -208,6 +207,26 @@ router.get("/external/redirect/:status", (req, res) => {
         if (!redirectUrl) {
             return res.send("Invalid status or redirect configuration missing");
         }
+
+        // --- PUNCH INTO REDIRECT ANALYSIS (Analysis Dashboard) ---
+        const statusCode = status === "complete" ? 1 : status === "terminate" ? 2 : status === "quota" ? 3 : 0;
+        const statusMap: Record<number, string> = { 1: "Completed", 2: "Terminated", 3: "Quota Full" };
+
+        try {
+            const { SurveyRedirectLogs } = await import("./models/SurveyRedirectLogs.js");
+            SurveyRedirectLogs.create({
+                pid: `EXT_${token}`,
+                uid: String(rid),
+                status: statusCode,
+                statusText: statusMap[statusCode] || "Unknown",
+                ipAddress: (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req.socket.remoteAddress,
+                userAgent: req.headers["user-agent"],
+                createdAt: new Date()
+            }).catch(e => console.error("❌ External log background error:", e));
+        } catch (e) {
+            console.error("❌ Problem recording external log:", e);
+        }
+        // ---------------------------------------------------------
 
         const sep = redirectUrl.includes("?") ? "&" : "?";
         const finalUrl = `${redirectUrl}${sep}rid=${rid}&transactionId=${transactionId}`;

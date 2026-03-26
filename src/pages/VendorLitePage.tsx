@@ -398,12 +398,16 @@ export default function VendorLitePage() {
       }
     });
 
-    // FAIL → vendor terminate URL
+    // FAIL → punch in via backend and THEN redirect to vendor
     if (!passed) {
-      console.log("❌ External Prescreener Failed");
-      const terminateBase = extSurvey.vendor?.terminate_url || "/survey-result/terminated";
-      const sep = terminateBase.includes("?") ? "&" : "?";
-      window.location.href = `${terminateBase}${sep}rid=${rid}&transactionId=${transactionId}&status=2`;
+      console.log("❌ External Prescreener Failed (Punching into Analysis)");
+      const token = localStorage.getItem("ext_token") || "";
+      const apiUrl = import.meta.env.PROD
+        ? 'https://survey-panelgo.onrender.com'
+        : 'http://localhost:3000';
+
+      // Hit our backend redirect endpoint which will log the termination and then send them to the vendor
+      window.location.href = `${apiUrl}/external/redirect/terminate?token=${token}&rid=${rid}&transactionId=${transactionId}`;
       return;
     }
 
@@ -479,8 +483,8 @@ export default function VendorLitePage() {
                         // Actually, let's let them click "Next" to be safe.
                       }}
                       className={`w-full text-left px-6 py-4 rounded-2xl border-2 transition-all font-jakarta font-semibold text-lg ${isSelected
-                          ? 'border-violet bg-violet/5 text-violet shadow-md ring-4 ring-violet/10'
-                          : 'border-violet/10 bg-white hover:border-violet/30 text-gray-700'
+                        ? 'border-violet bg-violet/5 text-violet shadow-md ring-4 ring-violet/10'
+                        : 'border-violet/10 bg-white hover:border-violet/30 text-gray-700'
                         }`}
                     >
                       {cleanedOpt}
