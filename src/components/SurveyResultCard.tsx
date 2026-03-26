@@ -23,50 +23,6 @@ export default function SurveyResultCard() {
   const status = params.get("status");
   const ip = params.get("ip");
   const time = params.get("time");
-  const source = params.get("source");
-  const token = params.get("token");
-
-  // 🎯 Redirect logic for External (Vendor Lite) Flow
-  React.useEffect(() => {
-    // ❗ ONLY run for external flow
-    if (source !== "external") return;
-
-    if (!token) {
-      console.warn("External flow detected but token is missing");
-      return;
-    }
-
-    const fetchAndRedirect = async () => {
-      try {
-        const apiUrl = import.meta.env.PROD
-          ? 'https://survey-panelgo.onrender.com'
-          : 'http://localhost:3000';
-
-        const res = await fetch(`${apiUrl}/external/data/${token}`);
-        const data = await res.json();
-
-        if (data.success && data.survey && data.survey.vendor) {
-          const vendor = data.survey.vendor;
-          let redirectUrl = "";
-
-          if (status === "1") redirectUrl = vendor.complete_url;
-          if (status === "2") redirectUrl = vendor.terminate_url;
-          if (status === "3") redirectUrl = vendor.quota_full_url || vendor.quota_url;
-
-          if (redirectUrl) {
-            // Replace placeholders and redirect
-            const sep = redirectUrl.includes("?") ? "&" : "?";
-            const finalRedirect = `${redirectUrl}${sep}rid=${pid}&status=${status}`;
-            window.location.replace(finalRedirect);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to redirect to vendor:", err);
-      }
-    };
-
-    fetchAndRedirect();
-  }, []);
 
   const config = status ? statusConfig[status] : { label: "Result", color: "#7C83FD" };
 

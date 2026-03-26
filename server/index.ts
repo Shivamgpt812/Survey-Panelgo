@@ -47,118 +47,6 @@ app.get('/api/health', (_req, res) => {
   res.send('Backend running');
 });
 
-// ---------- Survey Redirect Tracking ----------
-app.get('/api/redirect', async (req, res) => {
-  console.log("Redirect route hit");
-  try {
-    const { pid, uid, status } = req.query;
-
-    console.log("Redirect HIT:", { pid, uid, status });
-
-    // 🔥 Use dynamic origin or referer to support both netlify and custom domain
-    let redirectBase = (req.headers.origin as string);
-    if (!redirectBase && req.headers.referer) {
-      const ref = req.headers.referer as string;
-      if (ref.includes('surveypanelgo.netlify.app')) redirectBase = "https://surveypanelgo.netlify.app";
-      else if (ref.includes('surveypanelgo.com')) redirectBase = "https://surveypanelgo.com";
-    }
-    if (!redirectBase) redirectBase = "https://surveypanelgo.com";
-
-    if (!uid || !status) {
-      console.error("Missing params:", { pid, uid, status });
-      return res.redirect(`${redirectBase}/error`);
-    }
-
-    // Auto generate PID if not provided
-    const finalPid = pid || "AUTO_" + Date.now();
-    console.log("Final PID:", finalPid);
-
-    // Convert status to number
-    const statusCode = Number(status);
-
-    const statusMap = {
-      1: "Completed",
-      2: "Terminated",
-      3: "Quota Full",
-      4: "Security Terminated"
-    };
-
-    const statusText = statusMap[statusCode] || "Unknown";
-
-    // Save to DB
-    try {
-      await SurveyRedirectLogs.create({
-        pid: finalPid,
-        uid,
-        status: statusCode,
-        statusText,
-        ipAddress: req.headers["x-forwarded-for"] || req.socket.remoteAddress,
-        userAgent: req.headers["user-agent"],
-        createdAt: new Date()
-      });
-
-      console.log("Log saved successfully");
-    } catch (dbError) {
-      console.error("DB SAVE ERROR:", dbError);
-    }
-
-    // 🔥 Use dynamic origin or referer to support both netlify and custom domain
-    let BASE_URL = (req.headers.origin as string);
-    if (!BASE_URL && req.headers.referer) {
-      const ref = req.headers.referer as string;
-      if (ref.includes('surveypanelgo.netlify.app')) BASE_URL = "https://surveypanelgo.netlify.app";
-      else if (ref.includes('surveypanelgo.com')) BASE_URL = "https://surveypanelgo.com";
-    }
-    if (!BASE_URL) BASE_URL = "https://surveypanelgo.com";
-
-    // Capture IP address
-    const rawIp = req.headers["x-forwarded-for"] as string;
-    const ip = rawIp
-      ? rawIp.split(",")[0].trim()
-      : req.socket.remoteAddress || "Unknown";
-
-    // Capture timestamp
-    const timestamp = new Date().toISOString();
-
-    // Log redirect data for debugging
-    console.log("Redirect Data:", { finalPid, uid, status, ip, timestamp });
-
-    const redirectPages = {
-      1: `/survey-result/success?pid=${finalPid}&uid=${uid}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      2: `/survey-result/terminated?pid=${finalPid}&uid=${uid}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      3: `/survey-result/quota-full?pid=${finalPid}&uid=${uid}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      4: `/survey-result/security?pid=${finalPid}&uid=${uid}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
-    };
-
-    let finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${uid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
-
-    // 🔥 Override for external (vendor lite) flow
-    const extToken = ridToTokenMap[String(finalPid)];
-    if (extToken || req.query.source === 'external') {
-      finalPath += `&source=external&token=${extToken || ''}`;
-    }
-
-    const finalUrl = `${BASE_URL}${finalPath}`;
-
-    console.log("Redirecting to:", finalUrl);
-
-    return res.redirect(finalUrl);
-  } catch (error) {
-    console.error("REDIRECT CRASH:", error);
-
-    let redirectBase = (req.headers.origin as string);
-    if (!redirectBase && req.headers.referer) {
-      const ref = req.headers.referer as string;
-      if (ref.includes('surveypanelgo.netlify.app')) redirectBase = "https://surveypanelgo.netlify.app";
-      else if (ref.includes('surveypanelgo.com')) redirectBase = "https://surveypanelgo.com";
-    }
-    if (!redirectBase) redirectBase = "https://surveypanelgo.com";
-
-    return res.redirect(`${redirectBase}/error`);
-  }
-});
-
-
 // Vendor-lite routes
 app.use('/vendor-lite', vendorLiteRoutes);
 
@@ -820,7 +708,108 @@ app.get('/api/survey-tracking', requireAdmin, async (_req: any, res) => {
   }
 });
 
-// ---------- Health & Meta ----------
+// ---------- Survey Redirect Tracking ----------
+app.get('/api/redirect', async (req, res) => {
+  try {
+    const { pid, uid, status } = req.query;
+
+    console.log("Redirect HIT:", { pid, uid, status });
+
+    // 🔥 Use dynamic origin or referer to support both netlify and custom domain
+    let redirectBase = (req.headers.origin as string);
+    if (!redirectBase && req.headers.referer) {
+      const ref = req.headers.referer as string;
+      if (ref.includes('surveypanelgo.netlify.app')) redirectBase = "https://surveypanelgo.netlify.app";
+      else if (ref.includes('surveypanelgo.com')) redirectBase = "https://surveypanelgo.com";
+    }
+    if (!redirectBase) redirectBase = "https://surveypanelgo.com";
+
+    if (!uid || !status) {
+      console.error("Missing params:", { pid, uid, status });
+      return res.redirect(`${redirectBase}/error`);
+    }
+
+    // Auto generate PID if not provided
+    const finalPid = pid || "AUTO_" + Date.now();
+    console.log("Final PID:", finalPid);
+
+    // Convert status to number
+    const statusCode = Number(status);
+
+    const statusMap = {
+      1: "Completed",
+      2: "Terminated",
+      3: "Quota Full",
+      4: "Security Terminated"
+    };
+
+    const statusText = statusMap[statusCode] || "Unknown";
+
+    // Save to DB
+    try {
+      await SurveyRedirectLogs.create({
+        pid: finalPid,
+        uid,
+        status: statusCode,
+        statusText,
+        ipAddress: req.headers["x-forwarded-for"] || req.socket.remoteAddress,
+        userAgent: req.headers["user-agent"],
+        createdAt: new Date()
+      });
+
+      console.log("Log saved successfully");
+    } catch (dbError) {
+      console.error("DB SAVE ERROR:", dbError);
+    }
+
+    // 🔥 Use dynamic origin or referer to support both netlify and custom domain
+    let BASE_URL = (req.headers.origin as string);
+    if (!BASE_URL && req.headers.referer) {
+      const ref = req.headers.referer as string;
+      if (ref.includes('surveypanelgo.netlify.app')) BASE_URL = "https://surveypanelgo.netlify.app";
+      else if (ref.includes('surveypanelgo.com')) BASE_URL = "https://surveypanelgo.com";
+    }
+    if (!BASE_URL) BASE_URL = "https://surveypanelgo.com";
+
+    // Capture IP address
+    const rawIp = req.headers["x-forwarded-for"] as string;
+    const ip = rawIp
+      ? rawIp.split(",")[0].trim()
+      : req.socket.remoteAddress || "Unknown";
+
+    // Capture timestamp
+    const timestamp = new Date().toISOString();
+
+    // Log redirect data for debugging
+    console.log("Redirect Data:", { finalPid, uid, status, ip, timestamp });
+
+    const redirectPages = {
+      1: `/survey-result/success?pid=${finalPid}&uid=${uid}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      2: `/survey-result/terminated?pid=${finalPid}&uid=${uid}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      3: `/survey-result/quota-full?pid=${finalPid}&uid=${uid}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      4: `/survey-result/security?pid=${finalPid}&uid=${uid}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
+    };
+
+    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${uid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
+    const finalUrl = `${BASE_URL}${finalPath}`;
+
+    console.log("Redirecting to:", finalUrl);
+
+    return res.redirect(finalUrl);
+  } catch (error) {
+    console.error("REDIRECT CRASH:", error);
+
+    let redirectBase = (req.headers.origin as string);
+    if (!redirectBase && req.headers.referer) {
+      const ref = req.headers.referer as string;
+      if (ref.includes('surveypanelgo.netlify.app')) redirectBase = "https://surveypanelgo.netlify.app";
+      else if (ref.includes('surveypanelgo.com')) redirectBase = "https://surveypanelgo.com";
+    }
+    if (!redirectBase) redirectBase = "https://surveypanelgo.com";
+
+    return res.redirect(`${redirectBase}/error`);
+  }
+});
 
 // ---------- Intercept External Flow Default Redirects ----------
 // When an external provider ignores our custom callback URL and 
