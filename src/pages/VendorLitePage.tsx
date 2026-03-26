@@ -378,11 +378,18 @@ export default function VendorLitePage() {
     }
 
     // PASS → External Survey (redirect directly to configured external URL)
-    let finalUrl = extSurvey.externalUrl;
+    let finalUrl = extSurvey.externalUrl || "";
 
-    // Replace placeholders
-    finalUrl = finalUrl.replace('[#userid#]', rid);
-    finalUrl = finalUrl.replace('[#transaction_id#]', transactionId);
+    // Replace placeholders - prioritizing respondent ID (rid)
+    if (rid) {
+      finalUrl = finalUrl.replace('[#userid#]', rid);
+      finalUrl = finalUrl.replace('[#rid#]', rid);
+    }
+
+    // Replace transaction_id if it exists to complete the substitution
+    if (transactionId) {
+      finalUrl = finalUrl.replace('[#transaction_id#]', transactionId);
+    }
 
     console.log("🚀 Redirecting to External Survey:", finalUrl);
     window.location.href = finalUrl;

@@ -715,14 +715,8 @@ app.get('/api/redirect', async (req, res) => {
 
     console.log("Redirect HIT:", { pid, uid, status });
 
-    // 🔥 Use Netlify domain since it has the updated frontend build
-    let redirectBase = (req.headers.origin as string);
-    if (!redirectBase && req.headers.referer) {
-      const ref = req.headers.referer as string;
-      if (ref.includes('surveypanelgo.netlify.app')) redirectBase = "https://surveypanelgo.netlify.app";
-      else if (ref.includes('surveypanelgo.com')) redirectBase = "https://surveypanelgo.netlify.app";
-    }
-    if (!redirectBase) redirectBase = "https://surveypanelgo.netlify.app";
+    // 🔥 Explicitly use the Netlify domain where the frontend is reliable
+    const redirectBase = "https://surveypanelgo.netlify.app";
 
     if (!uid || !status) {
       console.error("Missing params:", { pid, uid, status });
@@ -762,14 +756,8 @@ app.get('/api/redirect', async (req, res) => {
       console.error("DB SAVE ERROR:", dbError);
     }
 
-    // 🔥 Use Netlify domain since it has the updated frontend build
-    let BASE_URL = (req.headers.origin as string);
-    if (!BASE_URL && req.headers.referer) {
-      const ref = req.headers.referer as string;
-      if (ref.includes('surveypanelgo.netlify.app')) BASE_URL = "https://surveypanelgo.netlify.app";
-      else if (ref.includes('surveypanelgo.com')) BASE_URL = "https://surveypanelgo.netlify.app";
-    }
-    if (!BASE_URL) BASE_URL = "https://surveypanelgo.netlify.app";
+    // 🔥 Consistency Check
+    const BASE_URL = "https://surveypanelgo.netlify.app";
 
     // Capture IP address
     const rawIp = req.headers["x-forwarded-for"] as string;
