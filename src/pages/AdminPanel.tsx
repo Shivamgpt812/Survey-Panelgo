@@ -4,7 +4,7 @@ import { PlayfulCard } from '@/components/ui/playful';
 import { useToast } from '@/hooks/useToast';
 import AdminLayout from '@/components/layout/AdminLayout';
 
-const BASE_URL = "https://survey-panelgo.onrender.com";
+const BASE_URL = window.location.origin;
 
 const AdminPanel: React.FC = () => {
   const { addToast } = useToast();
