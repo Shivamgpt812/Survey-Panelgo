@@ -761,7 +761,31 @@ app.get('/api/redirect', async (req, res) => {
     };
 
     const finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${uid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
-    const finalUrl = `${BASE_URL}${finalPath}`;
+
+    // 🔥 NEW: Check for external survey mapping to enable auto-forwarding to vendors
+    let finalUrl = `${BASE_URL}${finalPath}`;
+    try {
+      const { ridToTokenMap, loadSurveys } = await import('./externalCreate.js');
+      const token = ridToTokenMap[String(uid)];
+      if (token) {
+        const surveys = loadSurveys();
+        const survey = surveys[token];
+        if (survey && survey.vendor) {
+          let vendorUrl = "";
+          if (statusCode === 1) vendorUrl = survey.vendor.complete_url;
+          else if (statusCode === 2) vendorUrl = survey.vendor.terminate_url;
+          else if (statusCode === 3) vendorUrl = survey.vendor.quota_full_url;
+
+          if (vendorUrl) {
+            const sep = vendorUrl.includes("?") ? "&" : "?";
+            const finalVendorUrl = `${vendorUrl}${sep}rid=${uid}&uid=${uid}&pid=${survey.pid || ''}&transactionId=AUTO`;
+            finalUrl += `&redirect=${encodeURIComponent(finalVendorUrl)}`;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("⚠️ Intercept lookup skipped or failed:", e.message);
+    }
 
     console.log("🚀 Redirecting NOW to:", finalUrl);
     return res.redirect(finalUrl);
