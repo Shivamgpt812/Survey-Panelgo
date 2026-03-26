@@ -8,7 +8,7 @@ const BASE_URL = "https://survey-panelgo.onrender.com";
 
 const AdminPanel: React.FC = () => {
   const { addToast } = useToast();
-  
+
   const userData = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
   const uid = userData?.id || userData?._id;
   const [pid, setPid] = useState("");
@@ -16,38 +16,38 @@ const AdminPanel: React.FC = () => {
   const links = [
     {
       label: "Completed",
-      url: `${BASE_URL}/api/redirect?pid=${pid}&uid=${uid}&status=1` 
+      url: `${BASE_URL}/api/redirect?pid=${pid || 'XXXX1'}&uid=${uid || 'xxx21'}&status=1`
     },
     {
       label: "Terminated",
-      url: `${BASE_URL}/api/redirect?pid=${pid}&uid=${uid}&status=2` 
+      url: `${BASE_URL}/api/redirect?pid=${pid || 'XXXX1'}&uid=${uid || 'xxx21'}&status=2`
     },
     {
       label: "Quota Full",
-      url: `${BASE_URL}/api/redirect?pid=${pid}&uid=${uid}&status=3` 
+      url: `${BASE_URL}/api/redirect?pid=${pid || 'XXXX1'}&uid=${uid || 'xxx21'}&status=3`
     },
     {
       label: "Security Terminated",
-      url: `${BASE_URL}/api/redirect?pid=${pid}&uid=${uid}&status=4` 
+      url: `${BASE_URL}/api/redirect?pid=${pid || 'XXXX1'}&uid=${uid || 'xxx21'}&status=4`
     }
   ];
 
   const statusLinks = [
     {
       label: "Completed",
-      url: `${BASE_URL}/api/redirect?status=1&uid=${uid}` 
+      url: `${BASE_URL}/api/redirect?pid=${pid || 'XXXX1'}&uid=${uid || 'xxx21'}&status=1`
     },
     {
       label: "Terminated",
-      url: `${BASE_URL}/api/redirect?status=2&uid=${uid}` 
+      url: `${BASE_URL}/api/redirect?pid=${pid || 'XXXX1'}&uid=${uid || 'xxx21'}&status=2`
     },
     {
       label: "Quota Full",
-      url: `${BASE_URL}/api/redirect?status=3&uid=${uid}` 
+      url: `${BASE_URL}/api/redirect?pid=${pid || 'XXXX1'}&uid=${uid || 'xxx21'}&status=3`
     },
     {
       label: "Security",
-      url: `${BASE_URL}/api/redirect?status=4&uid=${uid}` 
+      url: `${BASE_URL}/api/redirect?pid=${pid || 'XXXX1'}&uid=${uid || 'xxx21'}&status=4`
     }
   ];
 
@@ -71,8 +71,8 @@ const AdminPanel: React.FC = () => {
   };
 
   return (
-    <AdminLayout 
-      title="Admin Panel" 
+    <AdminLayout
+      title="Admin Panel"
       subtitle="Generate redirect links for surveys"
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
