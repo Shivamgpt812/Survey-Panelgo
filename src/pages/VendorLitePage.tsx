@@ -85,7 +85,13 @@ export default function VendorLitePage() {
     externalLink: ''
   });
 
-  const [extQuestions, setExtQuestions] = useState([{ text: "", correctAnswer: "" }]);
+  const [extQuestions, setExtQuestions] = useState<any[]>([{
+    text: "",
+    type: "text",
+    options: "",
+    operator: "==",
+    correctAnswer: ""
+  }]);
 
   const [preScreenerQuestions, setPreScreenerQuestions] = useState([
     {
@@ -304,7 +310,13 @@ export default function VendorLitePage() {
             type: 'internal',
             externalLink: ''
           });
-          setExtQuestions([{ text: "", correctAnswer: "" }]);
+          setExtQuestions([{
+            text: "",
+            type: "text",
+            options: "",
+            operator: "==",
+            correctAnswer: ""
+          }]);
           setShowCreateSurvey(false);
         } else {
           alert('Error: ' + (data.message || 'Server error'));
@@ -363,8 +375,26 @@ export default function VendorLitePage() {
     // PART 5: PRESCREENER VALIDATION
     let passed = true;
     (extSurvey.questions || []).forEach((q: any, i: number) => {
-      if ((extAnswers[`q_${i}`] || '').trim() !== (q.correctAnswer || '').trim()) {
-        passed = false;
+      const answer = (extAnswers[`q_${i}`] || '').trim();
+      const target = (q.correctAnswer || '').trim();
+
+      if (q.type === 'age') {
+        const numAns = parseInt(answer);
+        const numTarget = parseInt(target);
+        if (isNaN(numAns) || isNaN(numTarget)) {
+          passed = false;
+        } else {
+          if (q.operator === '>=') { if (!(numAns >= numTarget)) passed = false; }
+          else if (q.operator === '>') { if (!(numAns > numTarget)) passed = false; }
+          else if (q.operator === '<=') { if (!(numAns <= numTarget)) passed = false; }
+          else if (q.operator === '<') { if (!(numAns < numTarget)) passed = false; }
+          else { if (!(numAns === numTarget)) passed = false; }
+        }
+      } else {
+        // Text or Select - case insensitive comparison
+        if (answer.toLowerCase() !== target.toLowerCase()) {
+          passed = false;
+        }
       }
     });
 
@@ -434,15 +464,39 @@ export default function VendorLitePage() {
             <div className="bg-violet/5 p-6 rounded-2xl mb-6">
               <h3 className="text-xl font-bold text-gray-800">{currentQuestion.text}</h3>
             </div>
-            <input
-              type="text"
-              placeholder="Your answer..."
-              value={extAnswers[`q_${extCurrentStep}`] || ''}
-              onChange={(e) => setExtAnswers({ ...extAnswers, [`q_${extCurrentStep}`]: e.target.value })}
-              onKeyPress={(e) => e.key === 'Enter' && (extAnswers[`q_${extCurrentStep}`] || '').trim() && (extCurrentStep < extSurvey.questions.length - 1 ? setExtCurrentStep(extCurrentStep + 1) : handleExtSubmit())}
-              className="w-full px-6 py-4 text-lg border-2 border-violet/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-violet/10 focus:border-violet transition-all bg-white shadow-sm"
-              autoFocus
-            />
+
+            {currentQuestion.type === 'select' ? (
+              <select
+                value={extAnswers[`q_${extCurrentStep}`] || ''}
+                onChange={(e) => setExtAnswers({ ...extAnswers, [`q_${extCurrentStep}`]: e.target.value })}
+                className="w-full px-6 py-4 text-lg border-2 border-violet/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-violet/10 focus:border-violet transition-all bg-white shadow-sm appearance-none"
+              >
+                <option value="">Select an option...</option>
+                {(currentQuestion.options || "").split(',').map((opt: string, idx: number) => (
+                  <option key={idx} value={opt.trim()}>{opt.trim()}</option>
+                ))}
+              </select>
+            ) : currentQuestion.type === 'age' ? (
+              <input
+                type="number"
+                placeholder="Enter age..."
+                value={extAnswers[`q_${extCurrentStep}`] || ''}
+                onChange={(e) => setExtAnswers({ ...extAnswers, [`q_${extCurrentStep}`]: e.target.value })}
+                onKeyPress={(e) => e.key === 'Enter' && (extAnswers[`q_${extCurrentStep}`] || '').trim() && (extCurrentStep < extSurvey.questions.length - 1 ? setExtCurrentStep(extCurrentStep + 1) : handleExtSubmit())}
+                className="w-full px-6 py-4 text-lg border-2 border-violet/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-violet/10 focus:border-violet transition-all bg-white shadow-sm"
+                autoFocus
+              />
+            ) : (
+              <input
+                type="text"
+                placeholder="Your answer..."
+                value={extAnswers[`q_${extCurrentStep}`] || ''}
+                onChange={(e) => setExtAnswers({ ...extAnswers, [`q_${extCurrentStep}`]: e.target.value })}
+                onKeyPress={(e) => e.key === 'Enter' && (extAnswers[`q_${extCurrentStep}`] || '').trim() && (extCurrentStep < extSurvey.questions.length - 1 ? setExtCurrentStep(extCurrentStep + 1) : handleExtSubmit())}
+                className="w-full px-6 py-4 text-lg border-2 border-violet/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-violet/10 focus:border-violet transition-all bg-white shadow-sm"
+                autoFocus
+              />
+            )}
           </div>
 
           <div className="flex justify-between items-center">
@@ -686,6 +740,19 @@ export default function VendorLitePage() {
                               }}
                               className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet"
                             />
+                            <select
+                              value={q.type}
+                              onChange={(e) => {
+                                const updated = [...extQuestions];
+                                updated[i].type = e.target.value;
+                                setExtQuestions(updated);
+                              }}
+                              className="w-32 px-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet"
+                            >
+                              <option value="text">Text</option>
+                              <option value="select">Select</option>
+                              <option value="age">Age/Num</option>
+                            </select>
                             {extQuestions.length > 1 && (
                               <button
                                 type="button"
@@ -696,10 +763,50 @@ export default function VendorLitePage() {
                               </button>
                             )}
                           </div>
+
+                          {q.type === 'select' && (
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-500 mb-1">Options (comma separated)</label>
+                              <input
+                                placeholder="Male, Female, Other"
+                                value={q.options}
+                                onChange={(e) => {
+                                  const updated = [...extQuestions];
+                                  updated[i].options = e.target.value;
+                                  setExtQuestions(updated);
+                                }}
+                                className="w-full px-4 py-2 border-2 border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
+                              />
+                            </div>
+                          )}
+
+                          {q.type === 'age' && (
+                            <div className="flex gap-2 items-center">
+                              <label className="text-xs font-semibold text-gray-500">Condition:</label>
+                              <select
+                                value={q.operator}
+                                onChange={(e) => {
+                                  const updated = [...extQuestions];
+                                  updated[i].operator = e.target.value;
+                                  setExtQuestions(updated);
+                                }}
+                                className="px-2 py-1 border-2 border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet"
+                              >
+                                <option value="==">Equal to</option>
+                                <option value=">=">Greater or Equal</option>
+                                <option value="<=">Less or Equal</option>
+                                <option value=">">Greater than</option>
+                                <option value="<">Less than</option>
+                              </select>
+                            </div>
+                          )}
+
                           <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1">Correct Answer (Case Sensitive)</label>
+                            <label className="block text-xs font-semibold text-gray-500 mb-1">
+                              {q.type === 'age' ? 'Target Value (Number)' : 'Correct Answer (Case Sensitive)'}
+                            </label>
                             <input
-                              placeholder="Respondent must type this exactly"
+                              placeholder={q.type === 'age' ? "e.g. 18" : "Respondent must type/select this exactly"}
                               value={q.correctAnswer}
                               onChange={(e) => {
                                 const updated = [...extQuestions];
@@ -713,7 +820,13 @@ export default function VendorLitePage() {
                       ))}
                       <button
                         type="button"
-                        onClick={() => setExtQuestions([...extQuestions, { text: "", correctAnswer: "" }])}
+                        onClick={() => setExtQuestions([...extQuestions, {
+                          text: "",
+                          type: "text",
+                          options: "",
+                          operator: "==",
+                          correctAnswer: ""
+                        }])}
                         className="text-violet font-semibold hover:underline"
                       >
                         + Add Question
