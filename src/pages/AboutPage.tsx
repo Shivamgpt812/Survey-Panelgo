@@ -51,7 +51,7 @@ const teamMembers: TeamMember[] = [
     name: 'Rohit Shreevastav',
     role: 'Head of Finance',
     bio: 'With deep financial expertise, Rohit manages the fiscal health of the company, securing the resources needed to drive our expansion and long-term sustainability.',
-    image: '/team/Rohit Shreevastav.HEIC',
+    image: '/team/Rohit Shreevastav.png',
     expertise: ['Financial Strategy', 'Fiscal Management', 'Growth Planning'],
   },
 ];
