@@ -71,25 +71,7 @@ router.post('/external/create', (req, res) => {
         saveSurveys(surveys);
 
         const baseUrl = process.env.BACKEND_URL || 'https://survey-panelgo.onrender.com';
-
-        // Detect parameter names from externalUrl if possible
-        let customParams = "";
-        try {
-            const parsedUrl = new URL(externalUrl);
-            parsedUrl.searchParams.forEach((val, key) => {
-                if (val === "[#userid#]") {
-                    customParams += `&${key}=[USER_ID]`;
-                } else if (val === "[#transaction_id#]") {
-                    customParams += `&${key}=[TRANSACTION_ID]`;
-                }
-            });
-        } catch (e) { }
-
-        // Fallback to defaults if no placeholders detected
-        if (!customParams.includes("[USER_ID]")) customParams += "&rid=[USER_ID]";
-        if (!customParams.includes("[TRANSACTION_ID]")) customParams += "&transactionId=[TRANSACTION_ID]";
-
-        const link = `${baseUrl}/external/router?token=${token}${customParams}`;
+        const link = `${baseUrl}/external/router?token=${token}&rid=[USER_ID]&transactionId=[TRANSACTION_ID]`;
 
         console.log('✅ External Survey Persisted:', { title, token, link });
 
@@ -121,10 +103,10 @@ async function findSurveyWithRetry(token: string, retries = 3, delay = 1000) {
 // ---------------------------------------------------------------------------
 router.get('/external/router', async (req, res) => {
     try {
-        const { token } = req.query;
+        const { rid, transactionId, token } = req.query;
 
-        if (!token) {
-            return res.status(400).send("Missing parameter: token is required");
+        if (!rid || !transactionId || !token) {
+            return res.status(400).send("Missing parameters: rid, transactionId, and token are required");
         }
 
         // Find external survey using token with retry logic
@@ -134,23 +116,10 @@ router.get('/external/router', async (req, res) => {
             return res.status(404).send("Survey not found");
         }
 
-        // Extract effective identification from incoming query params by structure matching
-        let rid = req.query.rid;
-        let transactionId = req.query.transactionId;
-
-        try {
-            const parsedExt = new URL(survey.externalUrl);
-            parsedExt.searchParams.forEach((val, key) => {
-                const incomingVal = req.query[key];
-                if (incomingVal) {
-                    if (val === "[#userid#]") rid = incomingVal;
-                    else if (val === "[#transaction_id#]") transactionId = incomingVal;
-                }
-            });
-        } catch (e) { }
-
-        if (!rid || !transactionId) {
-            return res.status(400).send("Missing identification parameters: rid or transactionId equivalent required");
+        // Check if survey has prescreener questions
+        if (Array.isArray(survey.questions) && survey.questions.length > 0) {
+            const frontendUrl = process.env.FRONTEND_URL || 'https://www.surveypanelgo.com';
+            return res.redirect(`${frontendUrl}/vendor-lite?mode=external&token=${token}&rid=${rid}&transactionId=${transactionId}`);
         }
 
         // Get stored external URL

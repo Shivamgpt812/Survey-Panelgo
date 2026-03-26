@@ -359,7 +359,6 @@ export default function VendorLitePage() {
 
     const rid = localStorage.getItem("ext_rid") || "";
     const transactionId = localStorage.getItem("ext_transactionId") || "";
-    const token = localStorage.getItem("ext_token") || "";
 
     // PART 5: PRESCREENER VALIDATION
     let passed = true;
@@ -378,17 +377,14 @@ export default function VendorLitePage() {
       return;
     }
 
-    // PASS → External Survey with control parameters
-    // 🔥 TEST MODE: Verification for SurveysGenie dynamic PID support
-    let finalUrl = "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjU2&r=39498030&source=17&PID=" + rid;
-    const base = "https://survey-panelgo.onrender.com/external/redirect";
+    // PASS → External Survey (redirect directly to configured external URL)
+    let finalUrl = extSurvey.externalUrl;
 
-    finalUrl +=
-      `&return_url=${encodeURIComponent(`${base}/complete?rid=${rid}&transactionId=${transactionId}`)}` +
-      `&fail_url=${encodeURIComponent(`${base}/terminate?rid=${rid}&transactionId=${transactionId}`)}` +
-      `&overquota_url=${encodeURIComponent(`${base}/quota?rid=${rid}&transactionId=${transactionId}`)}`;
+    // Replace placeholders
+    finalUrl = finalUrl.replace('[#userid#]', rid);
+    finalUrl = finalUrl.replace('[#transaction_id#]', transactionId);
 
-    console.log("🚀 TEST URL:", finalUrl);
+    console.log("🚀 Redirecting to External Survey:", finalUrl);
     window.location.href = finalUrl;
   };
 
