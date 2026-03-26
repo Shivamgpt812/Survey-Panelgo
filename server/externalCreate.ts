@@ -123,7 +123,7 @@ router.get('/external/start', (req, res) => {
         // Store mapping for late interception
         if (userid) ridToTokenMap[String(userid)] = token;
 
-        const redirectUrl = `${frontendBase}/external-survey/start?${params.toString()}`;
+        const redirectUrl = `${frontendBase}/v/${token}?mode=external&rid=${userid || ''}&transactionId=${transactionId || ''}`;
 
         return res.redirect(redirectUrl);
     } catch (err) {
@@ -187,7 +187,7 @@ router.get('/external/router', (req, res) => {
         ridToTokenMap[String(rid)] = String(token);
 
         // For legacy, we still go to vendor-lite but we could redirect to the new page too
-        const redirectUrl = `${frontendBase}/external-survey/start?${params.toString()}`;
+        const redirectUrl = `${frontendBase}/v/${token}?${params.toString()}`;
 
         return res.redirect(redirectUrl);
     } catch (err) {

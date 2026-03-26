@@ -15,7 +15,6 @@ import AdminPanel from '@/pages/AdminPanel';
 import VendorEntryPage from '@/pages/VendorEntryPage';
 import VendorLitePage from '@/pages/VendorLitePage';
 import VendorSurveyPublicPage from '@/pages/VendorSurveyPublicPage';
-import ExternalSurveyStart from '@/pages/ExternalSurveyStart';
 import './App.css';
 
 function AppContent() {
@@ -50,7 +49,6 @@ function AppContent() {
 
         {/* Vendor Lite Routes */}
         <Route path="/vendor-lite" element={<VendorLitePage />} />
-        <Route path="/external-survey/start" element={<ExternalSurveyStart />} />
         <Route path="/vendor-lite/survey/:token" element={<VendorSurveyPublicPage />} />
         <Route path="/v/:token" element={<VendorSurveyPublicPage />} />
 

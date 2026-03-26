@@ -287,8 +287,8 @@ export default function VendorSurveyPublicPage() {
 
     // If it's the new external flow, use the requested redirect logic
     if (survey?.isExternalFlow) {
-      const rid = localStorage.getItem("ext_rid") || "";
-      const transactionId = localStorage.getItem("ext_transactionId") || "";
+      const activeRid = searchParams.get('rid') || localStorage.getItem("ext_rid") || "";
+      const activeTransactionId = searchParams.get('transactionId') || localStorage.getItem("ext_transactionId") || "";
 
       if (!survey.externalUrl) {
         alert("External URL not found");
@@ -296,23 +296,46 @@ export default function VendorSurveyPublicPage() {
         return;
       }
 
-      // PART 5: PRESCREENER VALIDATION
+      const apiUrl = import.meta.env.PROD
+        ? 'https://survey-panelgo.onrender.com'
+        : 'http://localhost:3000';
+
+      // 1. PRESCREENER VALIDATION
       let passed = true;
       if (survey.questions && survey.questions.length > 0) {
         survey.questions.forEach((q: any, i: number) => {
-          const userAnswer = answers[`q_${i}`];
-          if (userAnswer !== q.correctAnswer) {
+          const userAnswer = (answers[`q_${i}`] || '').trim().toLowerCase();
+          const correctAnswer = (q.correctAnswer || '').trim().toLowerCase();
+          if (userAnswer !== correctAnswer) {
             passed = false;
           }
         });
       }
 
-      // FAIL → vendor terminate
+      // FAIL → vendor terminate + Internal Punch
       if (!passed) {
-        console.log("❌ Prescreener failed. Terminating...");
+        console.log("❌ External Prescreener Failed. Punching and Terminating...");
+
+        try {
+          await fetch(`${apiUrl}/api/external/punch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              transactionId: activeTransactionId,
+              userId: activeRid,
+              projectId: survey.projectId,
+              vendorId: survey.vendor?.id || survey.vendor?._id,
+              status: 'terminate',
+              token
+            })
+          });
+        } catch (err) {
+          console.error("Internal Punch Failed:", err);
+        }
+
         const terminateBase = survey.vendor?.terminate_url || "/survey-result/terminated";
         const sep = terminateBase.includes("?") ? "&" : "?";
-        const failUrl = `${terminateBase}${sep}rid=${rid}&transactionId=${transactionId}&status=2`;
+        const failUrl = `${terminateBase}${sep}rid=${activeRid}&transactionId=${activeTransactionId}&status=2`;
 
         // Clean up
         localStorage.removeItem('ext_rid');
@@ -323,16 +346,12 @@ export default function VendorSurveyPublicPage() {
         return;
       }
 
-      // PASS → external survey (TEST MODE ONLY - SurveysGenie)
-      let finalUrl = "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjU2&r=39498030&source=17&PID=" + rid;
-      const base = "https://survey-panelgo.onrender.com/external/redirect";
+      // PASS → success redirect with replacement
+      console.log("✅ External Prescreener Passed. Redirecting...");
 
-      finalUrl +=
-        `&return_url=${encodeURIComponent(`${base}/complete?rid=${rid}&transactionId=${transactionId}`)}` +
-        `&fail_url=${encodeURIComponent(`${base}/terminate?rid=${rid}&transactionId=${transactionId}`)}` +
-        `&overquota_url=${encodeURIComponent(`${base}/quota?rid=${rid}&transactionId=${transactionId}`)}`;
-
-      console.log("🚀 TEST URL (SurveysGenie):", finalUrl);
+      let finalUrl = survey.externalUrl;
+      finalUrl = finalUrl.replace(/\[#transaction_id#\]/g, activeTransactionId);
+      finalUrl = finalUrl.replace(/\[#userid#\]/g, activeRid);
 
       // Clean up local storage before redirecting
       localStorage.removeItem('ext_rid');
