@@ -790,7 +790,14 @@ app.get('/api/redirect', async (req, res) => {
       4: `/survey-result/security?pid=${finalPid}&uid=${uid}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
     };
 
-    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${uid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
+    let finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${uid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
+
+    // 🔥 Override for external (vendor lite) flow
+    const extToken = ridToTokenMap[String(finalPid)];
+    if (extToken || req.query.source === 'external') {
+      finalPath += `&source=external&token=${extToken || ''}`;
+    }
+
     const finalUrl = `${BASE_URL}${finalPath}`;
 
     console.log("Redirecting to:", finalUrl);

@@ -23,6 +23,50 @@ export default function SurveyResultCard() {
   const status = params.get("status");
   const ip = params.get("ip");
   const time = params.get("time");
+  const source = params.get("source");
+  const token = params.get("token");
+
+  // 🎯 Redirect logic for External (Vendor Lite) Flow
+  React.useEffect(() => {
+    // ❗ ONLY run for external flow
+    if (source !== "external") return;
+
+    if (!token) {
+      console.warn("External flow detected but token is missing");
+      return;
+    }
+
+    const fetchAndRedirect = async () => {
+      try {
+        const apiUrl = import.meta.env.PROD
+          ? 'https://survey-panelgo.onrender.com'
+          : 'http://localhost:3000';
+
+        const res = await fetch(`${apiUrl}/external/data/${token}`);
+        const data = await res.json();
+
+        if (data.success && data.survey && data.survey.vendor) {
+          const vendor = data.survey.vendor;
+          let redirectUrl = "";
+
+          if (status === "1") redirectUrl = vendor.complete_url;
+          if (status === "2") redirectUrl = vendor.terminate_url;
+          if (status === "3") redirectUrl = vendor.quota_full_url || vendor.quota_url;
+
+          if (redirectUrl) {
+            // Replace placeholders and redirect
+            const sep = redirectUrl.includes("?") ? "&" : "?";
+            const finalRedirect = `${redirectUrl}${sep}rid=${pid}&status=${status}`;
+            window.location.replace(finalRedirect);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to redirect to vendor:", err);
+      }
+    };
+
+    fetchAndRedirect();
+  }, []);
 
   const config = status ? statusConfig[status] : { label: "Result", color: "#7C83FD" };
 
@@ -110,7 +154,7 @@ export default function SurveyResultCard() {
         {/* Playful Background Elements */}
         <div className="absolute top-10 right-10 w-40 h-40 bg-purple-200 rounded-full opacity-30 blur-3xl"></div>
         <div className="absolute bottom-10 left-10 w-40 h-40 bg-blue-200 rounded-full opacity-30 blur-3xl"></div>
-        
+
         {/* Premium Result Card */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -181,7 +225,7 @@ export default function SurveyResultCard() {
                 At Survey PanelGo, we bring a rigorous approach to quantitative methodologies designed to decode complex markets and empower organizations worldwide.
               </p>
             </div>
-            
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 flex-1">
               <div className="space-y-3">
                 <h3 className="font-outfit font-bold text-navy">Company</h3>
@@ -191,7 +235,7 @@ export default function SurveyResultCard() {
                   <li><a href="#press" className="font-jakarta text-navy-light hover:text-violet transition-colors">Press Kit</a></li>
                 </ul>
               </div>
-              
+
               <div className="space-y-3">
                 <h3 className="font-outfit font-bold text-navy">Services</h3>
                 <ul className="space-y-2">
@@ -200,7 +244,7 @@ export default function SurveyResultCard() {
                   <li><a href="#consulting" className="font-jakarta text-navy-light hover:text-violet transition-colors">Consulting</a></li>
                 </ul>
               </div>
-              
+
               <div className="space-y-3">
                 <h3 className="font-outfit font-bold text-navy">Resources</h3>
                 <ul className="space-y-2">
@@ -209,7 +253,7 @@ export default function SurveyResultCard() {
                   <li><a href="#whitepapers" className="font-jakarta text-navy-light hover:text-violet transition-colors">Whitepapers</a></li>
                 </ul>
               </div>
-              
+
               <div className="space-y-3">
                 <h3 className="font-outfit font-bold text-navy">Legal</h3>
                 <ul className="space-y-2">
@@ -220,7 +264,7 @@ export default function SurveyResultCard() {
               </div>
             </div>
           </div>
-          
+
           <div className="mt-8 pt-8 border-t border-navy/10 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="font-jakarta text-navy-light text-sm">
               © 2024 Survey PanelGo. All rights reserved.

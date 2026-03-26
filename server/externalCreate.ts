@@ -89,9 +89,9 @@ async function findSurveyWithRetry(token: string, retries = 3, delay = 1000) {
     for (let i = 0; i < retries; i++) {
         const surveys = loadSurveys();
         const survey = surveys[token];
-        
+
         if (survey) return survey;
-        
+
         // Wait before retry
         await new Promise(resolve => setTimeout(resolve, delay));
     }
@@ -118,10 +118,14 @@ router.get('/external/router', async (req, res) => {
 
         // Get stored external URL
         let finalUrl = survey.externalUrl;
-        
+
         // Replace placeholders
         finalUrl = finalUrl.replace('[#transaction_id#]', transactionId as string);
         finalUrl = finalUrl.replace('[#userid#]', rid as string);
+
+        // Append source=external flag
+        const sep_char = finalUrl.includes('?') ? '&' : '?';
+        finalUrl = `${finalUrl}${sep_char}source=external`;
 
         // Store mapping for late interception (if panel redirects to default routes)
         ridToTokenMap[String(rid)] = String(token);
