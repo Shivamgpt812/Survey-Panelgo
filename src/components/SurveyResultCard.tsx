@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Menu, X } from 'lucide-react';
@@ -16,7 +16,6 @@ export default function SurveyResultCard() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [countdown, setCountdown] = useState(3);
   const params = new URLSearchParams(location.search);
 
   const pid = params.get("pid");
@@ -24,23 +23,6 @@ export default function SurveyResultCard() {
   const status = params.get("status");
   const ip = params.get("ip");
   const time = params.get("time");
-  const vendorRedirect = params.get("vendor_redirect");
-
-  useEffect(() => {
-    if (vendorRedirect) {
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            window.location.href = vendorRedirect;
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [vendorRedirect]);
 
   const config = status ? statusConfig[status] : { label: "Result", color: "#7C83FD" };
 
@@ -151,19 +133,6 @@ export default function SurveyResultCard() {
               {config.label}
             </h1>
           </div>
-
-          {/* Redirect Hint */}
-          {vendorRedirect && (
-            <div className="bg-violet/10 border border-violet/20 p-4 rounded-xl mb-6 flex items-center justify-between">
-              <span className="text-navy font-medium">Redirecting you to provider in {countdown}...</span>
-              <button
-                onClick={() => window.location.href = vendorRedirect}
-                className="text-violet font-bold hover:underline"
-              >
-                Go Now →
-              </button>
-            </div>
-          )}
 
           {/* Data Grid */}
           <div className="flex flex-col md:flex-row md:flex-wrap gap-4 text-sm md:text-base">

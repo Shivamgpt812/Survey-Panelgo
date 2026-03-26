@@ -205,33 +205,16 @@ router.get("/external/redirect/:status", (req, res) => {
             redirectUrl = survey.vendor.quota_full_url;
         }
 
-        const sep = redirectUrl.includes("?") ? "&" : "?";
-        const vendorUrl = `${redirectUrl}${sep}rid=${rid}&transactionId=${transactionId}`;
-
-        console.log("✅ REDIRECTING TO OUR SUCCESS PAGE FIRST:", vendorUrl);
-
-        // Dynamic frontend URL detection
-        const host = req.get('host') || "";
-        const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-        let frontendBase = process.env.FRONTEND_URL;
-
-        if (!frontendBase) {
-            if (host.includes('localhost') || host.includes('127.0.0.1')) {
-                frontendBase = "http://localhost:5173";
-            } else {
-                frontendBase = "https://surveypanelgo.netlify.app";
-            }
+        if (!redirectUrl) {
+            return res.send("Invalid status or redirect configuration missing");
         }
 
-        // Map status to our frontend result paths
-        let frontendPath = "/survey-result/success";
-        let statusCode = 1;
-        if (status === "terminate") { frontendPath = "/survey-result/terminated"; statusCode = 2; }
-        else if (status === "quota") { frontendPath = "/survey-result/quota-full"; statusCode = 3; }
+        const sep = redirectUrl.includes("?") ? "&" : "?";
+        const finalUrl = `${redirectUrl}${sep}rid=${rid}&transactionId=${transactionId}`;
 
-        const finalRedirect = `${frontendBase}${frontendPath}?status=${statusCode}&uid=${rid}&pid=${transactionId}&vendor_redirect=${encodeURIComponent(vendorUrl)}`;
+        console.log("✅ FINAL EXTERNAL REDIRECT TO VENDOR:", finalUrl);
 
-        res.redirect(finalRedirect);
+        res.redirect(finalUrl);
 
     } catch (err) {
         console.error("Return Error:", err);
