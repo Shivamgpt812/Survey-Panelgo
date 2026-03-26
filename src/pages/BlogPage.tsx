@@ -20,6 +20,7 @@ import {
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import Footer from '@/components/layout/Footer';
 
 interface BlogPost {
   id: string;
@@ -145,7 +146,7 @@ const BlogPage: React.FC = () => {
   const filteredPosts = blogPosts.filter(post => {
     const matchesCategory = selectedCategory === 'All' || post.category === selectedCategory;
     const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         post.excerpt.toLowerCase().includes(searchTerm.toLowerCase());
+      post.excerpt.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
@@ -220,7 +221,7 @@ const BlogPage: React.FC = () => {
             </h1>
 
             <p className="font-jakarta text-xl text-navy-light max-w-3xl mx-auto mb-8">
-              Stay updated with the latest trends, methodologies, and insights in market research. 
+              Stay updated with the latest trends, methodologies, and insights in market research.
               Our experts share valuable knowledge to help you make data-driven decisions.
             </p>
 
@@ -244,11 +245,10 @@ const BlogPage: React.FC = () => {
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category)}
-                  className={`px-6 py-2 rounded-full border-2 transition-all font-jakarta font-medium ${
-                    selectedCategory === category
+                  className={`px-6 py-2 rounded-full border-2 transition-all font-jakarta font-medium ${selectedCategory === category
                       ? 'bg-navy text-white border-navy'
                       : 'bg-white text-navy border-navy/30 hover:border-navy hover:shadow-hard-sm'
-                  }`}
+                    }`}
                 >
                   {category}
                 </button>
@@ -390,6 +390,7 @@ const BlogPage: React.FC = () => {
           </div>
         </div>
       </section>
+      <Footer />
     </div>
   );
 };

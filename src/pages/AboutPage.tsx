@@ -16,6 +16,7 @@ import {
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import Footer from '@/components/layout/Footer';
 
 interface TeamMember {
   name: string;
@@ -370,6 +371,7 @@ const AboutPage: React.FC = () => {
           </div>
         </div>
       </section>
+      <Footer />
     </div>
   );
 };

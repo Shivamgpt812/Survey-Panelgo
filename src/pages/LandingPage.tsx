@@ -32,6 +32,7 @@ import {
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, FloatingIcons, IconCircle } from '@/components/decorations';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import Footer from '@/components/layout/Footer';
 import { useToast } from '@/hooks/useToast';
 
 // Hero tabs data from Survey PanelGo with corresponding images
@@ -173,7 +174,7 @@ const useCountUp = (target: number, duration: number = 2000, start: boolean = tr
 
   useEffect(() => {
     if (!start) return;
-    
+
     const startTime = Date.now();
 
     const updateCount = () => {
@@ -212,7 +213,7 @@ const useCustomCursor = () => {
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
       }
-      
+
       rafRef.current = requestAnimationFrame(() => {
         setPosition({ x: e.clientX, y: e.clientY });
       });
@@ -562,28 +563,26 @@ const LandingPage: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => handleTabClick(index)}
-                  className={`px-6 py-3 rounded-2xl border-2 transition-all duration-300 font-outfit font-semibold ${
-                    activeTab === index
+                  className={`px-6 py-3 rounded-2xl border-2 transition-all duration-300 font-outfit font-semibold ${activeTab === index
                       ? 'bg-navy text-white border-navy shadow-hard scale-105'
                       : 'bg-white text-navy border-navy/30 hover:border-navy hover:shadow-hard-sm'
-                  } cursor-pointer`}
+                    } cursor-pointer`}
                 >
                   {tab.title}
                 </button>
               ))}
             </div>
-            
+
             {/* Progress dots */}
             <div className="flex gap-2">
               {heroTabs.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => handleTabClick(index)}
-                  className={`w-2 h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                    activeTab === index
+                  className={`w-2 h-2 rounded-full transition-all duration-300 cursor-pointer ${activeTab === index
                       ? 'bg-navy w-8'
                       : 'bg-navy/30 hover:bg-navy/50'
-                  }`}
+                    }`}
                   aria-label={`Go to ${heroTabs[index].title} tab`}
                 />
               ))}
@@ -744,9 +743,8 @@ const LandingPage: React.FC = () => {
             {stats.map((stat, index) => (
               <div
                 key={stat.label}
-                className={`opacity-0 translate-y-8 ${
-                  statsVisible ? 'animate-fadeSlideUp' : ''
-                }`}
+                className={`opacity-0 translate-y-8 ${statsVisible ? 'animate-fadeSlideUp' : ''
+                  }`}
                 style={{ animationDelay: `${index * 150}ms`, animationFillMode: 'forwards' }}
               >
                 <PlayfulCard variant="static" className="p-8 text-center bg-white/90 hover:shadow-hard transition-all cursor-pointer group h-full">
@@ -777,9 +775,9 @@ const LandingPage: React.FC = () => {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {services.map((service) => (
-              <PlayfulCard 
-                key={service.title} 
-                className="p-6 text-center h-full group hover:shadow-hard transition-all cursor-pointer" 
+              <PlayfulCard
+                key={service.title}
+                className="p-6 text-center h-full group hover:shadow-hard transition-all cursor-pointer"
                 onClick={() => navigate(`/services/${service.id}`)}
               >
                 <div className="flex justify-center mb-6">
@@ -952,7 +950,7 @@ const LandingPage: React.FC = () => {
             ))}
           </div>
 
-          </div>
+        </div>
       </section>
 
       {/* Global Panelists */}
@@ -1076,7 +1074,7 @@ const LandingPage: React.FC = () => {
                 className="flex-shrink-0 flex items-center justify-center h-24 sm:h-32 px-8 sm:px-14 py-5 sm:py-7 rounded-2xl border-2 border-navy bg-white shadow-hard-sm hover:shadow-hard hover:scale-105 transition-all group"
                 style={{ borderColor: client.color }}
               >
-                <span 
+                <span
                   className="font-outfit font-bold text-xl sm:text-2xl text-navy group-hover:scale-105 transition-transform whitespace-nowrap"
                   style={{ color: client.color }}
                 >
@@ -1209,93 +1207,7 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* Footer + credits */}
-      <footer className="relative z-10 px-4 sm:px-6 lg:px-8 pt-12 pb-10 border-t-2 border-navy/10 bg-white/80 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex flex-col lg:flex-row gap-10 lg:gap-16 items-start justify-between">
-            <div className="space-y-4 max-w-md">
-              <BrandLogo size="lg" />
-              <p className="font-jakarta text-navy-light text-sm leading-relaxed">
-                Survey Panel Go connects curious people with brands that want to listen—earn rewards for sharing your honest
-                take.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-8 text-sm">
-              <div>
-                <p className="font-outfit font-bold text-navy mb-2">Explore</p>
-                <ul className="space-y-2 font-jakarta text-navy-light">
-                  <li>
-                    <a href="#features" className="hover:text-violet transition-colors">
-                      How it works
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#topics" className="hover:text-violet transition-colors">
-                      Topics
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#partners" className="hover:text-violet transition-colors">
-                      Associations
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#contact" className="hover:text-violet transition-colors">
-                      Contact
-                    </a>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <p className="font-outfit font-bold text-navy mb-2">Account</p>
-                <ul className="space-y-2 font-jakarta text-navy-light">
-                  <li>
-                    <button type="button" onClick={() => navigate('/auth')} className="hover:text-violet transition-colors text-left">
-                      Sign in
-                    </button>
-                  </li>
-                  <li>
-                    <button type="button" onClick={() => navigate('/auth')} className="hover:text-violet transition-colors text-left">
-                      Join Our Panel
-                    </button>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-12 pt-8 border-t-2 border-navy/10 space-y-6">
-            <div className="rounded-2xl border-2 border-navy bg-periwinkle/50 px-5 py-5 sm:px-8 sm:py-6">
-              <p className="font-outfit font-bold text-navy text-sm uppercase tracking-wide mb-3">Credits</p>
-              <p className="font-jakarta text-navy text-sm sm:text-base">
-                <span className="text-navy-light">Owner:</span>{' '}
-                <span className="font-semibold">Rohit Singh</span>
-              </p>
-              <p className="font-jakarta text-navy text-sm sm:text-base mt-2">
-                <span className="text-navy-light">Website created by</span>{' '}
-                <a
-                  href="https://shivamweb.in/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-violet underline decoration-2 underline-offset-2 hover:opacity-90"
-                >
-                  ShivamWeb
-                </a>
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-              <p className="font-jakarta text-sm text-navy-light">
-                © {new Date().getFullYear()} Survey Panel Go. All rights reserved.
-              </p>
-              <div className="flex items-center gap-6">
-                <span className="font-jakarta text-sm text-navy-light">Privacy</span>
-                <span className="font-jakarta text-sm text-navy-light">Terms</span>
-                <span className="font-jakarta text-sm text-navy-light">Contact</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

@@ -25,6 +25,7 @@ import {
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import Footer from '@/components/layout/Footer';
 
 interface ServiceDetail {
   id: string;
@@ -428,7 +429,7 @@ const ServiceDetailPage: React.FC = () => {
   return (
     <div className={`relative min-h-screen w-full overflow-hidden bg-gradient-to-br ${service.bgGradient}`}>
       <DotGrid className="fixed inset-0" />
-      
+
       {/* Unique decorative elements for each service */}
       <DecorativeBlob variant={service.variant} size="lg" className="left-[10%] top-[15%] opacity-60" />
       <DecorativeBlob variant={service.variant === 'pink' ? 'yellow' : 'pink'} size="md" className="right-[15%] top-[20%] opacity-60" />
@@ -490,15 +491,15 @@ const ServiceDetailPage: React.FC = () => {
                 <service.icon className="w-12 h-12" />
               </IconCircle>
             </div>
-            
+
             <h1 className={`font-outfit font-extrabold text-4xl sm:text-5xl lg:text-6xl text-navy mb-4 leading-[1.1]`}>
               {service.title}
             </h1>
-            
+
             <p className={`font-outfit font-semibold text-2xl ${service.accentColor} mb-6`}>
               {service.tagline}
             </p>
-            
+
             <p className="font-jakarta text-xl text-navy-light max-w-3xl mx-auto mb-8">
               {service.description}
             </p>
@@ -674,11 +675,11 @@ const ServiceDetailPage: React.FC = () => {
                 <MessageSquare className="w-8 h-8" />
               </IconCircle>
             </div>
-            
+
             <h2 className={`font-outfit font-bold text-3xl text-navy mb-4`}>
               Ready to Get Started?
             </h2>
-            
+
             <p className="font-jakarta text-lg text-navy-light max-w-2xl mx-auto mb-8">
               Let's discuss how our {service.title.toLowerCase()} can help you achieve your business goals.
             </p>
@@ -718,6 +719,7 @@ const ServiceDetailPage: React.FC = () => {
           </PlayfulCard>
         </div>
       </section>
+      <Footer />
     </div>
   );
 };

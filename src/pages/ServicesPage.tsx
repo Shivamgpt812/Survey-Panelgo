@@ -19,6 +19,7 @@ import {
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import Footer from '@/components/layout/Footer';
 
 interface ServiceItem {
   icon: React.ComponentType<any>;
@@ -198,7 +199,7 @@ const ServicesPage: React.FC = () => {
             </h1>
 
             <p className="font-jakarta text-xl text-navy-light max-w-3xl mx-auto mb-8">
-              We deliver comprehensive research solutions that transform data into actionable insights, 
+              We deliver comprehensive research solutions that transform data into actionable insights,
               helping businesses make informed decisions with confidence.
             </p>
 
@@ -226,10 +227,10 @@ const ServicesPage: React.FC = () => {
               <PlayfulCard key={stat.label} variant="static" className="p-6 text-center bg-white/90 hover:shadow-hard transition-all">
                 <div className="flex justify-center mb-4">
                   <IconCircle variant={index === 0 ? 'yellow' : index === 1 ? 'pink' : index === 2 ? 'green' : 'lavender'} size="lg">
-                    {index === 0 ? <TrendingUp className="w-6 h-6" /> : 
-                     index === 1 ? <Users className="w-6 h-6" /> : 
-                     index === 2 ? <Target className="w-6 h-6" /> : 
-                     <Award className="w-6 h-6" />}
+                    {index === 0 ? <TrendingUp className="w-6 h-6" /> :
+                      index === 1 ? <Users className="w-6 h-6" /> :
+                        index === 2 ? <Target className="w-6 h-6" /> :
+                          <Award className="w-6 h-6" />}
                   </IconCircle>
                 </div>
                 <p className="font-outfit font-extrabold text-3xl text-violet mb-2">
@@ -318,6 +319,7 @@ const ServicesPage: React.FC = () => {
           </div>
         </div>
       </section>
+      <Footer />
     </div>
   );
 };

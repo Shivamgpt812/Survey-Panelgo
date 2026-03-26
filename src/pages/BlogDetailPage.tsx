@@ -18,6 +18,7 @@ import {
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import Footer from '@/components/layout/Footer';
 
 interface BlogPost {
   id: string;
@@ -1190,13 +1191,13 @@ Remember that metrics are only valuable when they lead to action. The ultimate g
 const BlogDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-  
+
   const blogPost = blogPosts.find(post => post.id === id);
-  
+
   if (!blogPost) {
     return (
       <div className="relative min-h-screen w-full overflow-hidden bg-periwinkle">
@@ -1292,10 +1293,10 @@ const BlogDetailPage: React.FC = () => {
               <span className="font-jakarta font-medium text-violet">{blogPost.category}</span>
               <span className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
-                {new Date(blogPost.date).toLocaleDateString('en-US', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
+                {new Date(blogPost.date).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
                 })}
               </span>
               <span className="flex items-center gap-1">
@@ -1327,7 +1328,7 @@ const BlogDetailPage: React.FC = () => {
                   <p className="font-jakarta text-sm text-navy-light">Research Expert</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-6 text-sm text-navy-light">
                 <span className="flex items-center gap-1">
                   <Eye className="w-4 h-4" />
@@ -1359,9 +1360,9 @@ const BlogDetailPage: React.FC = () => {
 
           {/* Article Content */}
           <div className="prose prose-lg max-w-none mb-12">
-            <div 
+            <div
               className="font-jakarta text-navy leading-relaxed space-y-6"
-              dangerouslySetInnerHTML={{ 
+              dangerouslySetInnerHTML={{
                 __html: blogPost.content
                   .replace(/^# /gm, '<h1 class="font-outfit font-bold text-3xl text-navy mb-6">')
                   .replace(/^## /gm, '<h2 class="font-outfit font-bold text-2xl text-navy mb-4 mt-8">')
@@ -1401,7 +1402,7 @@ const BlogDetailPage: React.FC = () => {
                 {blogPost.relatedPosts.map((post) => {
                   const fullPost = blogPosts.find(p => p.id === post.id);
                   return (
-                    <PlayfulCard 
+                    <PlayfulCard
                       key={post.id}
                       className="overflow-hidden bg-white/90 hover:shadow-hard transition-all cursor-pointer group"
                       onClick={() => navigate(`/blog/${post.id}`)}
@@ -1458,6 +1459,7 @@ const BlogDetailPage: React.FC = () => {
           </div>
         </div>
       </article>
+      <Footer />
     </div>
   );
 };

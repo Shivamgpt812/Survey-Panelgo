@@ -19,6 +19,7 @@ import {
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import Footer from '@/components/layout/Footer';
 
 interface CountryData {
   country: string;
@@ -522,15 +523,15 @@ const countryData: Record<string, CountryData> = {
 const CountryDetailPage: React.FC = () => {
   const { country } = useParams<{ country: string }>();
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-  
+
   // Add debugging and robust key matching
   console.log('Country parameter from URL:', country);
   console.log('Available country keys:', Object.keys(countryData));
-  
+
   // Try multiple key formats
   let countryInfo = countryData[country];
   if (!countryInfo) {
@@ -686,8 +687,8 @@ const CountryDetailPage: React.FC = () => {
                         <span className="font-outfit font-bold text-violet">{region.count}</span>
                       </div>
                       <div className="w-full bg-navy/10 rounded-full h-2">
-                        <div 
-                          className="h-2 bg-gradient-to-r from-violet to-pink rounded-full" 
+                        <div
+                          className="h-2 bg-gradient-to-r from-violet to-pink rounded-full"
                           style={{ width: `${region.percentage}%` }}
                         />
                       </div>
@@ -739,7 +740,7 @@ const CountryDetailPage: React.FC = () => {
               </p>
               <p className="font-jakarta text-sm text-navy-light font-medium">Total Panelists</p>
             </PlayfulCard>
-            
+
             <PlayfulCard variant="static" className="p-6 text-center bg-white/90 hover:shadow-hard transition-all">
               <div className="flex justify-center mb-4">
                 <IconCircle variant="yellow" size="lg">
@@ -751,7 +752,7 @@ const CountryDetailPage: React.FC = () => {
               </p>
               <p className="font-jakarta text-sm text-navy-light font-medium">Avg Surveys/Month</p>
             </PlayfulCard>
-            
+
             <PlayfulCard variant="static" className="p-6 text-center bg-white/90 hover:shadow-hard transition-all">
               <div className="flex justify-center mb-4">
                 <IconCircle variant="green" size="lg">
@@ -763,7 +764,7 @@ const CountryDetailPage: React.FC = () => {
               </p>
               <p className="font-jakarta text-sm text-navy-light font-medium">Completion Rate</p>
             </PlayfulCard>
-            
+
             <PlayfulCard variant="static" className="p-6 text-center bg-white/90 hover:shadow-hard transition-all">
               <div className="flex justify-center mb-4">
                 <IconCircle variant="lavender" size="lg">
@@ -791,8 +792,8 @@ const CountryDetailPage: React.FC = () => {
                     <span className="font-jakarta text-sm text-navy">{group.range}</span>
                     <div className="flex items-center gap-2">
                       <div className="w-24 bg-navy/10 rounded-full h-2">
-                        <div 
-                          className="h-2 bg-violet rounded-full" 
+                        <div
+                          className="h-2 bg-violet rounded-full"
                           style={{ width: `${group.percentage}%` }}
                         />
                       </div>
@@ -812,8 +813,8 @@ const CountryDetailPage: React.FC = () => {
                     <span className="font-jakarta text-sm text-navy">{group.type}</span>
                     <div className="flex items-center gap-2">
                       <div className="w-24 bg-navy/10 rounded-full h-2">
-                        <div 
-                          className="h-2 bg-violet rounded-full" 
+                        <div
+                          className="h-2 bg-violet rounded-full"
                           style={{ width: `${group.percentage}%` }}
                         />
                       </div>
@@ -954,7 +955,7 @@ const CountryDetailPage: React.FC = () => {
                 Join Our {countryInfo.country} Panel
               </h2>
               <p className="font-jakarta text-lg text-navy-light max-w-2xl mx-auto mb-8">
-                Become part of our diverse and engaged panelist community in {countryInfo.country}. 
+                Become part of our diverse and engaged panelist community in {countryInfo.country}.
                 Share your opinions and earn rewards while shaping the future of products and services.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -977,6 +978,7 @@ const CountryDetailPage: React.FC = () => {
           </div>
         </div>
       </section>
+      <Footer />
     </div>
   );
 };
