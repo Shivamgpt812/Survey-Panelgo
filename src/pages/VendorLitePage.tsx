@@ -362,41 +362,64 @@ export default function VendorLitePage() {
   /**
    * Respondent Handle Submit (External Flow)
    */
-  const handleExtSubmit = () => {
+  const handleExtSubmit = async () => {
     if (!extSurvey) return;
 
     const rid = localStorage.getItem("ext_rid") || "";
     const transactionId = localStorage.getItem("ext_transactionId") || "";
     const token = localStorage.getItem("ext_token") || "";
 
-    // PART 5: PRESCREENER VALIDATION
+    const apiUrl = import.meta.env.PROD
+      ? 'https://survey-panelgo.onrender.com'
+      : 'http://localhost:3000';
+
+    // 1. PRESCREENER VALIDATION
     let passed = true;
     (extSurvey.questions || []).forEach((q: any, i: number) => {
-      if ((extAnswers[`q_${i}`] || '').trim() !== (q.correctAnswer || '').trim()) {
+      const userAnswer = (extAnswers[`q_${i}`] || '').trim().toLowerCase();
+      const correctAnswer = (q.correctAnswer || '').trim().toLowerCase();
+      if (userAnswer !== correctAnswer) {
         passed = false;
       }
     });
 
     // FAIL → vendor terminate URL
     if (!passed) {
-      console.log("❌ External Prescreener Failed");
+      console.log("❌ External Prescreener Failed. Punching and Terminating...");
+
+      try {
+        await fetch(`${apiUrl}/api/external/punch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            transactionId,
+            userId: rid,
+            projectId: extSurvey.projectId,
+            vendorId: extSurvey.vendor?.id || extSurvey.vendor?._id,
+            status: 'terminate',
+            token
+          })
+        });
+      } catch (err) {
+        console.error("Internal Punch Failed:", err);
+      }
+
       const terminateBase = extSurvey.vendor?.terminate_url || "/survey-result/terminated";
       const sep = terminateBase.includes("?") ? "&" : "?";
       window.location.href = `${terminateBase}${sep}rid=${rid}&transactionId=${transactionId}&status=2`;
       return;
     }
 
-    // PASS → External Survey with control parameters
-    // 🔥 TEST MODE: Verification for SurveysGenie dynamic PID support
-    let finalUrl = "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjU2&r=39498030&source=17&PID=" + rid;
-    const base = "https://survey-panelgo.onrender.com/external/redirect";
+    // PASS → External Survey with dynamic replacement
+    console.log("✅ External Prescreener Passed. Redirecting...");
 
-    finalUrl +=
-      `&return_url=${encodeURIComponent(`${base}/complete?rid=${rid}&transactionId=${transactionId}`)}` +
-      `&fail_url=${encodeURIComponent(`${base}/terminate?rid=${rid}&transactionId=${transactionId}`)}` +
-      `&overquota_url=${encodeURIComponent(`${base}/quota?rid=${rid}&transactionId=${transactionId}`)}`;
+    let finalUrl = extSurvey.externalUrl || "";
 
-    console.log("🚀 TEST URL:", finalUrl);
+    // Replace placeholders: [#transaction_id#] and [#userid#]
+    finalUrl = finalUrl.replace(/\[#transaction_id#\]/g, transactionId);
+    finalUrl = finalUrl.replace(/\[#userid#\]/g, rid);
+
+    console.log("🚀 FINAL REDIRECT URL:", finalUrl);
     window.location.href = finalUrl;
   };
 

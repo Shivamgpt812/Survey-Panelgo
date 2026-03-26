@@ -123,7 +123,7 @@ router.get('/external/start', (req, res) => {
         // Store mapping for late interception
         if (userid) ridToTokenMap[String(userid)] = token;
 
-        const redirectUrl = `${frontendBase}/v/${token}?mode=external&rid=${userid || ''}&transactionId=${transactionId || ''}`;
+        const redirectUrl = `${frontendBase}/vendor-lite?mode=external&token=${token}&rid=${userid || ''}&transactionId=${transactionId || ''}`;
 
         return res.redirect(redirectUrl);
     } catch (err) {
