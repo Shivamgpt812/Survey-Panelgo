@@ -714,6 +714,7 @@ app.get('/api/redirect', async (req, res) => {
     const { pid, uid, status } = req.query;
 
     console.log("Redirect HIT:", { pid, uid, status });
+    console.log("Current ridToTokenMap:", ridToTokenMap);
 
     // 🔥 Check if this is external flow and redirect to vendor
     if (uid && ridToTokenMap[uid as string]) {
@@ -737,7 +738,12 @@ app.get('/api/redirect', async (req, res) => {
           console.log("✅ EXTERNAL REDIRECT TO VENDOR:", finalUrl);
           return res.redirect(finalUrl);
         }
+      } else {
+        console.log("❌ Survey or vendor config not found for token:", token);
       }
+    } else {
+      console.log("❌ No external flow detected for uid:", uid);
+      console.log("Available uids in map:", Object.keys(ridToTokenMap));
     }
 
     // 🔥 Use dynamic origin or referer to support both netlify and custom domain
@@ -761,7 +767,7 @@ app.get('/api/redirect', async (req, res) => {
     // Convert status to number
     const statusCode = Number(status);
 
-    const statusMap = {
+    const statusMap: Record<number, string> = {
       1: "Completed",
       2: "Terminated",
       3: "Quota Full",

@@ -129,6 +129,8 @@ router.get('/external/router', async (req, res) => {
 
         // Store mapping for late interception (if panel redirects to default routes)
         ridToTokenMap[String(rid)] = String(token);
+        console.log("🔥 MAPPING STORED:", { rid: String(rid), token: String(token) });
+        console.log("Current ridToTokenMap:", ridToTokenMap);
 
         // Immediately redirect to final external URL
         return res.redirect(finalUrl);
