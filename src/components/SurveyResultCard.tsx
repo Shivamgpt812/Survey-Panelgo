@@ -28,6 +28,19 @@ export default function SurveyResultCard() {
 
   const config = status ? statusConfig[status] : { label: "Result", color: "#7C83FD" };
 
+  // Function to parse comma-separated IPs
+  const parseIPs = (ipString: string | null) => {
+    if (!ipString) return { startIp: "N/A", endIp: "N/A" };
+    
+    const ips = ipString.split(',').map(ip => ip.trim());
+    return {
+      startIp: ips[0] || "N/A",
+      endIp: ips[1] || ips[0] || "N/A"
+    };
+  };
+
+  const { startIp, endIp } = parseIPs(ip);
+
   // Auto-redirect logic
   React.useEffect(() => {
     const checkVendorRedirect = async () => {
@@ -219,7 +232,10 @@ export default function SurveyResultCard() {
               <span className="font-semibold">Status:</span> {config.label}
             </div>
             <div className="bg-[#F8FAFF] px-4 py-2 rounded-xl shadow-sm">
-              <span className="font-semibold">IP:</span> {ip || "N/A"}
+              <span className="font-semibold">Start IP:</span> {startIp}
+            </div>
+            <div className="bg-[#F8FAFF] px-4 py-2 rounded-xl shadow-sm">
+              <span className="font-semibold">End IP:</span> {endIp}
             </div>
             <div className="bg-[#F8FAFF] px-4 py-2 rounded-xl shadow-sm">
               <span className="font-semibold">Time:</span>
