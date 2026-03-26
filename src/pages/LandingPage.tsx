@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import emailjs from '@emailjs/browser';
 import {
   Coins,
   ClipboardList,
@@ -405,6 +406,8 @@ const LandingPage: React.FC = () => {
     setTimeout(() => setIsAutoSliding(true), 10000);
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [contactForm, setContactForm] = useState({
     name: '',
     email: '',
@@ -412,16 +415,39 @@ const LandingPage: React.FC = () => {
     query: '',
   });
 
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would send an email or store in DB
-    addToast('Thanks! We have received your message and will get back to you soon.', 'success');
-    setContactForm({
-      name: '',
-      email: '',
-      phone: '',
-      query: '',
-    });
+    setIsSubmitting(true);
+
+    try {
+      const templateParams = {
+        from_name: contactForm.name,
+        from_email: contactForm.email,
+        phone_number: contactForm.phone,
+        message: contactForm.query,
+        to_name: 'Survey Panel Go Team',
+      };
+
+      await emailjs.send(
+        'service_p06p7hf',
+        'template_gu34p8h',
+        templateParams,
+        'eAJLF5uxWtHVtQgGX'
+      );
+
+      addToast('Thanks! We have received your message and will get back to you soon.', 'success');
+      setContactForm({
+        name: '',
+        email: '',
+        phone: '',
+        query: '',
+      });
+    } catch (error) {
+      console.error('EmailJS Error:', error);
+      addToast('Failed to send message. Please try again later or email us directly.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -564,8 +590,8 @@ const LandingPage: React.FC = () => {
                   key={tab.id}
                   onClick={() => handleTabClick(index)}
                   className={`px-6 py-3 rounded-2xl border-2 transition-all duration-300 font-outfit font-semibold ${activeTab === index
-                      ? 'bg-navy text-white border-navy shadow-hard scale-105'
-                      : 'bg-white text-navy border-navy/30 hover:border-navy hover:shadow-hard-sm'
+                    ? 'bg-navy text-white border-navy shadow-hard scale-105'
+                    : 'bg-white text-navy border-navy/30 hover:border-navy hover:shadow-hard-sm'
                     } cursor-pointer`}
                 >
                   {tab.title}
@@ -580,8 +606,8 @@ const LandingPage: React.FC = () => {
                   key={index}
                   onClick={() => handleTabClick(index)}
                   className={`w-2 h-2 rounded-full transition-all duration-300 cursor-pointer ${activeTab === index
-                      ? 'bg-navy w-8'
-                      : 'bg-navy/30 hover:bg-navy/50'
+                    ? 'bg-navy w-8'
+                    : 'bg-navy/30 hover:bg-navy/50'
                     }`}
                   aria-label={`Go to ${heroTabs[index].title} tab`}
                 />
@@ -1174,8 +1200,14 @@ const LandingPage: React.FC = () => {
                   ></textarea>
                 </div>
 
-                <PlayfulButton variant="primary" className="w-full" rightIcon={<Send className="w-5 h-5" />}>
-                  Send Message
+                <PlayfulButton
+                  variant="primary"
+                  className="w-full"
+                  type="submit"
+                  disabled={isSubmitting}
+                  rightIcon={isSubmitting ? null : <Send className="w-5 h-5" />}
+                >
+                  {isSubmitting ? 'Sending...' : 'Send Message'}
                 </PlayfulButton>
               </form>
             </PlayfulCard>
