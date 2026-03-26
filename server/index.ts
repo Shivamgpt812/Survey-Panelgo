@@ -760,11 +760,24 @@ app.get('/api/redirect', async (req, res) => {
     // 🔥 Check for external survey mapping to enable auto-forwarding to vendors
     let vendorRedirectUrl = "";
     try {
-      const { findTokenByRid, loadSurveys } = await import('./externalCreate.js');
-      const token = findTokenByRid(String(uid));
-      if (token) {
+      const { findTokenByUid, loadSurveys } = await import('./externalCreate.js');
+      // First try to find token by UID from database
+      const token = await findTokenByUid(String(uid));
+      
+      // Fallback to old method if database lookup fails
+      const fallbackToken = await (async () => {
+        if (!token) {
+          const { findTokenByRid } = await import('./externalCreate.js');
+          return findTokenByRid(String(uid));
+        }
+        return token;
+      })();
+      
+      const finalToken = token || fallbackToken;
+      
+      if (finalToken) {
         const surveys = loadSurveys();
-        const survey = surveys[token];
+        const survey = surveys[finalToken];
         if (survey && survey.vendor) {
           let vendorUrl = "";
           if (statusCode === 1) vendorUrl = survey.vendor.complete_url;
@@ -774,6 +787,7 @@ app.get('/api/redirect', async (req, res) => {
           if (vendorUrl) {
             const sep = vendorUrl.includes("?") ? "&" : "?";
             vendorRedirectUrl = `${vendorUrl}${sep}rid=${uid}&uid=${uid}&pid=${survey.pid || ''}&transactionId=AUTO`;
+            console.log(`🔥 Found vendor redirect for UID ${uid}: ${vendorRedirectUrl}`);
           }
         }
       }

@@ -42,6 +42,39 @@ const loadAllMappings = () => {
     } catch (e) { return {}; }
 };
 
+/**
+ * Save UID mapping to database
+ */
+export const saveUidMapping = async (uid: string, token: string, pid?: string) => {
+    try {
+        const RespondentMapping = (await import('./models/RespondentMapping.js')).default;
+        await RespondentMapping.findOneAndUpdate(
+            { uid },
+            { uid, token, pid },
+            { upsert: true, new: true }
+        );
+        console.log(`✅ Saved UID mapping: ${uid} -> ${token}`);
+    } catch (e) {
+        console.error("Failed to save UID mapping to database:", e);
+    }
+};
+
+/**
+ * Find token by UID from database
+ */
+export const findTokenByUid = async (uid: string) => {
+    try {
+        const RespondentMapping = (await import('./models/RespondentMapping.js')).default;
+        const mapping = await RespondentMapping.findOne({ uid });
+        if (mapping) {
+            return mapping.token;
+        }
+    } catch (e) {
+        console.error("Failed to find UID mapping in database:", e);
+    }
+    return null;
+};
+
 export const findTokenByRid = (rid: string) => {
     // Check memory first
     if (ridToTokenMap[rid]) return ridToTokenMap[rid];
@@ -186,6 +219,9 @@ router.get('/external/router', async (req, res) => {
         // Store mapping for late interception (if panel redirects to default routes)
         // This is now persisted to disk to survive cold starts
         saveRidToTokenMapping(String(rid), String(token));
+        
+        // Save UID mapping to database for vendor redirect lookup
+        await saveUidMapping(String(rid), String(token), survey.pid);
 
         // Immediately redirect to final external URL
         console.log(`🚀 Redirecting directly to External Survey: ${finalUrl}`);
