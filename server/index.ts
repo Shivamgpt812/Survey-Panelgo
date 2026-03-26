@@ -715,6 +715,31 @@ app.get('/api/redirect', async (req, res) => {
 
     console.log("Redirect HIT:", { pid, uid, status });
 
+    // 🔥 Check if this is external flow and redirect to vendor
+    if (uid && ridToTokenMap[uid]) {
+      console.log("🔥 EXTERNAL FLOW DETECTED - Redirecting to vendor");
+      
+      const token = ridToTokenMap[uid];
+      const surveys = loadSurveys();
+      const survey = surveys[token];
+
+      if (survey && survey.vendor) {
+        let redirectUrl = "";
+
+        if (status === "1") redirectUrl = survey.vendor.complete_url;
+        else if (status === "2") redirectUrl = survey.vendor.terminate_url;
+        else if (status === "3") redirectUrl = survey.vendor.quota_full_url;
+
+        if (redirectUrl) {
+          const sep = redirectUrl.includes("?") ? "&" : "?";
+          const finalUrl = `${redirectUrl}${sep}rid=${uid}&pid=${pid}`;
+          
+          console.log("✅ EXTERNAL REDIRECT TO VENDOR:", finalUrl);
+          return res.redirect(finalUrl);
+        }
+      }
+    }
+
     // 🔥 Use dynamic origin or referer to support both netlify and custom domain
     let redirectBase = (req.headers.origin as string);
     if (!redirectBase && req.headers.referer) {
