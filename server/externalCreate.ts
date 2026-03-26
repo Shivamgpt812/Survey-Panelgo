@@ -93,27 +93,26 @@ router.get('/external/router', (req, res) => {
             return res.status(400).send("Missing parameters: rid, transactionId, and token are required");
         }
 
-        // 🔥 Use dynamic origin or referer to support both netlify and custom domain
-        let frontendBase = (req.headers.origin as string);
-        if (!frontendBase && req.headers.referer) {
-            const ref = req.headers.referer as string;
-            if (ref.includes('surveypanelgo.netlify.app')) frontendBase = "https://surveypanelgo.netlify.app";
-            else if (ref.includes('surveypanelgo.com')) frontendBase = "https://surveypanelgo.com";
-        }
-        if (!frontendBase) frontendBase = "https://surveypanelgo.com";
+        // Find external survey using token
+        const surveys = loadSurveys();
+        const survey = surveys[token as string];
 
-        const params = new URLSearchParams();
-        params.set('mode', 'external');
-        params.set('rid', String(rid));
-        params.set('transactionId', String(transactionId));
-        params.set('token', String(token));
+        if (!survey) {
+            return res.status(404).send("Survey not found");
+        }
+
+        // Get stored external URL
+        let finalUrl = survey.externalUrl;
+        
+        // Replace placeholders
+        finalUrl = finalUrl.replace('[#transaction_id#]', transactionId as string);
+        finalUrl = finalUrl.replace('[#userid#]', rid as string);
 
         // Store mapping for late interception (if panel redirects to default routes)
         ridToTokenMap[String(rid)] = String(token);
 
-        const redirectUrl = `${frontendBase}/vendor-lite?${params.toString()}`;
-
-        return res.redirect(redirectUrl);
+        // Immediately redirect to final external URL
+        return res.redirect(finalUrl);
     } catch (err) {
         console.error('External Router Error:', err);
         return res.status(500).send("Router error");
