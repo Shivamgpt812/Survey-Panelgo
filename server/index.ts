@@ -711,103 +711,9 @@ app.get('/api/survey-tracking', requireAdmin, async (_req: any, res) => {
 // ---------- Survey Redirect Tracking ----------
 app.get('/api/redirect', async (req, res) => {
   try {
-    const { pid, uid, status, source, token } = req.query;
+    const { pid, uid, status } = req.query;
 
-    console.log("Redirect HIT:", { pid, uid, status, source, token });
-    console.log("Current ridToTokenMap:", ridToTokenMap);
-
-    // 🔥 Check if this is external flow and redirect to vendor
-    // Method 1: Check ridToTokenMap (existing logic)
-    if (uid && ridToTokenMap[uid as string]) {
-      console.log("🔥 EXTERNAL FLOW DETECTED (via ridToTokenMap) - Redirecting to vendor");
-      
-      const token = ridToTokenMap[uid as string];
-      const surveys = loadSurveys();
-      const survey = surveys[token];
-
-      if (survey && survey.vendor) {
-        let redirectUrl = "";
-
-        if (status === "1") redirectUrl = survey.vendor.complete_url;
-        else if (status === "2") redirectUrl = survey.vendor.terminate_url;
-        else if (status === "3") redirectUrl = survey.vendor.quota_full_url;
-
-        if (redirectUrl) {
-          const sep = redirectUrl.includes("?") ? "&" : "?";
-          const finalUrl = `${redirectUrl}${sep}rid=${uid}&pid=${pid}`;
-          
-          console.log("✅ EXTERNAL REDIRECT TO VENDOR:", finalUrl);
-          return res.redirect(finalUrl);
-        }
-      } else {
-        console.log("❌ Survey or vendor config not found for token:", token);
-      }
-    }
-    // Method 2: Use token parameter directly (new primary logic)
-    else if (token && source === "external") {
-      console.log("🔥 EXTERNAL FLOW DETECTED (via token parameter) - Redirecting to vendor");
-      
-      const surveys = loadSurveys();
-      const survey = surveys[token as string];
-
-      if (survey && survey.vendor) {
-        let redirectUrl = "";
-
-        if (status === "1") redirectUrl = survey.vendor.complete_url;
-        else if (status === "2") redirectUrl = survey.vendor.terminate_url;
-        else if (status === "3") redirectUrl = survey.vendor.quota_full_url;
-
-        if (redirectUrl) {
-          const sep = redirectUrl.includes("?") ? "&" : "?";
-          const finalUrl = `${redirectUrl}${sep}rid=${uid}&pid=${pid}`;
-          
-          console.log("✅ EXTERNAL REDIRECT TO VENDOR (via token):", finalUrl);
-          return res.redirect(finalUrl);
-        }
-      } else {
-        console.log("❌ Survey or vendor config not found for token:", token);
-      }
-    }
-    // Method 3: Check source=external parameter (fallback logic)
-    else if (source === "external") {
-      console.log("🔥 EXTERNAL FLOW DETECTED (via source parameter) - Attempting vendor redirect");
-      
-      // Try to find token by checking recent external surveys
-      const surveys = loadSurveys();
-      let foundSurvey = null;
-      let foundToken = null;
-      
-      // Look for any external survey that might match this user
-      for (const [token, survey] of Object.entries(surveys)) {
-        const surveyData = survey as any;
-        if (surveyData.vendor && surveyData.externalUrl) {
-          foundSurvey = surveyData;
-          foundToken = token;
-          break;
-        }
-      }
-      
-      if (foundSurvey && foundSurvey.vendor) {
-        let redirectUrl = "";
-
-        if (status === "1") redirectUrl = foundSurvey.vendor.complete_url;
-        else if (status === "2") redirectUrl = foundSurvey.vendor.terminate_url;
-        else if (status === "3") redirectUrl = foundSurvey.vendor.quota_full_url;
-
-        if (redirectUrl) {
-          const sep = redirectUrl.includes("?") ? "&" : "?";
-          const finalUrl = `${redirectUrl}${sep}rid=${uid}&pid=${pid}`;
-          
-          console.log("✅ EXTERNAL REDIRECT TO VENDOR (fallback):", finalUrl);
-          return res.redirect(finalUrl);
-        }
-      } else {
-        console.log("❌ No external survey found for fallback redirect");
-      }
-    } else {
-      console.log("❌ No external flow detected for uid:", uid);
-      console.log("Available uids in map:", Object.keys(ridToTokenMap));
-    }
+    console.log("Redirect HIT:", { pid, uid, status });
 
     // 🔥 Use dynamic origin or referer to support both netlify and custom domain
     let redirectBase = (req.headers.origin as string);
@@ -830,7 +736,7 @@ app.get('/api/redirect', async (req, res) => {
     // Convert status to number
     const statusCode = Number(status);
 
-    const statusMap: Record<number, string> = {
+    const statusMap = {
       1: "Completed",
       2: "Terminated",
       3: "Quota Full",

@@ -118,19 +118,13 @@ router.get('/external/router', async (req, res) => {
 
         // Get stored external URL
         let finalUrl = survey.externalUrl;
-        
+
         // Replace placeholders
         finalUrl = finalUrl.replace('[#transaction_id#]', transactionId as string);
         finalUrl = finalUrl.replace('[#userid#]', rid as string);
-        
-        // Add source=external flag for vendor redirect identification
-        const separator = finalUrl.includes('?') ? '&' : '?';
-        finalUrl += `${separator}source=external&token=${token}`;
 
         // Store mapping for late interception (if panel redirects to default routes)
         ridToTokenMap[String(rid)] = String(token);
-        console.log("🔥 MAPPING STORED:", { rid: String(rid), token: String(token) });
-        console.log("Current ridToTokenMap:", ridToTokenMap);
 
         // Immediately redirect to final external URL
         return res.redirect(finalUrl);

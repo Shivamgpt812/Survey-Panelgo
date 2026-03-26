@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Menu, X } from 'lucide-react';
@@ -23,52 +23,8 @@ export default function SurveyResultCard() {
   const status = params.get("status");
   const ip = params.get("ip");
   const time = params.get("time");
-  const source = params.get("source");
 
   const config = status ? statusConfig[status] : { label: "Result", color: "#7C83FD" };
-
-  // External vendor redirect logic
-  useEffect(() => {
-    // ❗ ONLY run for external flow
-    if (source !== "external") return;
-
-    const token = params.get("token");
-    if (!token) return;
-
-    // Get vendor configuration from stored external survey data
-    const getVendorConfig = async (token: string) => {
-      try {
-        const response = await fetch(`/external/data/${token}`);
-        const data = await response.json();
-        if (data.success && data.survey?.vendor) {
-          return data.survey.vendor;
-        }
-      } catch (error) {
-        console.error('Failed to fetch vendor config:', error);
-      }
-      return null;
-    };
-
-    const redirectExternal = async () => {
-      const vendor = await getVendorConfig(token);
-      if (!vendor) return;
-
-      let redirectUrl = "";
-
-      if (status === "1") redirectUrl = vendor.complete_url;
-      if (status === "2") redirectUrl = vendor.terminate_url;
-      if (status === "3") redirectUrl = vendor.quota_full_url;
-
-      if (redirectUrl) {
-        // Add rid and transactionId to vendor URL
-        const separator = redirectUrl.includes("?") ? "&" : "?";
-        const finalUrl = `${redirectUrl}${separator}rid=${uid}&transactionId=${params.get("transactionId")}`;
-        window.location.replace(finalUrl);
-      }
-    };
-
-    redirectExternal();
-  }, [source, status, uid, params]);
 
   return (
     <>
