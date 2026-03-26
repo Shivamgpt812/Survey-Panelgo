@@ -292,6 +292,7 @@ export default function VendorLitePage() {
           body: JSON.stringify({
             title: surveyForm.title,
             externalUrl: surveyForm.externalLink,
+            pid: surveyForm.pid,
             questions: extQuestions,
             vendor: vendorObj
           })

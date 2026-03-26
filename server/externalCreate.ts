@@ -51,7 +51,7 @@ const saveSurveys = (data: any) => {
 // ---------------------------------------------------------------------------
 router.post('/external/create', (req, res) => {
     try {
-        const { title, externalUrl, questions, vendor } = req.body;
+        const { title, externalUrl, pid, questions, vendor } = req.body;
 
         if (!externalUrl) {
             return res.status(400).json({ success: false, message: 'externalUrl is required' });
@@ -64,6 +64,7 @@ router.post('/external/create', (req, res) => {
         surveys[token] = {
             title: title || 'External Survey',
             externalUrl,
+            pid,
             questions: Array.isArray(questions) ? questions : [],
             vendor
         };
@@ -215,8 +216,8 @@ router.get("/external/redirect/:status", async (req, res) => {
         try {
             const { SurveyRedirectLogs } = await import("./models/SurveyRedirectLogs.js");
             SurveyRedirectLogs.create({
-                pid: `EXT_${token}`,
-                uid: String(rid),
+                pid: survey.pid || `EXT_${token}`,
+                uid: String(rid), // UID now strictly contains the value of RID as requested
                 status: statusCode,
                 statusText: statusMap[statusCode] || "Unknown",
                 ipAddress: (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req.socket.remoteAddress,
