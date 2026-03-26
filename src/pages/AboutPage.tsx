@@ -10,15 +10,8 @@ import {
   Heart,
   Shield,
   Zap,
-  Check,
-  Star,
-  MapPin,
-  Mail,
-  Phone,
-  MessageSquare,
-  TrendingUp,
   Building,
-  Eye,
+  MessageSquare,
 } from 'lucide-react';
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
@@ -75,7 +68,7 @@ const companyValues: CompanyValue[] = [
     icon: Shield,
     title: 'Integrity First',
     description: 'We uphold the highest ethical standards in all our research, ensuring data accuracy and participant privacy.',
-    variant: 'blue' as const,
+    variant: 'lavender' as const,
   },
   {
     icon: Lightbulb,
@@ -110,19 +103,18 @@ const companyValues: CompanyValue[] = [
 ];
 
 const stats = [
-  { value: 15, label: 'Years of Excellence', suffix: '+' },
+  { value: 4, label: 'Years of Excellence', suffix: '+' },
   { value: 300, label: 'Brands Trust Us', suffix: '+' },
   { value: 6, label: 'Global Panellists', suffix: 'M+' },
   { value: 50, label: 'Countries Served', suffix: '+' },
 ];
 
 const milestones = [
-  { year: '2022', title: 'Founded', description: 'Started with a vision to transform market research' },
-  { year: '2012', title: 'Global Expansion', description: 'Expanded operations to 10 countries' },
-  { year: '2015', title: 'Digital Innovation', description: 'Launched our first online research platform' },
-  { year: '2018', title: 'AI Integration', description: 'Incorporated machine learning into our research methodology' },
-  { year: '2021', title: 'Million Milestone', description: 'Reached 1M+ verified global panellists' },
-  { year: '2024', title: 'Industry Leadership', description: 'Recognized as leaders in AI-driven research' },
+  { year: '2022', title: 'The Vision', description: 'Survey Panel Go founded with a mission to bridge the gap between brands and people.' },
+  { year: '2023', title: 'Going Global', description: 'Expanded operations to 20+ countries and integrated advanced fraud detection.' },
+  { year: '2024', title: 'AI-Powered Research', description: 'Launched our proprietary AI engine for real-time survey auditing and quality control.' },
+  { year: '2025', title: 'The 5M Milestone', description: 'Reached a massive milestone of 5 million verified global panelists across all regions.' },
+  { year: '2026', title: 'Industry Leadership', description: 'Recognized as the fastest-growing panel platform with industry-leading respondent quality.' },
 ];
 
 const AboutPage: React.FC = () => {
@@ -200,7 +192,7 @@ const AboutPage: React.FC = () => {
             </h1>
 
             <p className="font-jakarta text-xl text-navy-light max-w-3xl mx-auto mb-8">
-              We are a leading market research company dedicated to transforming data into actionable insights 
+              We are a leading market research company dedicated to transforming data into actionable insights
               that drive business growth and innovation across industries worldwide.
             </p>
 
@@ -228,10 +220,10 @@ const AboutPage: React.FC = () => {
               <PlayfulCard key={stat.label} variant="static" className="p-6 text-center bg-white/90 hover:shadow-hard transition-all">
                 <div className="flex justify-center mb-4">
                   <IconCircle variant={index === 0 ? 'yellow' : index === 1 ? 'pink' : index === 2 ? 'green' : 'lavender'} size="lg">
-                    {index === 0 ? <Award className="w-6 h-6" /> : 
-                     index === 1 ? <Building className="w-6 h-6" /> : 
-                     index === 2 ? <Users className="w-6 h-6" /> : 
-                     <Globe className="w-6 h-6" />}
+                    {index === 0 ? <Award className="w-6 h-6" /> :
+                      index === 1 ? <Building className="w-6 h-6" /> :
+                        index === 2 ? <Users className="w-6 h-6" /> :
+                          <Globe className="w-6 h-6" />}
                   </IconCircle>
                 </div>
                 <p className="font-outfit font-extrabold text-3xl text-violet mb-2">
@@ -249,17 +241,17 @@ const AboutPage: React.FC = () => {
                 <div>
                   <h2 className="font-outfit font-bold text-3xl text-navy mb-6">Our Story</h2>
                   <p className="font-jakarta text-navy-light mb-6 leading-relaxed">
-                    Founded in 2022, Survey Panel Go began with a simple mission: to bridge the gap between businesses 
-                    and their customers through meaningful research insights. What started as a small team of passionate 
+                    Founded in 2022, Survey Panel Go began with a simple mission: to bridge the gap between businesses
+                    and their customers through meaningful research insights. What started as a small team of passionate
                     researchers has grown into a global network of experts serving hundreds of brands across multiple continents.
                   </p>
                   <p className="font-jakarta text-navy-light mb-6 leading-relaxed">
-                    Today, we combine cutting-edge technology with deep industry expertise to deliver research solutions that 
-                    not only answer questions but also anticipate future trends. Our commitment to innovation and excellence 
+                    Today, we combine cutting-edge technology with deep industry expertise to deliver research solutions that
+                    not only answer questions but also anticipate future trends. Our commitment to innovation and excellence
                     has made us a trusted partner for businesses seeking to understand their markets better.
                   </p>
                   <p className="font-jakarta text-navy-light leading-relaxed">
-                    As we look to the future, we remain dedicated to our core values of integrity, innovation, and client success, 
+                    As we look to the future, we remain dedicated to our core values of integrity, innovation, and client success,
                     ensuring that every research project we undertake delivers measurable impact and lasting value.
                   </p>
                 </div>
@@ -278,7 +270,7 @@ const AboutPage: React.FC = () => {
           <div className="mb-20">
             <h2 className="font-outfit font-bold text-3xl text-navy mb-12 text-center">Our Values</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {companyValues.map((value, index) => (
+              {companyValues.map((value) => (
                 <PlayfulCard key={value.title} className="p-8 bg-white/90 hover:shadow-hard transition-all text-center group">
                   <div className="flex justify-center mb-6">
                     <IconCircle variant={value.variant} size="xl" className="group-hover:scale-110 transition-transform">
