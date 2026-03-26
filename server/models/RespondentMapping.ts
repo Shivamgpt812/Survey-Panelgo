@@ -16,6 +16,14 @@ const respondentMappingSchema = new mongoose.Schema({
     type: String,
     required: false
   },
+  startIp: {
+    type: String,
+    required: false
+  },
+  endIp: {
+    type: String,
+    required: false
+  },
   createdAt: {
     type: Date,
     default: Date.now,

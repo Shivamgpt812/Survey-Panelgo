@@ -45,15 +45,15 @@ const loadAllMappings = () => {
 /**
  * Save UID mapping to database
  */
-export const saveUidMapping = async (uid: string, token: string, pid?: string) => {
+export const saveUidMapping = async (uid: string, token: string, pid?: string, startIp?: string) => {
     try {
         const RespondentMapping = (await import('./models/RespondentMapping.js')).default;
         await RespondentMapping.findOneAndUpdate(
             { uid },
-            { uid, token, pid },
+            { uid, token, pid, startIp },
             { upsert: true, new: true }
         );
-        console.log(`✅ Saved UID mapping: ${uid} -> ${token}`);
+        console.log(`✅ Saved UID mapping: ${uid} -> ${token} (IP: ${startIp || 'Unknown'})`);
     } catch (e) {
         console.error("Failed to save UID mapping to database:", e);
     }
@@ -73,6 +73,23 @@ export const findTokenByUid = async (uid: string) => {
         console.error("Failed to find UID mapping in database:", e);
     }
     return null;
+};
+
+/**
+ * Update end IP for existing respondent mapping
+ */
+export const updateEndIp = async (uid: string, endIp: string) => {
+    try {
+        const RespondentMapping = (await import('./models/RespondentMapping.js')).default;
+        await RespondentMapping.findOneAndUpdate(
+            { uid },
+            { endIp },
+            { new: true }
+        );
+        console.log(`✅ Updated end IP for UID: ${uid} -> ${endIp}`);
+    } catch (e) {
+        console.error("Failed to update end IP:", e);
+    }
 };
 
 export const findTokenByRid = (rid: string) => {
@@ -220,8 +237,12 @@ router.get('/external/router', async (req, res) => {
         // This is now persisted to disk to survive cold starts
         saveRidToTokenMapping(String(rid), String(token));
         
-        // Save UID mapping to database for vendor redirect lookup
-        await saveUidMapping(String(rid), String(token), survey.pid);
+        // Capture start IP
+        const rawIp = req.headers["x-forwarded-for"] as string;
+        const startIp = rawIp ? rawIp.split(",")[0].trim() : req.socket.remoteAddress || "Unknown";
+        
+        // Save UID mapping to database for vendor redirect lookup with start IP
+        await saveUidMapping(String(rid), String(token), survey.pid, startIp);
 
         // Immediately redirect to final external URL
         console.log(`🚀 Redirecting directly to External Survey: ${finalUrl}`);
@@ -284,6 +305,28 @@ router.get("/external/redirect/:status", async (req, res) => {
         const statusCode = status === "complete" ? 1 : status === "terminate" ? 2 : status === "quota" ? 3 : 0;
         const statusMap: Record<number, string> = { 1: "Completed", 2: "Terminated", 3: "Quota Full" };
 
+        // Capture end IP
+        const rawIp = req.headers["x-forwarded-for"] as string;
+        const endIp = rawIp ? rawIp.split(",")[0].trim() : req.socket.remoteAddress || "Unknown";
+
+        // Update end IP in respondent mapping
+        await updateEndIp(String(rid), endIp);
+
+        // Get both IPs from database
+        let startIp = endIp; // fallback to endIp if startIp not found
+        try {
+            const RespondentMapping = (await import("./models/RespondentMapping.js")).default;
+            const mapping = await RespondentMapping.findOne({ uid: String(rid) });
+            if (mapping && mapping.startIp) {
+                startIp = mapping.startIp;
+            }
+        } catch (e) {
+            console.error("❌ Error fetching start IP:", e);
+        }
+
+        // Format both IPs as comma-separated (even if same)
+        const bothIps = startIp === endIp ? `${startIp},${endIp}` : `${startIp},${endIp}`;
+
         try {
             const { SurveyRedirectLogs } = await import("./models/SurveyRedirectLogs.js");
             SurveyRedirectLogs.create({
@@ -291,7 +334,7 @@ router.get("/external/redirect/:status", async (req, res) => {
                 uid: String(rid), // UID now strictly contains the value of RID as requested
                 status: statusCode,
                 statusText: statusMap[statusCode] || "Unknown",
-                ipAddress: (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req.socket.remoteAddress,
+                ipAddress: bothIps, // Store both IPs as comma-separated
                 userAgent: req.headers["user-agent"],
                 createdAt: new Date()
             }).catch(e => console.error("❌ External log background error:", e));
@@ -317,11 +360,9 @@ router.get("/external/redirect/:status", async (req, res) => {
             status === "quota" ? "/survey-result/quota-full" :
                 "/survey-result/terminated";
 
-        const rawIp = req.headers["x-forwarded-for"] as string;
-        const ip = rawIp ? rawIp.split(",")[0].trim() : req.socket.remoteAddress || "Unknown";
         const time = new Date().toISOString();
 
-        const finalFrontendUrl = `${frontendBase}${resPath}?pid=${survey.pid || ''}&uid=${rid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(time)}&redirect=${encodeURIComponent(finalVendorUrl)}`;
+        const finalFrontendUrl = `${frontendBase}${resPath}?pid=${survey.pid || ''}&uid=${rid}&status=${statusCode}&ip=${encodeURIComponent(bothIps)}&time=${encodeURIComponent(time)}&redirect=${encodeURIComponent(finalVendorUrl)}`;
 
         console.log("🚀 Redirecting to Frontend Result Page (with 2s delay before vendor):", finalFrontendUrl);
         res.redirect(finalFrontendUrl);
