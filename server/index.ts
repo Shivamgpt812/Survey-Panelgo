@@ -992,6 +992,42 @@ app.get('/api/export/responses.csv', requireAdmin, async (_req, res) => {
   }
 });
 
+// ---------- External Link Pass-Through ----------
+app.get('/external/start', async (req, res) => {
+  try {
+    const { projectId, transactionId, userid } = req.query;
+
+    if (!projectId) {
+      return res.status(400).send('Missing projectId parameter');
+    }
+
+    if (!transactionId || !userid) {
+      return res.status(400).send('Missing transactionId or userid parameters');
+    }
+
+    // Find the survey by projectId
+    const survey = await Survey.findById(projectId);
+    if (!survey) {
+      return res.status(404).send('Survey not found');
+    }
+
+    if (!survey.isExternal || !survey.link) {
+      return res.status(400).send('Survey is not external or has no link configured');
+    }
+
+    // Replace placeholders in the external URL
+    let finalUrl = survey.link;
+    finalUrl = finalUrl.replace('[#transaction_id#]', transactionId as string);
+    finalUrl = finalUrl.replace('[#userid#]', userid as string);
+
+    // Immediate redirect to the final URL
+    return res.redirect(finalUrl);
+  } catch (error) {
+    console.error('External pass-through error:', error);
+    return res.status(500).send('Internal server error');
+  }
+});
+
 // ---------- Frontend Static Serving (MUST BE LAST) ----------
 app.use(express.static('dist'));
 
