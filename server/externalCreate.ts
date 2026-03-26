@@ -97,11 +97,22 @@ router.get('/external/start', (req, res) => {
         }
 
         const surveys = loadSurveys();
+        console.log("🔍 Checking external start:", { projectId, vendorId, surveysCount: Object.keys(surveys).length });
+
         const token = Object.keys(surveys)
-            .find(t => surveys[t].projectId === projectId &&
-                (surveys[t].vendor?.id === vendorId || surveys[t].vendor?._id === vendorId));
+            .find(t => {
+                const s = surveys[t];
+                const storedPid = String(s.projectId || '').trim();
+                const storedVid = String(s.vendor?.id || s.vendor?._id || '').trim();
+                const requestedPid = String(projectId || '').trim();
+                const requestedVid = String(vendorId || '').trim();
+
+                console.log(`Checking token ${t}: PID(${storedPid} vs ${requestedPid}), VID(${storedVid} vs ${requestedVid})`);
+                return (storedPid === requestedPid) && (storedVid === requestedVid);
+            });
 
         if (!token) {
+            console.error("❌ Survey token not found for:", { projectId, vendorId });
             return res.status(404).send("Survey not found for this project and vendor");
         }
 
