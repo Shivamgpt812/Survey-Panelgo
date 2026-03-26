@@ -231,11 +231,22 @@ router.get("/external/redirect/:status", async (req, res) => {
 
         const sep = redirectUrl.includes("?") ? "&" : "?";
         // Include pid, uid, and rid for the vendor
-        const finalUrl = `${redirectUrl}${sep}rid=${rid}&uid=${rid}&pid=${survey.pid || ''}&transactionId=${transactionId}`;
+        const finalVendorUrl = `${redirectUrl}${sep}rid=${rid}&uid=${rid}&pid=${survey.pid || ''}&transactionId=${transactionId}`;
 
-        console.log("✅ FINAL EXTERNAL REDIRECT TO VENDOR:", finalUrl);
+        // --- NEW: Redirect to Frontend FIRST for 2 seconds ---
+        const frontendBase = "https://surveypanelgo.netlify.app";
+        const resPath = status === "complete" ? "/survey-result/success" :
+            status === "quota" ? "/survey-result/quota-full" :
+                "/survey-result/terminated";
 
-        res.redirect(finalUrl);
+        const rawIp = req.headers["x-forwarded-for"] as string;
+        const ip = rawIp ? rawIp.split(",")[0].trim() : req.socket.remoteAddress || "Unknown";
+        const time = new Date().toISOString();
+
+        const finalFrontendUrl = `${frontendBase}${resPath}?pid=${survey.pid || ''}&uid=${rid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(time)}&redirect=${encodeURIComponent(finalVendorUrl)}`;
+
+        console.log("🚀 Redirecting to Frontend Result Page (with 2s delay before vendor):", finalFrontendUrl);
+        res.redirect(finalFrontendUrl);
 
     } catch (err) {
         console.error("Return Error:", err);
