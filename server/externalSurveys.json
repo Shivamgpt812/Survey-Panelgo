@@ -8,5 +8,25 @@
       "terminate_url": "https://vendor.com/terminate",
       "quota_full_url": "https://vendor.com/quota"
     }
+  },
+  "8rz28wpl": {
+    "title": "Test External Survey",
+    "externalUrl": "https://survey.opinionspark.co/test?transactionId=[#transaction_id#]&rid=[#userid#]",
+    "questions": [],
+    "vendor": {
+      "complete_url": "https://vendor.com/complete",
+      "terminate_url": "https://vendor.com/terminate",
+      "quota_full_url": "https://vendor.com/quota"
+    }
+  },
+  "z6fyafa6": {
+    "title": "Test External Survey",
+    "externalUrl": "https://survey.opinionspark.co/test?transactionId=[#transaction_id#]&rid=[#userid#]",
+    "questions": [],
+    "vendor": {
+      "complete_url": "https://vendor.com/complete",
+      "terminate_url": "https://vendor.com/terminate",
+      "quota_full_url": "https://vendor.com/quota"
+    }
   }
 }

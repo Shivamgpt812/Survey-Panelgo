@@ -125,7 +125,7 @@ router.get('/external/router', async (req, res) => {
         
         // Add source=external flag for vendor redirect identification
         const separator = finalUrl.includes('?') ? '&' : '?';
-        finalUrl += `${separator}source=external`;
+        finalUrl += `${separator}source=external&token=${token}`;
 
         // Store mapping for late interception (if panel redirects to default routes)
         ridToTokenMap[String(rid)] = String(token);
