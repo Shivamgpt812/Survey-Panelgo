@@ -51,7 +51,7 @@ const saveSurveys = (data: any) => {
 // ---------------------------------------------------------------------------
 router.post('/external/create', (req, res) => {
     try {
-        const { title, externalUrl, questions, vendor, pid } = req.body;
+        const { title, externalUrl, questions, vendor } = req.body;
 
         if (!externalUrl) {
             return res.status(400).json({ success: false, message: 'externalUrl is required' });
@@ -64,7 +64,6 @@ router.post('/external/create', (req, res) => {
         surveys[token] = {
             title: title || 'External Survey',
             externalUrl,
-            pid,
             questions: Array.isArray(questions) ? questions : [],
             vendor
         };

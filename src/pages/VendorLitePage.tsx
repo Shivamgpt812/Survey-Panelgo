@@ -287,8 +287,7 @@ export default function VendorLitePage() {
             title: surveyForm.title,
             externalUrl: surveyForm.externalLink,
             questions: extQuestions,
-            vendor: vendorObj,
-            pid: surveyForm.pid
+            vendor: vendorObj
           })
         });
 
@@ -381,27 +380,11 @@ export default function VendorLitePage() {
     // PASS → External Survey (redirect directly to configured external URL)
     let finalUrl = extSurvey.externalUrl;
 
-    // Replace placeholders in the base URL
+    // Replace placeholders
     finalUrl = finalUrl.replace('[#userid#]', rid);
     finalUrl = finalUrl.replace('[#transaction_id#]', transactionId);
 
-    // Determine backend base URL for redirects
-    const apiUrl = import.meta.env.PROD
-      ? 'https://survey-panelgo.onrender.com'
-      : 'http://localhost:3000';
-
-    const pidValue = extSurvey.pid || "6899051"; // Fallback to your example if not set
-    const redirectBase = `${apiUrl}/api/redirect`;
-
-    // Append return parameters so OpinionSpark knows where to send the user back
-    // We point these to our backend /api/redirect handler which captures IP/Time
-    const sep = finalUrl.includes("?") ? "&" : "?";
-    finalUrl +=
-      `${sep}return_url=${encodeURIComponent(`${redirectBase}?pid=${pidValue}&uid=${rid}&status=1`)}` +
-      `&fail_url=${encodeURIComponent(`${redirectBase}?pid=${pidValue}&uid=${rid}&status=2`)}` +
-      `&overquota_url=${encodeURIComponent(`${redirectBase}?pid=${pidValue}&uid=${rid}&status=3`)}`;
-
-    console.log("🚀 Redirecting to External Survey with Return Parameters:", finalUrl);
+    console.log("🚀 Redirecting to External Survey:", finalUrl);
     window.location.href = finalUrl;
   };
 
