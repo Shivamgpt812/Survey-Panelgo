@@ -716,10 +716,10 @@ app.get('/api/redirect', async (req, res) => {
     console.log("Redirect HIT:", { pid, uid, status });
 
     // 🔥 Check if this is external flow and redirect to vendor
-    if (uid && ridToTokenMap[uid]) {
+    if (uid && ridToTokenMap[uid as string]) {
       console.log("🔥 EXTERNAL FLOW DETECTED - Redirecting to vendor");
       
-      const token = ridToTokenMap[uid];
+      const token = ridToTokenMap[uid as string];
       const surveys = loadSurveys();
       const survey = surveys[token];
 
