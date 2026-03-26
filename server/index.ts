@@ -715,10 +715,17 @@ app.get('/api/redirect', async (req, res) => {
 
     console.log("Redirect HIT:", { pid, uid, status });
 
-    // Validate params
+    // 🔥 Use dynamic origin or referer to support both netlify and custom domain
+    let redirectBase = (req.headers.origin as string);
+    if (!redirectBase && req.headers.referer) {
+      const ref = req.headers.referer as string;
+      if (ref.includes('surveypanelgo.netlify.app')) redirectBase = "https://surveypanelgo.netlify.app";
+      else if (ref.includes('surveypanelgo.com')) redirectBase = "https://surveypanelgo.com";
+    }
+    if (!redirectBase) redirectBase = "https://surveypanelgo.com";
+
     if (!uid || !status) {
       console.error("Missing params:", { pid, uid, status });
-      const redirectBase = (req.headers.origin as string) || "https://surveypanelgo.netlify.app";
       return res.redirect(`${redirectBase}/error`);
     }
 
@@ -755,9 +762,14 @@ app.get('/api/redirect', async (req, res) => {
       console.error("DB SAVE ERROR:", dbError);
     }
 
-    // Redirect user to frontend (IMPORTANT)
-    // 🔥 Use dynamic origin to support both netlify and custom domain
-    const BASE_URL = (req.headers.origin as string) || "https://surveypanelgo.netlify.app";
+    // 🔥 Use dynamic origin or referer to support both netlify and custom domain
+    let BASE_URL = (req.headers.origin as string);
+    if (!BASE_URL && req.headers.referer) {
+      const ref = req.headers.referer as string;
+      if (ref.includes('surveypanelgo.netlify.app')) BASE_URL = "https://surveypanelgo.netlify.app";
+      else if (ref.includes('surveypanelgo.com')) BASE_URL = "https://surveypanelgo.com";
+    }
+    if (!BASE_URL) BASE_URL = "https://surveypanelgo.com";
 
     // Capture IP address
     const rawIp = req.headers["x-forwarded-for"] as string;
@@ -787,7 +799,14 @@ app.get('/api/redirect', async (req, res) => {
   } catch (error) {
     console.error("REDIRECT CRASH:", error);
 
-    const redirectBase = (req.headers.origin as string) || "https://surveypanelgo.netlify.app";
+    let redirectBase = (req.headers.origin as string);
+    if (!redirectBase && req.headers.referer) {
+      const ref = req.headers.referer as string;
+      if (ref.includes('surveypanelgo.netlify.app')) redirectBase = "https://surveypanelgo.netlify.app";
+      else if (ref.includes('surveypanelgo.com')) redirectBase = "https://surveypanelgo.com";
+    }
+    if (!redirectBase) redirectBase = "https://surveypanelgo.com";
+
     return res.redirect(`${redirectBase}/error`);
   }
 });
