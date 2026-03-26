@@ -73,8 +73,8 @@ router.post('/external/create', (req, res) => {
         saveSurveys(surveys);
 
         const baseUrl = process.env.BACKEND_URL || 'https://survey-panelgo.onrender.com';
-        // Updated link format as per requirement
-        const link = `${baseUrl}/external/start?projectId=${surveys[token].projectId}&vendorId=${vendor.id || vendor._id}`;
+        // Updated link format with placeholders as per requirement
+        const link = `${baseUrl}/external/start?projectId=${surveys[token].projectId}&vendorId=${vendor.id || vendor._id}&transactionId=[TRANSACTION_ID]&userid=[USER_ID]`;
 
         console.log('✅ External Survey Persisted:', { title, token, link });
 
