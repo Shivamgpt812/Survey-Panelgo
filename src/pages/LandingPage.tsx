@@ -1125,8 +1125,8 @@ const LandingPage: React.FC = () => {
 
               <div className="space-y-6">
                 {[
-                  { icon: Mail, variant: 'violet' as const, title: 'Email us', text: 'support@surveypanelgo.com' },
-                  { icon: Phone, variant: 'green' as const, title: 'Call us', text: '+91 (800) 123-4567' },
+                  { icon: Mail, variant: 'violet' as const, title: 'Email us', text: 'sales@surveypanelgo.com' },
+                  { icon: Phone, variant: 'green' as const, title: 'Call us', text: '+91 97111 08615' },
                   {
                     icon: MessageSquare,
                     variant: 'yellow' as const,
