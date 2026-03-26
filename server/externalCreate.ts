@@ -82,10 +82,26 @@ router.post('/external/create', (req, res) => {
     }
 });
 
+/**
+ * Retry mechanism for finding surveys during cold start
+ */
+async function findSurveyWithRetry(token: string, retries = 3, delay = 1000) {
+    for (let i = 0; i < retries; i++) {
+        const surveys = loadSurveys();
+        const survey = surveys[token];
+        
+        if (survey) return survey;
+        
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    return null;
+}
+
 // ---------------------------------------------------------------------------
 // GET /external/router
 // ---------------------------------------------------------------------------
-router.get('/external/router', (req, res) => {
+router.get('/external/router', async (req, res) => {
     try {
         const { rid, transactionId, token } = req.query;
 
@@ -93,9 +109,8 @@ router.get('/external/router', (req, res) => {
             return res.status(400).send("Missing parameters: rid, transactionId, and token are required");
         }
 
-        // Find external survey using token
-        const surveys = loadSurveys();
-        const survey = surveys[token as string];
+        // Find external survey using token with retry logic
+        const survey = await findSurveyWithRetry(token as string);
 
         if (!survey) {
             return res.status(404).send("Survey not found");
