@@ -329,13 +329,13 @@ const associations = [
 
 // Clients data for marquee
 const clients = [
-  { name: 'Team Visory', color: '#7B61FF' },
-  { name: 'Bilendi', color: '#FF6B6B' },
-  { name: 'Ipsos', color: '#4ECDC4' },
-  { name: 'Nimble Insights', color: '#45B7D1' },
-  { name: 'Zamplia', color: '#F7DC6F' },
-  { name: 'Logit Group', color: '#BB8FCE' },
-  { name: 'Global Survey', color: '#85C1E2' },
+  { name: 'Team Visory', src: '/Client/Team Visory.png' },
+  { name: 'Bilendi', src: '/Client/Bilendi.png' },
+  { name: 'Ipsos', src: '/Client/Ipsos.png' },
+  { name: 'Nimble Insight', src: '/Client/Nimble Insight.png' },
+  { name: 'Zamplia', src: '/Client/Zamplia.png' },
+  { name: 'Logit', src: '/Client/Logit.png' },
+  { name: 'Globalsurvey', src: '/Client/Globalsurvey.png' },
 ];
 
 const perks = [
@@ -1097,15 +1097,13 @@ const LandingPage: React.FC = () => {
             {clientsStrip.map((client, i) => (
               <div
                 key={`${client.name}-${i}`}
-                className="flex-shrink-0 flex items-center justify-center h-24 sm:h-32 px-8 sm:px-14 py-5 sm:py-7 rounded-2xl border-2 border-navy bg-white shadow-hard-sm hover:shadow-hard hover:scale-105 transition-all group"
-                style={{ borderColor: client.color }}
+                className="flex-shrink-0 flex items-center justify-center h-24 sm:h-32 w-40 sm:w-48 px-6 sm:px-8 py-4 sm:py-6 rounded-2xl border-2 border-navy bg-white shadow-hard-sm hover:shadow-hard hover:scale-105 transition-all group"
               >
-                <span
-                  className="font-outfit font-bold text-xl sm:text-2xl text-navy group-hover:scale-105 transition-transform whitespace-nowrap"
-                  style={{ color: client.color }}
-                >
-                  {client.name}
-                </span>
+                <img
+                  src={client.src}
+                  alt={client.name}
+                  className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+                />
               </div>
             ))}
           </div>
