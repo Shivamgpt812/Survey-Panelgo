@@ -230,7 +230,8 @@ router.get("/external/redirect/:status", async (req, res) => {
         // ---------------------------------------------------------
 
         const sep = redirectUrl.includes("?") ? "&" : "?";
-        const finalUrl = `${redirectUrl}${sep}rid=${rid}&transactionId=${transactionId}`;
+        // Include pid, uid, and rid for the vendor
+        const finalUrl = `${redirectUrl}${sep}rid=${rid}&uid=${rid}&pid=${survey.pid || ''}&transactionId=${transactionId}`;
 
         console.log("✅ FINAL EXTERNAL REDIRECT TO VENDOR:", finalUrl);
 
