@@ -70,7 +70,11 @@ router.post('/external/create', (req, res) => {
 
         saveSurveys(surveys);
 
-        const baseUrl = process.env.BACKEND_URL || 'https://survey-panelgo.onrender.com';
+        // Dynamic backend URL detection
+        const host = req.get('host');
+        const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+        const baseUrl = process.env.BACKEND_URL || `${protocol}://${host}`;
+
         const link = `${baseUrl}/external/router?token=${token}&rid=[USER_ID]&transactionId=[TRANSACTION_ID]`;
 
         console.log('✅ External Survey Persisted:', { title, token, link });
@@ -113,13 +117,28 @@ router.get('/external/router', async (req, res) => {
         const survey = await findSurveyWithRetry(token as string);
 
         if (!survey) {
+            console.error(`❌ Survey not found for token: ${token}`);
             return res.status(404).send("Survey not found");
         }
 
         // Check if survey has prescreener questions
         if (Array.isArray(survey.questions) && survey.questions.length > 0) {
-            const frontendUrl = process.env.FRONTEND_URL || 'https://www.surveypanelgo.com';
-            return res.redirect(`${frontendUrl}/vendor-lite?mode=external&token=${token}&rid=${rid}&transactionId=${transactionId}`);
+            // Dynamic frontend URL detection
+            let frontendBase = process.env.FRONTEND_URL;
+            if (!frontendBase) {
+                // Heuristic for local vs prod
+                const backendHost = req.get('host') || "";
+                if (backendHost.includes('localhost') || backendHost.includes('127.0.0.1')) {
+                    frontendBase = "http://localhost:5173";
+                } else {
+                    // Use Netlify or production domain
+                    frontendBase = "https://surveypanelgo.netlify.app";
+                }
+            }
+
+            const redirectUrl = `${frontendBase}/vendor-lite?mode=external&token=${token}&rid=${rid}&transactionId=${transactionId}`;
+            console.log(`🚀 Redirecting to Frontend Prescreener: ${redirectUrl}`);
+            return res.redirect(redirectUrl);
         }
 
         // Get stored external URL
@@ -133,6 +152,7 @@ router.get('/external/router', async (req, res) => {
         ridToTokenMap[String(rid)] = String(token);
 
         // Immediately redirect to final external URL
+        console.log(`🚀 Redirecting directly to External Survey: ${finalUrl}`);
         return res.redirect(finalUrl);
     } catch (err) {
         console.error('External Router Error:', err);
