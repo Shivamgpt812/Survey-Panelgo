@@ -304,7 +304,14 @@ router.get("/external/redirect/:status", async (req, res) => {
         // Include pid, uid, and rid for the vendor
         const finalVendorUrl = `${redirectUrl}${sep}rid=${rid}&uid=${rid}&pid=${survey.pid || ''}&transactionId=${transactionId}`;
 
-        // --- NEW: Redirect to Frontend FIRST for 2 seconds ---
+        // For terminate status from external prescreener, redirect directly to vendor
+        if (status === "terminate") {
+            console.log("🚀 External Prescreener Failed - Redirecting directly to Vendor Terminate URL:", finalVendorUrl);
+            res.redirect(finalVendorUrl);
+            return;
+        }
+
+        // For other statuses (complete, quota), redirect to frontend first for 2-second delay
         const frontendBase = "https://surveypanelgo.netlify.app";
         const resPath = status === "complete" ? "/survey-result/success" :
             status === "quota" ? "/survey-result/quota-full" :
