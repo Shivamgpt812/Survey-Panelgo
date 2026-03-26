@@ -198,7 +198,7 @@ app.post('/api/surveys', requireAdmin, async (req: AuthedRequest, res) => {
     const doc = await Survey.create(body);
     const sid = doc._id.toString();
     if (doc.questions?.length) {
-      doc.questions = doc.questions.map((q: { id?: string; surveyId?: string }) => ({
+      doc.questions = doc.questions.map((q: any) => ({
         ...q,
         surveyId: sid,
       })) as typeof doc.questions;
@@ -720,6 +720,10 @@ app.get('/api/redirect', async (req, res) => {
 
     if (!uid || !status) {
       console.error("❌ Missing required parameters (uid/status)");
+      // For AJAX requests, return JSON error
+      if (req.get('Accept')?.includes('application/json')) {
+        return res.status(400).json({ error: "Missing required parameters (uid/status)" });
+      }
       return res.redirect(`${BASE_URL}/error`);
     }
 
@@ -753,17 +757,8 @@ app.get('/api/redirect', async (req, res) => {
       : req.socket.remoteAddress || "Unknown";
     const timestamp = new Date().toISOString();
 
-    const redirectPages = {
-      1: `/survey-result/success?pid=${finalPid}&uid=${uid}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      2: `/survey-result/terminated?pid=${finalPid}&uid=${uid}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      3: `/survey-result/quota-full?pid=${finalPid}&uid=${uid}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      4: `/survey-result/security?pid=${finalPid}&uid=${uid}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
-    };
-
-    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${uid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
-
-    // 🔥 NEW: Check for external survey mapping to enable auto-forwarding to vendors
-    let finalUrl = `${BASE_URL}${finalPath}`;
+    // 🔥 Check for external survey mapping to enable auto-forwarding to vendors
+    let vendorRedirectUrl = "";
     try {
       const { findTokenByRid, loadSurveys } = await import('./externalCreate.js');
       const token = findTokenByRid(String(uid));
@@ -778,13 +773,36 @@ app.get('/api/redirect', async (req, res) => {
 
           if (vendorUrl) {
             const sep = vendorUrl.includes("?") ? "&" : "?";
-            const finalVendorUrl = `${vendorUrl}${sep}rid=${uid}&uid=${uid}&pid=${survey.pid || ''}&transactionId=AUTO`;
-            finalUrl += `&redirect=${encodeURIComponent(finalVendorUrl)}`;
+            vendorRedirectUrl = `${vendorUrl}${sep}rid=${uid}&uid=${uid}&pid=${survey.pid || ''}&transactionId=AUTO`;
           }
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn("⚠️ Intercept lookup skipped or failed:", e.message);
+    }
+
+    // For AJAX requests, return JSON with vendor redirect URL
+    if (req.get('Accept')?.includes('application/json')) {
+      return res.json({
+        success: true,
+        redirectUrl: vendorRedirectUrl,
+        hasVendorRedirect: !!vendorRedirectUrl
+      });
+    }
+
+    // For regular browser requests, redirect as before
+    const redirectPages = {
+      1: `/survey-result/success?pid=${finalPid}&uid=${uid}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      2: `/survey-result/terminated?pid=${finalPid}&uid=${uid}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      3: `/survey-result/quota-full?pid=${finalPid}&uid=${uid}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      4: `/survey-result/security?pid=${finalPid}&uid=${uid}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
+    };
+
+    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${uid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
+    let finalUrl = `${BASE_URL}${finalPath}`;
+
+    if (vendorRedirectUrl) {
+      finalUrl += `&redirect=${encodeURIComponent(vendorRedirectUrl)}`;
     }
 
     console.log("🚀 Redirecting NOW to:", finalUrl);
@@ -793,6 +811,10 @@ app.get('/api/redirect', async (req, res) => {
   } catch (error) {
     console.error("❌ REDIRECT CRASH:", error);
     const fallback = "https://surveypanelgo.netlify.app";
+    // For AJAX requests, return JSON error
+    if (req.get('Accept')?.includes('application/json')) {
+      return res.status(500).json({ error: "Internal server error" });
+    }
     return res.redirect(`${fallback}/error`);
   }
 });

@@ -30,22 +30,57 @@ export default function SurveyResultCard() {
 
   // Auto-redirect logic
   React.useEffect(() => {
-    if (redirectUrl) {
-      setCountdown(2);
-      const timer = setInterval(() => {
-        setCountdown((prev) => (prev !== null && prev > 0 ? prev - 1 : prev));
-      }, 1000);
+    const checkVendorRedirect = async () => {
+      // If redirect URL is already provided, use it
+      if (redirectUrl) {
+        setCountdown(2);
+        const timer = setInterval(() => {
+          setCountdown((prev) => (prev !== null && prev > 0 ? prev - 1 : prev));
+        }, 1000);
 
-      const redirectTimer = setTimeout(() => {
-        window.location.href = redirectUrl;
-      }, 2000);
+        const redirectTimer = setTimeout(() => {
+          window.location.href = redirectUrl;
+        }, 2000);
 
-      return () => {
-        clearInterval(timer);
-        clearTimeout(redirectTimer);
-      };
-    }
-  }, [redirectUrl]);
+        return () => {
+          clearInterval(timer);
+          clearTimeout(redirectTimer);
+        };
+      }
+
+      // If no redirect URL but we have uid and status, check for vendor redirect
+      if (uid && status && !redirectUrl) {
+        try {
+          const response = await fetch(`/api/redirect?uid=${uid}&status=${status}${pid ? `&pid=${pid}` : ''}`, {
+            headers: {
+              'Accept': 'application/json'
+            }
+          });
+          const data = await response.json();
+          
+          if (data.success && data.redirectUrl) {
+            setCountdown(2);
+            const timer = setInterval(() => {
+              setCountdown((prev) => (prev !== null && prev > 0 ? prev - 1 : prev));
+            }, 1000);
+
+            const redirectTimer = setTimeout(() => {
+              window.location.href = data.redirectUrl;
+            }, 2000);
+
+            return () => {
+              clearInterval(timer);
+              clearTimeout(redirectTimer);
+            };
+          }
+        } catch (error) {
+          console.warn("Failed to check vendor redirect:", error);
+        }
+      }
+    };
+
+    checkVendorRedirect();
+  }, [redirectUrl, uid, status, pid]);
 
   return (
     <>
