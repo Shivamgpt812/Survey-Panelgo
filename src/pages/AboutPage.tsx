@@ -306,21 +306,21 @@ const AboutPage: React.FC = () => {
           {/* Team Section */}
           <div className="mb-20">
             <h2 className="font-outfit font-bold text-3xl text-navy mb-12 text-center">Leadership Team</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10 max-w-6xl mx-auto">
               {teamMembers.map((member) => (
-                <PlayfulCard key={member.name} className="p-6 bg-white/90 hover:shadow-hard transition-all text-center group">
-                  <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden border-2 border-navy">
+                <PlayfulCard key={member.name} className="p-8 lg:p-10 bg-white/90 hover:shadow-hard transition-all text-center group">
+                  <div className="w-28 h-28 lg:w-32 lg:h-32 mx-auto mb-6 rounded-full overflow-hidden border-2 border-navy">
                     <img
                       src={member.image}
                       alt={member.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
                   </div>
-                  <h3 className="font-outfit font-bold text-lg text-navy mb-1 group-hover:text-violet transition-colors">
+                  <h3 className="font-outfit font-bold text-xl lg:text-2xl text-navy mb-1 group-hover:text-violet transition-colors">
                     {member.name}
                   </h3>
-                  <p className="font-jakarta text-sm text-violet font-medium mb-3">{member.role}</p>
-                  <p className="font-jakarta text-navy-light text-sm mb-4">{member.bio}</p>
+                  <p className="font-jakarta text-sm lg:text-base text-violet font-medium mb-4">{member.role}</p>
+                  <p className="font-jakarta text-navy-light text-sm lg:text-base mb-6">{member.bio}</p>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {member.expertise.map((skill, skillIndex) => (
                       <span
