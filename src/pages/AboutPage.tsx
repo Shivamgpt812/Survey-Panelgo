@@ -43,17 +43,17 @@ const teamMembers: TeamMember[] = [
   },
   {
     name: 'Nitin',
-    role: 'Co-Founder & COO',
-    bio: 'Nitin leads our global operations, ensuring that our research projects are executed with precision, speed, and the highest quality standards across all regions.',
+    role: 'Head of Finance',
+    bio: 'With deep financial expertise, Nitin manages the fiscal health of the company, securing the resources needed to drive our expansion and long-term sustainability.',
     image: '/team/Nitin.jpeg',
-    expertise: ['Operations', 'Quality Assurance', 'Scalability'],
+    expertise: ['Financial Strategy', 'Fiscal Management', 'Growth Planning'],
   },
   {
     name: 'Rohit Shreevastav',
-    role: 'Head of Finance',
-    bio: 'With deep financial expertise, Rohit manages the fiscal health of the company, securing the resources needed to drive our expansion and long-term sustainability.',
+    role: 'Co-Founder & COO',
+    bio: 'Rohit leads our global operations, ensuring that our research projects are executed with precision, speed, and the highest quality standards across all regions.',
     image: '/team/Rohit Shreevastav.png',
-    expertise: ['Financial Strategy', 'Fiscal Management', 'Growth Planning'],
+    expertise: ['Operations', 'Quality Assurance', 'Scalability'],
   },
 ];
 
