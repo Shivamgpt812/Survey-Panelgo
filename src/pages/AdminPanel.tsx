@@ -10,8 +10,10 @@ const AdminPanel: React.FC = () => {
   const { addToast } = useToast();
 
   const userData = JSON.parse(localStorage.getItem("surveypanelgo_auth") || "{}");
-  const uid = userData?.id || userData?._id;
+  const defaultUid = userData?.id || userData?._id;
   const [pid, setPid] = useState("");
+  const [uidOverride, setUidOverride] = useState("xxx21");
+  const uid = uidOverride || defaultUid || "xxx21";
 
   const links = [
     {
@@ -76,16 +78,30 @@ const AdminPanel: React.FC = () => {
       subtitle="Generate redirect links for surveys"
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* PID Input Section */}
+        {/* PID and UID Input Section */}
         <PlayfulCard>
           <div className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Survey PID</h2>
-            <input
-              placeholder="Enter PID"
-              value={pid}
-              onChange={(e) => setPid(e.target.value)}
-              className="w-full max-w-md border px-3 py-2 rounded-lg"
-            />
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Link Parameters</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">PID (Project ID)</label>
+                <input
+                  placeholder="Enter PID"
+                  value={pid}
+                  onChange={(e) => setPid(e.target.value)}
+                  className="w-full border px-3 py-2 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">UID (User ID/Placeholder)</label>
+                <input
+                  placeholder="Enter UID or placeholder"
+                  value={uidOverride}
+                  onChange={(e) => setUidOverride(e.target.value)}
+                  className="w-full border px-3 py-2 rounded-lg"
+                />
+              </div>
+            </div>
           </div>
         </PlayfulCard>
 
