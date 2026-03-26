@@ -8,7 +8,6 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Response as ResponseModel } from './models/Response.js';
 
 const router = express.Router();
 
@@ -52,7 +51,7 @@ const saveSurveys = (data: any) => {
 // ---------------------------------------------------------------------------
 router.post('/external/create', (req, res) => {
     try {
-        const { title, externalUrl, questions, vendor, projectId } = req.body;
+        const { title, externalUrl, questions, vendor } = req.body;
 
         if (!externalUrl) {
             return res.status(400).json({ success: false, message: 'externalUrl is required' });
@@ -66,15 +65,13 @@ router.post('/external/create', (req, res) => {
             title: title || 'External Survey',
             externalUrl,
             questions: Array.isArray(questions) ? questions : [],
-            vendor,
-            projectId: projectId || 'EXT_' + Date.now()
+            vendor
         };
 
         saveSurveys(surveys);
 
         const baseUrl = process.env.BACKEND_URL || 'https://survey-panelgo.onrender.com';
-        // Updated link format with placeholders as per requirement
-        const link = `${baseUrl}/external/start?projectId=${surveys[token].projectId}&vendorId=${vendor.id || vendor._id}&transactionId=[TRANSACTION_ID]&userid=[USER_ID]`;
+        const link = `${baseUrl}/external/router?token=${token}&rid=[USER_ID]&transactionId=[TRANSACTION_ID]`;
 
         console.log('✅ External Survey Persisted:', { title, token, link });
 
@@ -86,90 +83,7 @@ router.post('/external/create', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /external/start (New Requirement)
-// ---------------------------------------------------------------------------
-router.get('/external/start', (req, res) => {
-    try {
-        const { projectId, vendorId, transactionId, userid } = req.query;
-
-        if (!projectId || !vendorId) {
-            return res.status(400).send("Missing parameters: projectId and vendorId are required");
-        }
-
-        const surveys = loadSurveys();
-        console.log("🔍 Checking external start:", { projectId, vendorId, surveysCount: Object.keys(surveys).length });
-
-        const token = Object.keys(surveys)
-            .find(t => {
-                const s = surveys[t];
-                const storedPid = String(s.projectId || '').trim();
-                const storedVid = String(s.vendor?.id || s.vendor?._id || '').trim();
-                const requestedPid = String(projectId || '').trim();
-                const requestedVid = String(vendorId || '').trim();
-
-                console.log(`Checking token ${t}: PID(${storedPid} vs ${requestedPid}), VID(${storedVid} vs ${requestedVid})`);
-                return (storedPid === requestedPid) && (storedVid === requestedVid);
-            });
-
-        if (!token) {
-            console.error("❌ Survey token not found for:", { projectId, vendorId });
-            return res.status(404).send("Survey not found for this project and vendor");
-        }
-
-        // 🔥 Use dynamic origin or referer to support both netlify and custom domain
-        let frontendBase = (req.headers.origin as string);
-        if (!frontendBase && req.headers.referer) {
-            const ref = req.headers.referer as string;
-            if (ref.includes('surveypanelgo.netlify.app')) frontendBase = "https://surveypanelgo.netlify.app";
-            else if (ref.includes('surveypanelgo.com')) frontendBase = "https://surveypanelgo.com";
-        }
-        if (!frontendBase) frontendBase = "https://surveypanelgo.com";
-
-        const params = new URLSearchParams();
-        params.set('mode', 'external');
-        params.set('token', token);
-        params.set('rid', String(userid || ''));
-        params.set('transactionId', String(transactionId || ''));
-
-        // Store mapping for late interception
-        if (userid) ridToTokenMap[String(userid)] = token;
-
-        const redirectUrl = `${frontendBase}/vendor-lite?mode=external&token=${token}&rid=${userid || ''}&transactionId=${transactionId || ''}`;
-
-        return res.redirect(redirectUrl);
-    } catch (err) {
-        console.error('External Start Error:', err);
-        return res.status(500).send("Start error");
-    }
-});
-
-// ---------------------------------------------------------------------------
-// POST /api/external/punch (New Requirement for prescreener fail)
-// ---------------------------------------------------------------------------
-router.post('/api/external/punch', async (req, res) => {
-    try {
-        const { transactionId, userId, projectId, vendorId, status, token } = req.body;
-
-        console.log("🥊 Punching Data Internally:", { transactionId, userId, projectId, vendorId, status });
-
-        // Record response in DB
-        await ResponseModel.create({
-            surveyId: token || projectId || "UnknownExternal",
-            vendorId: vendorId,
-            userId: userId || transactionId,
-            status: status === 'complete' ? 'complete' : (status === 'quota' ? 'quota_full' : 'terminate'),
-            failureReason: status === 'terminate' ? 'Prescreener Failed' : undefined
-        });
-
-        return res.json({ success: true });
-    } catch (err) {
-        console.error("Punch Error:", err);
-        return res.status(500).json({ success: false });
-    }
-});
-
-// ---------------------------------------------------------------------------
-// GET /external/router (Legacy Support)
+// GET /external/router
 // ---------------------------------------------------------------------------
 router.get('/external/router', (req, res) => {
     try {
@@ -197,8 +111,7 @@ router.get('/external/router', (req, res) => {
         // Store mapping for late interception (if panel redirects to default routes)
         ridToTokenMap[String(rid)] = String(token);
 
-        // For legacy, we still go to vendor-lite but we could redirect to the new page too
-        const redirectUrl = `${frontendBase}/v/${token}?${params.toString()}`;
+        const redirectUrl = `${frontendBase}/vendor-lite?${params.toString()}`;
 
         return res.redirect(redirectUrl);
     } catch (err) {
@@ -228,7 +141,7 @@ router.get('/external/data/:token', (req, res) => {
 // ---------------------------------------------------------------------------
 // GET /external/redirect/:status
 // ---------------------------------------------------------------------------
-router.get("/external/redirect/:status", async (req, res) => {
+router.get("/external/redirect/:status", (req, res) => {
     try {
         const { status } = req.params;
         const { rid, token, transactionId } = req.query;
@@ -242,21 +155,8 @@ router.get("/external/redirect/:status", async (req, res) => {
             return res.status(404).send("Invalid survey token or token expired");
         }
 
-        // 👉 Step 1: Punch data internally (New Requirement)
-        try {
-            await ResponseModel.create({
-                surveyId: (token as string) || survey.projectId || "ExternalSurvey",
-                vendorId: survey.vendor?.id || survey.vendor?._id,
-                userId: (rid as string) || (transactionId as string),
-                status: status === "complete" ? "complete" : (status === "quota" ? "quota_full" : "terminate")
-            });
-            console.log("✅ Internal Punch Successful");
-        } catch (punchErr) {
-            console.error("Internal Punch Failed:", punchErr);
-        }
-
-        // 👉 Step 2: Immediately redirect user to VENDOR redirect URL (Modified)
         let redirectUrl = "";
+
         if (status === "complete") {
             redirectUrl = survey.vendor.complete_url;
         } else if (status === "terminate") {
