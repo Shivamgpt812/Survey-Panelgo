@@ -11,14 +11,48 @@ import { fileURLToPath } from 'url';
 
 const router = express.Router();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const mappingPath = path.join(__dirname, "respondentMappings.json");
+
 // ── Shared Mapping for Intercepting Defaults ─────────────────────────────────
 // OpinionSpark and other panels sometimes ignore return parameters and hit
 // default internal routes. We map rid -> token here to find the right vendor url.
 export const ridToTokenMap: Record<string, string> = {};
-export const findTokenByRid = (rid: string) => ridToTokenMap[rid];
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+/**
+ * Persist mapping to disk to survive server restarts/cold starts
+ */
+export const saveRidToTokenMapping = (rid: string, token: string) => {
+    try {
+        ridToTokenMap[rid] = token;
+        const current = loadAllMappings();
+        current[rid] = token;
+        fs.writeFileSync(mappingPath, JSON.stringify(current, null, 2));
+    } catch (e) {
+        console.error("Failed to save mapping to disk:", e);
+    }
+};
+
+const loadAllMappings = () => {
+    try {
+        if (!fs.existsSync(mappingPath)) return {};
+        const data = fs.readFileSync(mappingPath, "utf-8");
+        return JSON.parse(data || "{}");
+    } catch (e) { return {}; }
+};
+
+export const findTokenByRid = (rid: string) => {
+    // Check memory first
+    if (ridToTokenMap[rid]) return ridToTokenMap[rid];
+    // Check disk
+    const onDisk = loadAllMappings();
+    if (onDisk[rid]) {
+        ridToTokenMap[rid] = onDisk[rid]; // Update memory cache
+        return onDisk[rid];
+    }
+    return null;
+};
 const filePath = path.join(__dirname, "externalSurveys.json");
 
 /**
@@ -150,7 +184,8 @@ router.get('/external/router', async (req, res) => {
         finalUrl = finalUrl.replace('[#userid#]', rid as string);
 
         // Store mapping for late interception (if panel redirects to default routes)
-        ridToTokenMap[String(rid)] = String(token);
+        // This is now persisted to disk to survive cold starts
+        saveRidToTokenMapping(String(rid), String(token));
 
         // Immediately redirect to final external URL
         console.log(`🚀 Redirecting directly to External Survey: ${finalUrl}`);

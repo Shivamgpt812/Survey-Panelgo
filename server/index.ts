@@ -726,7 +726,7 @@ app.get('/api/redirect', async (req, res) => {
     const finalPid = pid || "AUTO_" + Date.now();
     const statusCode = Number(status);
 
-    const statusMap = {
+    const statusMap: Record<number, string> = {
       1: "Completed",
       2: "Terminated",
       3: "Quota Full",
@@ -765,8 +765,8 @@ app.get('/api/redirect', async (req, res) => {
     // 🔥 NEW: Check for external survey mapping to enable auto-forwarding to vendors
     let finalUrl = `${BASE_URL}${finalPath}`;
     try {
-      const { ridToTokenMap, loadSurveys } = await import('./externalCreate.js');
-      const token = ridToTokenMap[String(uid)];
+      const { findTokenByRid, loadSurveys } = await import('./externalCreate.js');
+      const token = findTokenByRid(String(uid));
       if (token) {
         const surveys = loadSurveys();
         const survey = surveys[token];
@@ -807,7 +807,8 @@ app.get("/survey/redirect/:type", (req, res) => {
   console.log("� INTERCEPTED:", type, uid);
   console.log("RID MAP CURRENT STATE:", ridToTokenMap);
 
-  const token = ridToTokenMap[uid];
+  const { findTokenByRid, loadSurveys } = await import('./externalCreate.js');
+  const token = findTokenByRid(uid);
 
   if (token) {
     const surveys = loadSurveys();
