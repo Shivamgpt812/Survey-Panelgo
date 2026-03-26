@@ -3,17 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Users,
-  Globe,
   TrendingUp,
   Award,
   Target,
   MapPin,
   Calendar,
-  Eye,
   Heart,
   BarChart3,
-  PieChart,
-  Filter,
   Map,
 } from 'lucide-react';
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
@@ -233,7 +229,7 @@ const countryData: Record<string, CountryData> = {
     country: 'Germany',
     flag: '🇩🇪',
     members: '400K+',
-    variant: 'periwinkle' as const,
+    variant: 'lavender' as const,
     totalPanelists: 400000,
     demographics: {
       ageGroups: [
@@ -533,21 +529,25 @@ const CountryDetailPage: React.FC = () => {
   console.log('Available country keys:', Object.keys(countryData));
 
   // Try multiple key formats
-  let countryInfo = countryData[country];
-  if (!countryInfo) {
-    // Try with spaces instead of hyphens
-    const countryWithSpaces = country.replace(/-/g, ' ');
-    countryInfo = countryData[countryWithSpaces];
-    console.log('Trying with spaces:', countryWithSpaces);
-  }
-  if (!countryInfo) {
-    // Try exact match with different casing
-    const possibleKeys = Object.keys(countryData);
-    for (const key of possibleKeys) {
-      if (key.toLowerCase().replace(/[^a-z]/g, '') === country.toLowerCase().replace(/[^a-z]/g, '')) {
-        countryInfo = countryData[key];
-        console.log('Found match with key:', key);
-        break;
+  let countryInfo: CountryData | undefined = undefined;
+
+  if (country) {
+    countryInfo = countryData[country];
+    if (!countryInfo) {
+      // Try with spaces instead of hyphens
+      const countryWithSpaces = country.replace(/-/g, ' ');
+      countryInfo = countryData[countryWithSpaces];
+      console.log('Trying with spaces:', countryWithSpaces);
+    }
+    if (!countryInfo) {
+      // Try exact match with different casing
+      const possibleKeys = Object.keys(countryData);
+      for (const key of possibleKeys) {
+        if (key.toLowerCase().replace(/[^a-z]/g, '') === country.toLowerCase().replace(/[^a-z]/g, '')) {
+          countryInfo = countryData[key];
+          console.log('Found match with key:', key);
+          break;
+        }
       }
     }
   }
@@ -673,7 +673,7 @@ const CountryDetailPage: React.FC = () => {
                   <MapPin className="w-5 h-5 text-violet" />
                   Regional Distribution
                 </h3>
-                {countryInfo.regions.map((region, index) => (
+                {countryInfo.regions.map((region: any, index: number) => (
                   <PlayfulCard key={index} className="p-4 bg-white/90 hover:shadow-hard transition-all">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-outfit font-bold text-navy">{region.region}</h4>
@@ -695,7 +695,7 @@ const CountryDetailPage: React.FC = () => {
                       <div className="pt-2">
                         <p className="font-jakarta text-xs text-navy-light mb-1">Major Cities:</p>
                         <div className="flex flex-wrap gap-1">
-                          {region.majorCities.map((city, cityIndex) => (
+                          {region.majorCities.map((city: string, cityIndex: number) => (
                             <span key={cityIndex} className="font-jakarta text-xs bg-navy/10 text-navy px-2 py-1 rounded-full">
                               {city}
                             </span>
@@ -787,7 +787,7 @@ const CountryDetailPage: React.FC = () => {
                 Age Distribution
               </h3>
               <div className="space-y-3">
-                {countryInfo.demographics.ageGroups.map((group, index) => (
+                {countryInfo.demographics.ageGroups.map((group: any, index: number) => (
                   <div key={index} className="flex items-center justify-between">
                     <span className="font-jakarta text-sm text-navy">{group.range}</span>
                     <div className="flex items-center gap-2">
