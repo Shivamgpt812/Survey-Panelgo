@@ -466,16 +466,28 @@ export default function VendorLitePage() {
             </div>
 
             {currentQuestion.type === 'select' ? (
-              <select
-                value={extAnswers[`q_${extCurrentStep}`] || ''}
-                onChange={(e) => setExtAnswers({ ...extAnswers, [`q_${extCurrentStep}`]: e.target.value })}
-                className="w-full px-6 py-4 text-lg border-2 border-violet/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-violet/10 focus:border-violet transition-all bg-white shadow-sm appearance-none"
-              >
-                <option value="">Select an option...</option>
-                {(currentQuestion.options || "").split(',').map((opt: string, idx: number) => (
-                  <option key={idx} value={opt.trim()}>{opt.trim()}</option>
-                ))}
-              </select>
+              <div className="space-y-4">
+                {(currentQuestion.options || "").split(',').map((opt: string, idx: number) => {
+                  const cleanedOpt = opt.trim();
+                  const isSelected = extAnswers[`q_${extCurrentStep}`] === cleanedOpt;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setExtAnswers({ ...extAnswers, [`q_${extCurrentStep}`]: cleanedOpt });
+                        // Auto-advance to next if not the last question? 
+                        // Actually, let's let them click "Next" to be safe.
+                      }}
+                      className={`w-full text-left px-6 py-4 rounded-2xl border-2 transition-all font-jakarta font-semibold text-lg ${isSelected
+                          ? 'border-violet bg-violet/5 text-violet shadow-md ring-4 ring-violet/10'
+                          : 'border-violet/10 bg-white hover:border-violet/30 text-gray-700'
+                        }`}
+                    >
+                      {cleanedOpt}
+                    </button>
+                  );
+                })}
+              </div>
             ) : currentQuestion.type === 'age' ? (
               <input
                 type="number"
@@ -749,9 +761,9 @@ export default function VendorLitePage() {
                               }}
                               className="w-32 px-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet"
                             >
-                              <option value="text">Text</option>
-                              <option value="select">Select</option>
-                              <option value="age">Age/Num</option>
+                              <option value="text">Text Entry</option>
+                              <option value="select">Multiple Choice</option>
+                              <option value="age">Age/Numeric</option>
                             </select>
                             {extQuestions.length > 1 && (
                               <button
