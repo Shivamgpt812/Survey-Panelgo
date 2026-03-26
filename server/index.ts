@@ -713,21 +713,17 @@ app.get('/api/redirect', async (req, res) => {
   try {
     const { pid, uid, status } = req.query;
 
-    console.log("Redirect HIT:", { pid, uid, status });
+    console.log("🔥 Redirect HIT:", { pid, uid, status });
 
     // 🔥 Explicitly use the Netlify domain where the frontend is reliable
-    const redirectBase = "https://surveypanelgo.netlify.app";
+    const BASE_URL = "https://surveypanelgo.netlify.app";
 
     if (!uid || !status) {
-      console.error("Missing params:", { pid, uid, status });
-      return res.redirect(`${redirectBase}/error`);
+      console.error("❌ Missing required parameters (uid/status)");
+      return res.redirect(`${BASE_URL}/error`);
     }
 
-    // Auto generate PID if not provided
     const finalPid = pid || "AUTO_" + Date.now();
-    console.log("Final PID:", finalPid);
-
-    // Convert status to number
     const statusCode = Number(status);
 
     const statusMap = {
@@ -739,37 +735,23 @@ app.get('/api/redirect', async (req, res) => {
 
     const statusText = statusMap[statusCode] || "Unknown";
 
-    // Save to DB
-    try {
-      await SurveyRedirectLogs.create({
-        pid: finalPid,
-        uid,
-        status: statusCode,
-        statusText,
-        ipAddress: req.headers["x-forwarded-for"] || req.socket.remoteAddress,
-        userAgent: req.headers["user-agent"],
-        createdAt: new Date()
-      });
+    // Non-blocking log creation to avoid delaying the redirect
+    SurveyRedirectLogs.create({
+      pid: finalPid,
+      uid,
+      status: statusCode,
+      statusText,
+      ipAddress: (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req.socket.remoteAddress,
+      userAgent: req.headers["user-agent"],
+      createdAt: new Date()
+    }).catch(err => console.error("❌ Background log error:", err));
 
-      console.log("Log saved successfully");
-    } catch (dbError) {
-      console.error("DB SAVE ERROR:", dbError);
-    }
-
-    // 🔥 Consistency Check
-    const BASE_URL = "https://surveypanelgo.netlify.app";
-
-    // Capture IP address
+    // Capture diagnostic info
     const rawIp = req.headers["x-forwarded-for"] as string;
     const ip = rawIp
       ? rawIp.split(",")[0].trim()
       : req.socket.remoteAddress || "Unknown";
-
-    // Capture timestamp
     const timestamp = new Date().toISOString();
-
-    // Log redirect data for debugging
-    console.log("Redirect Data:", { finalPid, uid, status, ip, timestamp });
 
     const redirectPages = {
       1: `/survey-result/success?pid=${finalPid}&uid=${uid}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
@@ -781,22 +763,13 @@ app.get('/api/redirect', async (req, res) => {
     const finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${uid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
     const finalUrl = `${BASE_URL}${finalPath}`;
 
-    console.log("Redirecting to:", finalUrl);
-
+    console.log("🚀 Redirecting NOW to:", finalUrl);
     return res.redirect(finalUrl);
+
   } catch (error) {
-    console.error("REDIRECT CRASH:", error);
-
-    // 🔥 Use Netlify domain since it has the updated frontend build
-    let redirectBase = (req.headers.origin as string);
-    if (!redirectBase && req.headers.referer) {
-      const ref = req.headers.referer as string;
-      if (ref.includes('surveypanelgo.netlify.app')) redirectBase = "https://surveypanelgo.netlify.app";
-      else if (ref.includes('surveypanelgo.com')) redirectBase = "https://surveypanelgo.netlify.app";
-    }
-    if (!redirectBase) redirectBase = "https://surveypanelgo.netlify.app";
-
-    return res.redirect(`${redirectBase}/error`);
+    console.error("❌ REDIRECT CRASH:", error);
+    const fallback = "https://surveypanelgo.netlify.app";
+    return res.redirect(`${fallback}/error`);
   }
 });
 
