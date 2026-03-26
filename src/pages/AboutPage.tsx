@@ -34,32 +34,25 @@ interface CompanyValue {
 
 const teamMembers: TeamMember[] = [
   {
-    name: 'Dr. Sarah Chen',
-    role: 'Chief Executive Officer',
-    bio: 'With over 15 years of experience in market research, Sarah leads our vision of delivering actionable insights that drive business growth.',
-    image: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&q=80&auto=format&fit=crop',
-    expertise: ['Strategic Planning', 'Quantitative Analysis', 'Global Markets'],
+    name: 'Rohit Singh',
+    role: 'Founder & CEO',
+    bio: 'The visionary leader behind Survey Panel Go, Rohit has a passion for building innovative products that solve real-world problems and empower businesses globally.',
+    image: '/team/Rohit Singh.webp',
+    expertise: ['Product Vision', 'Strategic Growth', 'Innovation'],
   },
   {
-    name: 'Michael Rodriguez',
-    role: 'Chief Research Officer',
-    bio: 'Michael specializes in consumer behavior analysis and has helped Fortune 500 companies understand their customers better.',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80&auto=format&fit=crop',
-    expertise: ['Consumer Insights', 'Behavioral Economics', 'Research Design'],
+    name: 'Nitin',
+    role: 'Co-Founder & COO',
+    bio: 'Nitin leads our global operations, ensuring that our research projects are executed with precision, speed, and the highest quality standards across all regions.',
+    image: '/team/Nitin.jpeg',
+    expertise: ['Operations', 'Quality Assurance', 'Scalability'],
   },
   {
-    name: 'Emma Thompson',
-    role: 'Head of Operations',
-    bio: 'Emma ensures our research projects run smoothly and efficiently, delivering high-quality insights on time and within budget.',
-    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=80&auto=format&fit=crop',
-    expertise: ['Project Management', 'Quality Assurance', 'Process Optimization'],
-  },
-  {
-    name: 'James Wilson',
-    role: 'Director of Digital Research',
-    bio: 'James pioneers innovative digital research methods, leveraging AI and machine learning to uncover deeper insights.',
-    image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80&auto=format&fit=crop',
-    expertise: ['Digital Analytics', 'AI Research', 'Online Panels'],
+    name: 'Rohit Shreevastav',
+    role: 'Head of Finance',
+    bio: 'With deep financial expertise, Rohit manages the fiscal health of the company, securing the resources needed to drive our expansion and long-term sustainability.',
+    image: '/team/Rohit Shreevastav.HEIC',
+    expertise: ['Financial Strategy', 'Fiscal Management', 'Growth Planning'],
   },
 ];
 
