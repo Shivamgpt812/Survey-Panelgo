@@ -1097,7 +1097,7 @@ const LandingPage: React.FC = () => {
             {clientsStrip.map((client, i) => (
               <div
                 key={`${client.name}-${i}`}
-                className="flex-shrink-0 flex items-center justify-center h-24 sm:h-32 w-40 sm:w-48 px-6 sm:px-8 py-4 sm:py-6 rounded-2xl border-2 border-navy bg-white shadow-hard-sm hover:shadow-hard hover:scale-105 transition-all group"
+                className="flex-shrink-0 flex items-center justify-center h-32 sm:h-40 w-40 sm:w-48 px-6 sm:px-8 py-4 sm:py-6 rounded-2xl border-2 border-navy bg-white shadow-hard-sm hover:shadow-hard hover:scale-105 transition-all group"
               >
                 <img
                   src={client.src}
