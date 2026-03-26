@@ -800,7 +800,7 @@ app.get('/api/redirect', async (req, res) => {
 // ---------- Intercept External Flow Default Redirects ----------
 // When an external provider ignores our custom callback URL and 
 // hits these default routes instead, we intercept and reroute.
-app.get("/survey/redirect/:type", (req, res) => {
+app.get("/survey/redirect/:type", async (req, res) => {
   const { type } = req.params;
   const { uid } = req.query as { uid: string };
 
