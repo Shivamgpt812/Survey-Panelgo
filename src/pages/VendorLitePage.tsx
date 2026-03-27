@@ -293,7 +293,7 @@ export default function VendorLitePage() {
             title: surveyForm.title,
             externalUrl: surveyForm.externalLink,
             pid: surveyForm.pid,
-            questions: extQuestions,
+            questions: extQuestions.filter(q => q.text && q.text.trim() !== ''),
             vendor: vendorObj
           })
         });
