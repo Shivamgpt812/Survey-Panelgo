@@ -454,6 +454,28 @@ export default function VendorLitePage() {
   if (isExternalMode) {
     if (!extSurvey) return <div className="min-h-screen bg-violet-50 flex items-center justify-center font-jakarta font-bold text-violet">Loading Prescreener...</div>;
 
+    // If no prescreener questions, redirect directly to external survey
+    if (!extSurvey.questions || extSurvey.questions.length === 0) {
+      const rid = localStorage.getItem("ext_rid") || "";
+      const transactionId = localStorage.getItem("ext_transactionId") || "";
+      let finalUrl = extSurvey.externalUrl || "";
+
+      // Replace placeholders - prioritizing respondent ID (rid)
+      if (rid) {
+        finalUrl = finalUrl.replace('[#userid#]', rid);
+        finalUrl = finalUrl.replace('[#rid#]', rid);
+      }
+
+      // Replace transaction_id if it exists to complete the substitution
+      if (transactionId) {
+        finalUrl = finalUrl.replace('[#transaction_id#]', transactionId);
+      }
+
+      console.log("🚀 No prescreener questions - Redirecting directly to External Survey:", finalUrl);
+      window.location.href = finalUrl;
+      return <div className="min-h-screen bg-violet-50 flex items-center justify-center font-jakarta font-bold text-violet">Redirecting to survey...</div>;
+    }
+
     const currentQuestion = extSurvey.questions[extCurrentStep];
 
     return (
