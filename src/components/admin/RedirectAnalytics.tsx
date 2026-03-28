@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, Users, Activity, Clock, DollarSign, BarChart3 } from 'lucide-react';
 
@@ -32,27 +32,10 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
   const [error, setError] = useState<string | null>(null);
   const [statusCounts, setStatusCounts] = useState<Record<number, number>>({});
   const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [activeTab, setActiveTab] = useState('overview');
-
-  // Debounce search term to avoid too many API calls
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-      setCurrentPage(1);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  const handleSearchSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    setDebouncedSearchTerm(searchTerm);
-    setCurrentPage(1);
-  }, [searchTerm]);
 
   const statusColors = {
     1: '#10b981', // green
@@ -83,7 +66,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
         limit: '50',
       });
 
-      if (debouncedSearchTerm) params.append('search', debouncedSearchTerm);
+      if (searchTerm) params.append('search', searchTerm);
       if (filterStatus) params.append('status', filterStatus);
 
       const url = `https://survey-panelgo.onrender.com/api/redirect-logs?${params}`;
@@ -119,7 +102,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
 
   useEffect(() => {
     fetchLogs();
-  }, [currentPage, debouncedSearchTerm, filterStatus]);
+  }, [currentPage, searchTerm, filterStatus]);
 
   const chartData = Object.entries(statusCounts).map(([status, count]) => ({
     status: statusLabels[parseInt(status) as keyof typeof statusLabels],
@@ -247,12 +230,15 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
               </div>
 
               {/* Filters */}
-              <form onSubmit={handleSearchSubmit} className="flex flex-col xl:flex-row gap-3 w-full">
+              <div className="flex flex-col xl:flex-row gap-3 w-full">
                 <input
                   type="text"
                   placeholder="Search by PID, UID, Status, IP..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   className="w-full xl:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 
@@ -270,7 +256,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                   <option value="3">Quota Full</option>
                   <option value="4">Security Terminated</option>
                 </select>
-              </form>
+              </div>
 
               {/* Table */}
               <div className="w-full overflow-x-auto border border-gray-200 rounded-lg">
