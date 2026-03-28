@@ -31,6 +31,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusCounts, setStatusCounts] = useState<Record<number, number>>({});
+  const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -115,6 +116,19 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
     value: item.count,
     fill: item.fill,
   }));
+
+  const handleSearchSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      setSearchTerm(searchInput);
+      setCurrentPage(1);
+    }
+  };
+
+  const handleSearchClear = () => {
+    setSearchInput('');
+    setSearchTerm('');
+    setCurrentPage(1);
+  };
 
   if (loading) {
     return (
@@ -231,16 +245,24 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
 
               {/* Filters */}
               <div className="flex flex-col xl:flex-row gap-3 w-full">
-                <input
-                  type="text"
-                  placeholder="Search by PID, UID, Status, IP..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="w-full xl:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                <div className="relative w-full xl:flex-1">
+                  <input
+                    type="text"
+                    placeholder="Search by PID, UID, Status, IP... (Press Enter to search)"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onKeyDown={handleSearchSubmit}
+                    className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  {searchInput && (
+                    <button
+                      onClick={handleSearchClear}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
                 
                 <select
                   value={filterStatus}
