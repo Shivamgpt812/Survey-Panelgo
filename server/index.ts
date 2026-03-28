@@ -885,7 +885,7 @@ app.get("/survey/redirect/:type", async (req, res) => {
 // ---------- Redirect Analytics ----------
 app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
   try {
-    const { page = 1, limit = 50, pid, status } = req.query;
+    const { page = 1, limit = 50, pid, status, search } = req.query;
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
@@ -893,6 +893,19 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
     const filter: any = {};
     if (pid) filter.pid = String(pid);
     if (status) filter.status = parseInt(status as string);
+
+    // Add general search functionality
+    if (search) {
+      const searchTerm = String(search).trim();
+      if (searchTerm) {
+        filter.$or = [
+          { pid: { $regex: searchTerm, $options: 'i' } },
+          { uid: { $regex: searchTerm, $options: 'i' } },
+          { statusText: { $regex: searchTerm, $options: 'i' } },
+          { ipAddress: { $regex: searchTerm, $options: 'i' } }
+        ];
+      }
+    }
 
     const [logs, total] = await Promise.all([
       SurveyRedirectLogs.find(filter)

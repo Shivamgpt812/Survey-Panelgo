@@ -31,7 +31,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusCounts, setStatusCounts] = useState<Record<number, number>>({});
-  const [filterPid, setFilterPid] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -66,7 +66,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
         limit: '50',
       });
 
-      if (filterPid) params.append('pid', filterPid);
+      if (searchTerm) params.append('search', searchTerm);
       if (filterStatus) params.append('status', filterStatus);
 
       const url = `https://survey-panelgo.onrender.com/api/redirect-logs?${params}`;
@@ -102,7 +102,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
 
   useEffect(() => {
     fetchLogs();
-  }, [currentPage, filterPid, filterStatus]);
+  }, [currentPage, searchTerm, filterStatus]);
 
   const chartData = Object.entries(statusCounts).map(([status, count]) => ({
     status: statusLabels[parseInt(status) as keyof typeof statusLabels],
@@ -233,10 +233,10 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
               <div className="flex flex-col xl:flex-row gap-3 w-full">
                 <input
                   type="text"
-                  placeholder="Filter by PID..."
-                  value={filterPid}
+                  placeholder="Search by PID, UID, Status, IP..."
+                  value={searchTerm}
                   onChange={(e) => {
-                    setFilterPid(e.target.value);
+                    setSearchTerm(e.target.value);
                     setCurrentPage(1);
                   }}
                   className="w-full xl:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
