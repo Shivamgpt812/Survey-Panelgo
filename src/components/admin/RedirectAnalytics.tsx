@@ -281,7 +281,8 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                   )}
                 </div>
                 
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                  <label className="text-sm font-medium text-gray-700">From:</label>
                   <input
                     type="date"
                     value={startDate}
@@ -292,6 +293,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                     className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Start Date"
                   />
+                  <label className="text-sm font-medium text-gray-700">To:</label>
                   <input
                     type="date"
                     value={endDate}
