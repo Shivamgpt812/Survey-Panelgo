@@ -885,7 +885,7 @@ app.get("/survey/redirect/:type", async (req, res) => {
 // ---------- Redirect Analytics ----------
 app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
   try {
-    const { page = 1, limit = 50, pid, status, search } = req.query;
+    const { page = 1, limit = 50, pid, status, search, startDate, endDate } = req.query;
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
@@ -904,6 +904,19 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
           { statusText: { $regex: searchTerm, $options: 'i' } },
           { ipAddress: { $regex: searchTerm, $options: 'i' } }
         ];
+      }
+    }
+
+    // Add date range filtering
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) {
+        filter.createdAt.$gte = new Date(startDate as string);
+      }
+      if (endDate) {
+        const endDateTime = new Date(endDate as string);
+        endDateTime.setHours(23, 59, 59, 999); // End of day
+        filter.createdAt.$lte = endDateTime;
       }
     }
 

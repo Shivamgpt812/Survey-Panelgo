@@ -34,6 +34,8 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [activeTab, setActiveTab] = useState('overview');
@@ -69,6 +71,8 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
 
       if (searchTerm) params.append('search', searchTerm);
       if (filterStatus) params.append('status', filterStatus);
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
 
       const url = `https://survey-panelgo.onrender.com/api/redirect-logs?${params}`;
       console.log("API CALL (GET):", url);
@@ -103,7 +107,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
 
   useEffect(() => {
     fetchLogs();
-  }, [currentPage, searchTerm, filterStatus]);
+  }, [currentPage, searchTerm, filterStatus, startDate, endDate]);
 
   const chartData = Object.entries(statusCounts).map(([status, count]) => ({
     status: statusLabels[parseInt(status) as keyof typeof statusLabels],
@@ -127,6 +131,19 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
   const handleSearchClear = () => {
     setSearchInput('');
     setSearchTerm('');
+    setCurrentPage(1);
+  };
+
+  const handleDateFilter = () => {
+    setCurrentPage(1);
+  };
+
+  const handleClearAllFilters = () => {
+    setSearchInput('');
+    setSearchTerm('');
+    setFilterStatus('');
+    setStartDate('');
+    setEndDate('');
     setCurrentPage(1);
   };
 
@@ -244,8 +261,8 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
               </div>
 
               {/* Filters */}
-              <div className="flex flex-col xl:flex-row gap-3 w-full">
-                <div className="relative w-full xl:flex-1">
+              <div className="flex flex-col lg:flex-row gap-3 w-full">
+                <div className="relative flex-1">
                   <input
                     type="text"
                     placeholder="Search by PID, UID, Status, IP... (Press Enter to search)"
@@ -264,13 +281,36 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                   )}
                 </div>
                 
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      handleDateFilter();
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Start Date"
+                  />
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      handleDateFilter();
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="End Date"
+                  />
+                </div>
+                
                 <select
                   value={filterStatus}
                   onChange={(e) => {
                     setFilterStatus(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full xl:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">All Statuses</option>
                   <option value="1">Completed</option>
@@ -278,6 +318,13 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                   <option value="3">Quota Full</option>
                   <option value="4">Security Terminated</option>
                 </select>
+
+                <button
+                  onClick={handleClearAllFilters}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Clear All
+                </button>
               </div>
 
               {/* Table */}
@@ -285,6 +332,9 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                 <table className="min-w-[800px] w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                        S.No
+                      </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Timestamp
                       </th>
@@ -306,7 +356,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {logs.map((log) => (
+                    {logs.map((log, index) => (
                       <tr 
                         key={log.id}
                         style={{ cursor: "pointer" }}
@@ -318,6 +368,9 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                           );
                         }}
                       >
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          {(currentPage - 1) * 50 + index + 1}
+                        </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           {new Date(log.createdAt).toLocaleString()}
                         </td>
