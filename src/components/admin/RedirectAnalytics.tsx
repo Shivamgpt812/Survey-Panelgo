@@ -357,17 +357,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {logs.map((log, index) => (
-                      <tr 
-                        key={log.id}
-                        style={{ cursor: "pointer" }}
-                        onClick={() => {
-                          const statusCode = log.status || statusMap[log.statusText];
-                          window.open(
-                            `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`,
-                            "_blank"
-                          );
-                        }}
-                      >
+                      <tr key={log.id}>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           {(currentPage - 1) * 50 + index + 1}
                         </td>
@@ -400,8 +390,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                           <div className="flex flex-wrap gap-1">
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              onClick={() => {
                                 const statusCode = log.status || statusMap[log.statusText];
                                 window.open(
                                   `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`,
@@ -421,8 +410,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                               Replay
                             </button>
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              onClick={() => {
                                 const statusCode = log.status || statusMap[log.statusText];
                                 const url = `${BACKEND_URL}/api/redirect?pid=${log.pid}&uid=${log.uid}&status=${statusCode}`;
                                 navigator.clipboard.writeText(url);
