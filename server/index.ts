@@ -920,23 +920,22 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
       }
     }
 
-    const [logs, total] = await Promise.all([
-      SurveyRedirectLogs.find(filter)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limitNum)
-        .lean(),
-      SurveyRedirectLogs.countDocuments(filter)
-    ]);
+    // Get all matching records first for proper deduplication
+    const allLogs = await SurveyRedirectLogs.find(filter)
+      .sort({ createdAt: -1 })
+      .lean();
 
     // Remove duplicates based on combination of pid, uid, and statusText
-    const uniqueLogs = logs.filter((log, index, self) => {
+    const uniqueLogs = allLogs.filter((log, index, self) => {
       return index === self.findIndex((l) => 
         l.pid === log.pid && 
         l.uid === log.uid && 
         l.statusText === log.statusText
       );
     });
+
+    // Apply pagination to unique records
+    const paginatedLogs = uniqueLogs.slice(skip, skip + limitNum);
 
     // Calculate status counts from unique records only
     const uniqueStatusCounts = uniqueLogs.reduce((acc, log) => {
@@ -945,7 +944,7 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
     }, {} as Record<number, number>);
 
     res.json({
-      logs: uniqueLogs.map(log => ({
+      logs: paginatedLogs.map(log => ({
         ...log,
         id: log._id,
         _id: undefined
@@ -953,7 +952,7 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
       pagination: {
         page: pageNum,
         limit: limitNum,
-        total: uniqueLogs.length, // Update total to reflect unique records
+        total: uniqueLogs.length, // Total unique records
         pages: Math.ceil(uniqueLogs.length / limitNum)
       },
       statusCounts: uniqueStatusCounts
