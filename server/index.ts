@@ -929,14 +929,23 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
       SurveyRedirectLogs.countDocuments(filter)
     ]);
 
-    const statusCounts = await SurveyRedirectLogs.aggregate([
-      { $match: filter },
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-      { $sort: { _id: 1 } }
-    ]);
+    // Remove duplicates based on combination of pid, uid, and statusText
+    const uniqueLogs = logs.filter((log, index, self) => {
+      return index === self.findIndex((l) => 
+        l.pid === log.pid && 
+        l.uid === log.uid && 
+        l.statusText === log.statusText
+      );
+    });
+
+    // Calculate status counts from unique records only
+    const uniqueStatusCounts = uniqueLogs.reduce((acc, log) => {
+      acc[log.status] = (acc[log.status] || 0) + 1;
+      return acc;
+    }, {} as Record<number, number>);
 
     res.json({
-      logs: logs.map(log => ({
+      logs: uniqueLogs.map(log => ({
         ...log,
         id: log._id,
         _id: undefined
@@ -944,13 +953,10 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
       pagination: {
         page: pageNum,
         limit: limitNum,
-        total,
-        pages: Math.ceil(total / limitNum)
+        total: uniqueLogs.length, // Update total to reflect unique records
+        pages: Math.ceil(uniqueLogs.length / limitNum)
       },
-      statusCounts: statusCounts.reduce((acc, item) => {
-        acc[item._id] = item.count;
-        return acc;
-      }, {} as Record<number, number>)
+      statusCounts: uniqueStatusCounts
     });
   } catch (e) {
     console.error(e);
