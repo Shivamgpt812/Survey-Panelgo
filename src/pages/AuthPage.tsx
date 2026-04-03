@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
@@ -10,11 +10,12 @@ import { useToast } from '@/hooks/useToast';
 const AuthPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { login, register } = useAuth();
+  const { login, register, googleLogin } = useAuth();
   const { addToast } = useToast();
   const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'signup');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -65,6 +66,72 @@ const AuthPage: React.FC = () => {
       ...prev,
       [e.target.name]: e.target.value,
     }));
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsGoogleLoading(true);
+    try {
+      // Load Google GSI script
+      if (!window.google) {
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+
+        script.onload = () => {
+          initializeGoogleSignIn();
+        };
+      } else {
+        initializeGoogleSignIn();
+      }
+    } catch (error) {
+      console.error('Google login error:', error);
+      addToast('Google login failed', 'error');
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const initializeGoogleSignIn = () => {
+    if (!window.google) return;
+
+    window.google.accounts.id.initialize({
+      client_id: '787845696998-3nl0cq616g0n21fm4mdomjdqo04ckvah.apps.googleusercontent.com',
+      callback: async (response: any) => {
+        try {
+          const result = await googleLogin({ token: response.credential });
+          
+          if (result.success && result.user) {
+            addToast(`Welcome, ${result.user.name}! 🎉`, 'success');
+
+            // Check for stored redirect URL (from vendor entry)
+            const redirectUrl = sessionStorage.getItem('surveypanelgo_redirect');
+            if (redirectUrl) {
+              sessionStorage.removeItem('surveypanelgo_redirect');
+              navigate(redirectUrl);
+              return;
+            }
+
+            // Redirect based on role
+            if (result.user.role === 'admin') {
+              navigate('/admin');
+            } else {
+              navigate('/dashboard');
+            }
+          } else {
+            addToast(result.error || 'Google login failed', 'error');
+          }
+        } catch (error) {
+          console.error('Google login callback error:', error);
+          addToast('Google login failed', 'error');
+        } finally {
+          setIsGoogleLoading(false);
+        }
+      },
+    });
+
+    // Show the One Tap popup
+    window.google.accounts.id.prompt();
   };
 
   return (
@@ -218,7 +285,11 @@ const AuthPage: React.FC = () => {
 
         {/* Social Buttons */}
         <div className="grid grid-cols-2 gap-3">
-          <button className="flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta font-medium text-sm text-navy hover:bg-periwinkle transition-colors">
+          <button 
+            onClick={handleGoogleLogin}
+            disabled={isGoogleLoading}
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta font-medium text-sm text-navy hover:bg-periwinkle transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
                 fill="currentColor"
@@ -237,7 +308,7 @@ const AuthPage: React.FC = () => {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            Google
+            {isGoogleLoading ? 'Signing in...' : 'Google'}
           </button>
           <button className="flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta font-medium text-sm text-navy hover:bg-periwinkle transition-colors">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">

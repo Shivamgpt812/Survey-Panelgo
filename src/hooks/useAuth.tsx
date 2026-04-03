@@ -16,6 +16,10 @@ export interface RegisterPayload {
   password: string;
 }
 
+export interface GoogleLoginPayload {
+  token: string;
+}
+
 export interface LoginResult {
   success: boolean;
   user?: User;
@@ -26,6 +30,7 @@ interface AuthContextType extends AuthState {
   token: string | null;
   login: (credentials: LoginCredentials) => Promise<LoginResult>;
   register: (payload: RegisterPayload) => Promise<LoginResult>;
+  googleLogin: (payload: GoogleLoginPayload) => Promise<LoginResult>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   isAdmin: () => boolean;
@@ -107,6 +112,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const googleLogin = async (payload: GoogleLoginPayload): Promise<LoginResult> => {
+    try {
+      const data = await apiPost<{ token: string; user: User }>('/api/auth/google', payload);
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data.user));
+      setToken(data.token);
+      setState({
+        user: data.user,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+      return { success: true, user: data.user };
+    } catch (e) {
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : 'Google login failed',
+      };
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(TOKEN_KEY);
@@ -136,6 +161,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         token,
         login,
         register,
+        googleLogin,
         logout,
         refreshUser,
         isAdmin,

@@ -24,6 +24,7 @@ import {
   requireAdmin,
   type AuthedRequest,
 } from './middleware/optionalAuth.js';
+import { OAuth2Client } from 'google-auth-library';
 
 const app = express();
 const allowedOrigins = [
@@ -129,6 +130,57 @@ app.get('/api/auth/me', requireAuth, async (req: AuthedRequest, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to load user' });
+  }
+});
+
+// ---------- Google OAuth ----------
+const googleClient = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_CALLBACK_URL
+);
+
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ error: 'Google token is required' });
+    }
+
+    // Verify Google token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      return res.status(400).json({ error: 'Invalid Google token' });
+    }
+
+    // Check if user exists
+    let user = await User.findOne({ email: payload.email });
+    
+    if (!user) {
+      // Create new user
+      user = await User.create({
+        name: payload.name || payload.email.split('@')[0],
+        email: payload.email,
+        role: 'user',
+        createdAt: new Date(),
+      });
+    }
+
+    // Generate JWT token
+    const jwtToken = signToken(String(user._id), user.role);
+    
+    res.json({ 
+      token: jwtToken, 
+      user: userJson(user) 
+    });
+  } catch (e) {
+    console.error('Google auth error:', e);
+    res.status(500).json({ error: 'Google authentication failed' });
   }
 });
 
