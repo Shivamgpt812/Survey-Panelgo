@@ -15,6 +15,7 @@ import AdminPanel from '@/pages/AdminPanel';
 import VendorEntryPage from '@/pages/VendorEntryPage';
 import VendorLitePage from '@/pages/VendorLitePage';
 import VendorSurveyPublicPage from '@/pages/VendorSurveyPublicPage';
+import AuthCallbackPage from '@/pages/AuthCallbackPage';
 import './App.css';
 
 function AppContent() {
@@ -28,6 +29,7 @@ function AppContent() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/global" element={<CountryHeroSection />} />
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/start" element={<VendorEntryPage />} />
         <Route path="/survey-result/success" element={<SurveySuccess />} />
         <Route path="/survey-result/terminated" element={<SurveyTerminated />} />

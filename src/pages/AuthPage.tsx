@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
@@ -71,67 +71,30 @@ const AuthPage: React.FC = () => {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
-      // Load Google GSI script
-      if (!window.google) {
-        const script = document.createElement('script');
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.async = true;
-        script.defer = true;
-        document.head.appendChild(script);
-
-        script.onload = () => {
-          initializeGoogleSignIn();
-        };
-      } else {
-        initializeGoogleSignIn();
-      }
+      // Generate OAuth 2.0 URL for Google Sign-In
+      const clientId = '787845696998-3nl0cq616g0n21fm4mdomjdqo04ckvah.apps.googleusercontent.com';
+      const redirectUri = encodeURIComponent('http://localhost:5173/auth/callback');
+      const scope = encodeURIComponent('openid email profile');
+      const responseType = 'code';
+      const state = encodeURIComponent(Date.now().toString()); // Simple state for security
+      
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${clientId}&` +
+        `redirect_uri=${redirectUri}&` +
+        `scope=${scope}&` +
+        `response_type=${responseType}&` +
+        `state=${state}`;
+      
+      // Store the state in sessionStorage for verification
+      sessionStorage.setItem('google_oauth_state', state);
+      
+      // Redirect to Google OAuth
+      window.location.href = authUrl;
     } catch (error) {
       console.error('Google login error:', error);
       addToast('Google login failed', 'error');
       setIsGoogleLoading(false);
     }
-  };
-
-  const initializeGoogleSignIn = () => {
-    if (!window.google) return;
-
-    window.google.accounts.id.initialize({
-      client_id: '787845696998-3nl0cq616g0n21fm4mdomjdqo04ckvah.apps.googleusercontent.com',
-      callback: async (response: any) => {
-        try {
-          const result = await googleLogin({ token: response.credential });
-          
-          if (result.success && result.user) {
-            addToast(`Welcome, ${result.user.name}! 🎉`, 'success');
-
-            // Check for stored redirect URL (from vendor entry)
-            const redirectUrl = sessionStorage.getItem('surveypanelgo_redirect');
-            if (redirectUrl) {
-              sessionStorage.removeItem('surveypanelgo_redirect');
-              navigate(redirectUrl);
-              return;
-            }
-
-            // Redirect based on role
-            if (result.user.role === 'admin') {
-              navigate('/admin');
-            } else {
-              navigate('/dashboard');
-            }
-          } else {
-            addToast(result.error || 'Google login failed', 'error');
-          }
-        } catch (error) {
-          console.error('Google login callback error:', error);
-          addToast('Google login failed', 'error');
-        } finally {
-          setIsGoogleLoading(false);
-        }
-      },
-    });
-
-    // Show the One Tap popup
-    window.google.accounts.id.prompt();
   };
 
   return (

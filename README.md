@@ -1,4 +1,45 @@
-# React + TypeScript + Vite
+# Survey Panelgo - Live
+
+A survey panel application with Google OAuth integration.
+
+## Google OAuth Setup
+
+To enable Google login functionality, you need to configure your Google Cloud Console:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Enable Google+ API and Google OAuth2 API
+4. Create OAuth 2.0 Client ID credentials
+5. Set **Authorized redirect URI** to: `http://localhost:5173/auth/callback`
+6. Add the following to your `.env` file:
+
+```
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_CALLBACK_URL=http://localhost:5173/auth/callback
+```
+
+### Common Issues
+
+**Error 400: redirect_uri_mismatch**
+- Ensure the redirect URI in Google Cloud Console exactly matches: `http://localhost:5173/auth/callback`
+- No trailing slashes
+- Exact match including protocol (http vs https)
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start frontend
+npm run dev
+
+# Start backend (in separate terminal)
+npm run dev:server
+```
+
+## React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
