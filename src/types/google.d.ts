@@ -10,6 +10,15 @@ declare global {
             callback: (response: { credential: string }) => void;
           }) => void;
           prompt: () => void;
+          renderButton: (
+            container: HTMLElement,
+            options: {
+              theme?: string;
+              size?: string;
+              text?: string;
+              width?: string;
+            }
+          ) => void;
         };
       };
     };

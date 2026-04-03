@@ -144,36 +144,12 @@ app.post('/api/auth/google', async (req, res) => {
   try {
     const { token } = req.body;
     if (!token) {
-      return res.status(400).json({ error: 'Google authorization code is required' });
+      return res.status(400).json({ error: 'Google ID token is required' });
     }
 
-    // Exchange authorization code for tokens
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        code: token,
-        client_id: process.env.GOOGLE_CLIENT_ID!,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        redirect_uri: process.env.GOOGLE_CALLBACK_URL!,
-        grant_type: 'authorization_code',
-      }),
-    });
-
-    if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.text();
-      console.error('Token exchange failed:', errorData);
-      return res.status(400).json({ error: 'Failed to exchange authorization code' });
-    }
-
-    const tokenData = await tokenResponse.json();
-    const idToken = tokenData.id_token;
-
-    // Verify ID token
+    // Verify ID token directly (no code exchange needed)
     const ticket = await googleClient.verifyIdToken({
-      idToken,
+      idToken: token,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
 

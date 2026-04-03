@@ -10,8 +10,9 @@ To enable Google login functionality, you need to configure your Google Cloud Co
 2. Create a new project or select an existing one
 3. Enable Google+ API and Google OAuth2 API
 4. Create OAuth 2.0 Client ID credentials
-5. Set **Authorized redirect URI** to: `http://localhost:5173/auth/callback`
-6. Add the following to your `.env` file:
+5. Set **Authorized JavaScript origins** to: `http://localhost:5173`
+6. Set **Authorized redirect URIs** to: `http://localhost:5173/auth/callback` (optional for this approach)
+7. Add the following to your `.env` file:
 
 ```
 GOOGLE_CLIENT_ID=your-google-client-id
@@ -22,7 +23,12 @@ GOOGLE_CALLBACK_URL=http://localhost:5173/auth/callback
 ### Common Issues
 
 **Error 400: redirect_uri_mismatch**
-- Ensure the redirect URI in Google Cloud Console exactly matches: `http://localhost:5173/auth/callback`
+- For the current implementation using Google Sign-In JavaScript library, you mainly need to set **Authorized JavaScript origins**
+- Add `http://localhost:5173` to Authorized JavaScript origins
+- The redirect URI is not strictly required for this approach
+
+**If you still get redirect_uri_mismatch:**
+- Ensure the JavaScript origin exactly matches: `http://localhost:5173`
 - No trailing slashes
 - Exact match including protocol (http vs https)
 

@@ -69,30 +69,103 @@ const AuthPage: React.FC = () => {
   };
 
   const handleGoogleLogin = async () => {
+    console.log('Google login clicked');
     setIsGoogleLoading(true);
     try {
-      // Generate OAuth 2.0 URL for Google Sign-In
-      const clientId = '787845696998-3nl0cq616g0n21fm4mdomjdqo04ckvah.apps.googleusercontent.com';
-      const redirectUri = encodeURIComponent('http://localhost:5173/auth/callback');
-      const scope = encodeURIComponent('openid email profile');
-      const responseType = 'code';
-      const state = encodeURIComponent(Date.now().toString()); // Simple state for security
-      
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-        `client_id=${clientId}&` +
-        `redirect_uri=${redirectUri}&` +
-        `scope=${scope}&` +
-        `response_type=${responseType}&` +
-        `state=${state}`;
-      
-      // Store the state in sessionStorage for verification
-      sessionStorage.setItem('google_oauth_state', state);
-      
-      // Redirect to Google OAuth
-      window.location.href = authUrl;
+      // Load Google GSI script if not already loaded
+      if (!window.google) {
+        console.log('Loading Google GSI script...');
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+
+        script.onload = () => {
+          console.log('Google GSI script loaded');
+          initializeGoogleSignIn();
+        };
+        script.onerror = () => {
+          console.error('Failed to load Google GSI script');
+          addToast('Failed to load Google Sign-In', 'error');
+          setIsGoogleLoading(false);
+        };
+      } else {
+        console.log('Google GSI script already loaded');
+        initializeGoogleSignIn();
+      }
     } catch (error) {
       console.error('Google login error:', error);
       addToast('Google login failed', 'error');
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const initializeGoogleSignIn = () => {
+    console.log('Initializing Google Sign-In...');
+    if (!window.google) {
+      console.error('Google object not available');
+      addToast('Google Sign-In not available', 'error');
+      setIsGoogleLoading(false);
+      return;
+    }
+
+    try {
+      window.google.accounts.id.initialize({
+        client_id: '787845696998-3nl0cq616g0n21fm4mdomjdqo04ckvah.apps.googleusercontent.com',
+        callback: async (response: any) => {
+          console.log('Google callback received:', response);
+          try {
+            const result = await googleLogin({ token: response.credential });
+            
+            if (result.success && result.user) {
+              addToast(`Welcome, ${result.user.name}! 🎉`, 'success');
+
+              // Check for stored redirect URL (from vendor entry)
+              const redirectUrl = sessionStorage.getItem('surveypanelgo_redirect');
+              if (redirectUrl) {
+                sessionStorage.removeItem('surveypanelgo_redirect');
+                navigate(redirectUrl);
+                return;
+              }
+
+              // Redirect based on role
+              if (result.user.role === 'admin') {
+                navigate('/admin');
+              } else {
+                navigate('/dashboard');
+              }
+            } else {
+              addToast(result.error || 'Google login failed', 'error');
+            }
+          } catch (error) {
+            console.error('Google login callback error:', error);
+            addToast('Google login failed', 'error');
+          } finally {
+            setIsGoogleLoading(false);
+          }
+        },
+      });
+
+      console.log('Google Sign-In initialized, rendering button...');
+      // Instead of popup, render the button
+      const buttonContainer = document.getElementById('google-signin-button');
+      if (buttonContainer) {
+        buttonContainer.innerHTML = ''; // Clear previous button
+        buttonContainer.classList.remove('hidden'); // Show the container
+        window.google.accounts.id.renderButton(buttonContainer, {
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+        });
+        setIsGoogleLoading(false);
+      } else {
+        console.error('Google button container not found');
+        setIsGoogleLoading(false);
+      }
+    } catch (error) {
+      console.error('Error initializing Google Sign-In:', error);
+      addToast('Failed to initialize Google Sign-In', 'error');
       setIsGoogleLoading(false);
     }
   };
@@ -247,11 +320,12 @@ const AuthPage: React.FC = () => {
         </div>
 
         {/* Social Buttons */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-3">
+          {/* Custom Google Button */}
           <button 
             onClick={handleGoogleLogin}
             disabled={isGoogleLoading}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta font-medium text-sm text-navy hover:bg-periwinkle transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta font-medium text-sm text-navy hover:bg-periwinkle transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
@@ -271,9 +345,14 @@ const AuthPage: React.FC = () => {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            {isGoogleLoading ? 'Signing in...' : 'Google'}
+            {isGoogleLoading ? 'Loading...' : 'Google'}
           </button>
-          <button className="flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta font-medium text-sm text-navy hover:bg-periwinkle transition-colors">
+          
+          {/* Google Sign-In Button Container - Hidden by default */}
+          <div id="google-signin-button" className="hidden w-full" />
+          
+          {/* Facebook Button */}
+          <button className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta font-medium text-sm text-navy hover:bg-periwinkle transition-colors">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z" />
             </svg>
