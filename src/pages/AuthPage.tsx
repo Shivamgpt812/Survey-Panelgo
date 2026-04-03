@@ -16,6 +16,7 @@ const AuthPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -116,6 +117,10 @@ const AuthPage: React.FC = () => {
         client_id: '787845696998-3nl0cq616g0n21fm4mdomjdqo04ckvah.apps.googleusercontent.com',
         callback: async (response: any) => {
           console.log('Google callback received:', response);
+          // Show loading state when authentication starts
+          setIsAuthenticating(true);
+          addToast('Signing in with Google...', 'info');
+          
           try {
             const result = await googleLogin({ token: response.credential });
             
@@ -141,9 +146,9 @@ const AuthPage: React.FC = () => {
             }
           } catch (error) {
             console.error('Google login callback error:', error);
-            addToast('Google login failed', 'error');
+            addToast('Google login failed. The server might be starting up, please try again.', 'error');
           } finally {
-            setIsGoogleLoading(false);
+            setIsAuthenticating(false);
           }
         },
       });
@@ -330,11 +335,11 @@ const AuthPage: React.FC = () => {
           {/* Google Sign-In Button - Always Visible */}
           <div id="google-signin-button" className="w-full flex justify-center" />
           
-          {/* Loading indicator while Google button loads */}
-          {isGoogleLoading && (
+          {/* Loading indicator while Google button loads or authenticating */}
+          {(isGoogleLoading || isAuthenticating) && (
             <div className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta font-medium text-sm text-navy">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-navy"></div>
-              Loading Google Sign-In...
+              {isAuthenticating ? 'Authenticating with Google...' : 'Loading Google Sign-In...'}
             </div>
           )}
         </div>
