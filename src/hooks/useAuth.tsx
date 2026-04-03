@@ -114,7 +114,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const googleLogin = async (payload: GoogleLoginPayload): Promise<LoginResult> => {
     try {
+      console.log('Attempting Google login with token:', payload.token?.substring(0, 50) + '...');
       const data = await apiPost<{ token: string; user: User }>('/api/auth/google', payload);
+      console.log('Google login successful, user data:', data);
       localStorage.setItem(TOKEN_KEY, data.token);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data.user));
       setToken(data.token);
@@ -125,6 +127,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       return { success: true, user: data.user };
     } catch (e) {
+      console.error('Google login error in frontend:', e);
       return {
         success: false,
         error: e instanceof Error ? e.message : 'Google login failed',

@@ -6,6 +6,8 @@ A survey panel application with Google OAuth integration.
 
 To enable Google login functionality, you need to configure your Google Cloud Console:
 
+### Development Setup
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select an existing one
 3. Enable Google+ API and Google OAuth2 API
@@ -20,15 +22,31 @@ GOOGLE_CLIENT_SECRET=your-google-client-secret
 GOOGLE_CALLBACK_URL=http://localhost:5173/auth/callback
 ```
 
+### Production Setup (Render.com)
+
+For production deployment on Render.com:
+
+1. In Google Cloud Console, add your production URL to **Authorized JavaScript origins**:
+   - `https://survey-panelgo.onrender.com`
+
+2. In your Render.com dashboard, add these environment variables:
+   ```
+   GOOGLE_CLIENT_ID=your-google-client-id
+   GOOGLE_CLIENT_SECRET=your-google-client-secret
+   GOOGLE_CALLBACK_URL=https://survey-panelgo.onrender.com/auth/callback
+   ```
+
+3. Make sure your production MongoDB connection string is set correctly.
+
 ### Common Issues
 
 **Error 400: redirect_uri_mismatch**
 - For the current implementation using Google Sign-In JavaScript library, you mainly need to set **Authorized JavaScript origins**
-- Add `http://localhost:5173` to Authorized JavaScript origins
+- Add `http://localhost:5173` for development and `https://your-app-url.com` for production
 - The redirect URI is not strictly required for this approach
 
 **If you still get redirect_uri_mismatch:**
-- Ensure the JavaScript origin exactly matches: `http://localhost:5173`
+- Ensure the JavaScript origin exactly matches your URL
 - No trailing slashes
 - Exact match including protocol (http vs https)
 

@@ -1,4 +1,5 @@
-const BASE = "https://survey-panelgo.onrender.com";
+const BASE = import.meta.env.DEV ? "http://localhost:3000" : "https://survey-panelgo.onrender.com";
+console.log('API Base URL:', BASE, 'DEV mode:', import.meta.env.DEV);
 
 async function parseError(res: Response): Promise<string> {
   try {
