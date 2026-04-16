@@ -26,60 +26,6 @@ import {
 } from './middleware/optionalAuth.js';
 import { OAuth2Client } from 'google-auth-library';
 
-// ---------- Helper Functions ----------
-const getRealIPAddress = (req: any): string => {
-  // Try various headers for real IP address
-  const xForwardedFor = req.headers['x-forwarded-for'];
-  const xRealIP = req.headers['x-real-ip'];
-  const cfConnectingIP = req.headers['cf-connecting-ip']; // Cloudflare
-  const xClientIP = req.headers['x-client-ip'];
-  
-  let ipAddress = 'unknown';
-  
-  if (xForwardedFor) {
-    // X-Forwarded-For can contain multiple IPs, take the first one (original client)
-    ipAddress = Array.isArray(xForwardedFor) ? xForwardedFor[0] : xForwardedFor.split(',')[0].trim();
-  } else if (cfConnectingIP) {
-    ipAddress = cfConnectingIP as string;
-  } else if (xRealIP) {
-    ipAddress = xRealIP as string;
-  } else if (xClientIP) {
-    ipAddress = xClientIP as string;
-  } else if (req.socket?.remoteAddress) {
-    ipAddress = req.socket.remoteAddress;
-  } else if (req.connection?.remoteAddress) {
-    ipAddress = req.connection.remoteAddress;
-  } else if ((req as any).ip) {
-    ipAddress = (req as any).ip;
-  }
-  
-  // Clean up IPv6-mapped IPv4 addresses
-  if (ipAddress && ipAddress.startsWith('::ffff:')) {
-    ipAddress = ipAddress.substring(7);
-  }
-  
-  // Handle localhost addresses
-  if (ipAddress === '::1' || ipAddress === '127.0.0.1') {
-    return 'localhost';
-  }
-  
-  // Handle private IP ranges
-  const privateRanges = [
-    /^10\./,
-    /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
-    /^192\.168\./,
-    /^169\.254\./ // Link-local
-  ];
-  
-  const isPrivate = privateRanges.some(range => range.test(ipAddress));
-  if (isPrivate) {
-    return `${ipAddress} (private)`;
-  }
-  
-  return ipAddress || 'unknown';
-};
-
-// ---------- App Setup ----------
 const app = express();
 const allowedOrigins = [
   'http://localhost:5173',
@@ -239,7 +185,7 @@ app.post('/api/auth/google', async (req, res) => {
 
     console.log('Generating JWT token for user:', user._id);
     // Generate JWT token
-    const jwtToken = signToken(String(user._id), String(user.role));
+    const jwtToken = signToken(String(user._id), user.role);
     
     console.log('Google authentication successful for:', payload.email);
     res.json({ 
@@ -675,8 +621,8 @@ app.post('/api/internal-complete', requireAuth, async (req: AuthedRequest, res) 
         console.error('Failed to update vendor completion tracking:', vendorError);
       }
     }
-    (user as any).points += survey.pointsReward;
-    (user as any).surveysCompleted += 1;
+    user.points += survey.pointsReward;
+    user.surveysCompleted += 1;
     await user.save();
 
     await ActivityLog.create({
@@ -862,10 +808,10 @@ app.get('/api/redirect', async (req, res) => {
     // Non-blocking log creation to avoid delaying the redirect
     SurveyRedirectLogs.createLog({
       pid: finalPid,
-      uid: String(uid),
+      uid,
       status: statusCode,
       statusText: statusMap[statusCode] || "Unknown",
-      ipAddress: getRealIPAddress(req),
+      ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
       userAgent: req.get('User-Agent') || 'unknown'
     }).catch(err => {
       console.error("❌ Error saving redirect log:", err);
@@ -926,7 +872,7 @@ app.get('/api/redirect', async (req, res) => {
     }
 
     // For regular browser requests, redirect as before
-    const redirectPages: Record<number, string> = {
+    const redirectPages = {
       1: `/survey-result/success?pid=${finalPid}&uid=${uid}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
       2: `/survey-result/terminated?pid=${finalPid}&uid=${uid}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
       3: `/survey-result/quota-full?pid=${finalPid}&uid=${uid}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
@@ -1046,65 +992,23 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    // Enhanced deduplication - remove duplicates based on same UID with close timestamps or same PID+UID
+    // Enhanced deduplication - remove exact duplicates based on pid, uid, status, and close timestamps
     const uniqueLogsMap = new Map<string, any>();
-    const processedKeys = new Set<string>();
     
     allLogs.forEach(log => {
-      const uidKey = `uid-${log.uid}`;
-      const pidUidKey = `${log.pid}-${log.uid}`;
-      const logTime = new Date(log.createdAt).getTime();
+      // Create a unique key based on pid, uid, and status
+      const key = `${log.pid}-${log.uid}-${log.status}`;
       
-      // Check if we've seen this UID recently (within 5 minutes)
-      const existingUidLog = uniqueLogsMap.get(uidKey);
-      if (existingUidLog) {
-        const existingTime = new Date(existingUidLog.createdAt).getTime();
-        const timeDiff = Math.abs(logTime - existingTime);
-        
-        // If same UID within 5 minutes, keep only the newest one
-        if (timeDiff < 5 * 60 * 1000) { // 5 minutes
-          if (logTime > existingTime) {
-            uniqueLogsMap.set(uidKey, log);
-            console.log(`🔄 Replaced older log for UID ${log.uid} (time diff: ${Math.round(timeDiff/1000)}s)`);
-          }
-          processedKeys.add(pidUidKey);
-          return;
-        }
-      }
-      
-      // Check for exact PID+UID match
-      const existingPidUidLog = uniqueLogsMap.get(pidUidKey);
-      if (existingPidUidLog) {
-        const existingTime = new Date(existingPidUidLog.createdAt).getTime();
-        const timeDiff = Math.abs(logTime - existingTime);
-        
-        // If same PID+UID within 1 hour, keep only the newest one
-        if (timeDiff < 60 * 60 * 1000) { // 1 hour
-          if (logTime > existingTime) {
-            uniqueLogsMap.set(pidUidKey, log);
-            console.log(`🔄 Replaced older log for PID ${log.pid}, UID ${log.uid} (time diff: ${Math.round(timeDiff/1000)}s)`);
-          }
-          processedKeys.add(pidUidKey);
-          return;
-        }
-      }
-      
-      // If we haven't processed this combination, add it
-      if (!processedKeys.has(pidUidKey)) {
-        uniqueLogsMap.set(pidUidKey, log);
-        uniqueLogsMap.set(uidKey, log); // Also track by UID for time-based deduplication
-        processedKeys.add(pidUidKey);
+      // If we haven't seen this combination yet, or if this entry is newer, keep it
+      if (!uniqueLogsMap.has(key) || new Date(log.createdAt).getTime() > new Date(uniqueLogsMap.get(key).createdAt).getTime()) {
+        uniqueLogsMap.set(key, log);
       }
     });
     
     // Convert back to array and sort by creation date (newest first)
-    const uniqueLogs = Array.from(uniqueLogsMap.values())
-      .filter((log, index, self) => 
-        index === self.findIndex((l) => l._id === log._id) // Remove any remaining duplicates by ID
-      )
-      .sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+    const uniqueLogs = Array.from(uniqueLogsMap.values()).sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
     console.log(`📊 Deduplication: ${allLogs.length} total logs → ${uniqueLogs.length} unique logs (${allLogs.length - uniqueLogs.length} duplicates removed)`);
 
@@ -1140,14 +1044,14 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
 // ---------- Cleanup Duplicate Redirect Logs ----------
 app.post('/api/redirect-logs/cleanup', requireAdmin, async (req, res) => {
   try {
-    console.log("🧹 Starting enhanced cleanup of duplicate redirect logs...");
+    console.log("🧹 Starting cleanup of duplicate redirect logs...");
     
-    // Get all logs grouped by UID for time-based deduplication
-    const uidGroups = await SurveyRedirectLogs.aggregate([
+    // Get all logs grouped by pid, uid, status
+    const duplicateGroups = await SurveyRedirectLogs.aggregate([
       {
         $group: {
-          _id: '$uid',
-          docs: { $push: { _id: '$_id', pid: '$pid', status: '$status', createdAt: '$createdAt' } },
+          _id: { pid: '$pid', uid: '$uid', status: '$status' },
+          docs: { $push: { _id: '$_id', createdAt: '$createdAt' } },
           count: { $sum: 1 }
         }
       },
@@ -1157,49 +1061,6 @@ app.post('/api/redirect-logs/cleanup', requireAdmin, async (req, res) => {
     ]);
 
     let totalDuplicatesRemoved = 0;
-
-    // Process UID-based duplicates (same user within 5 minutes)
-    for (const group of uidGroups) {
-      // Sort by creation date (newest first)
-      group.docs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      
-      // Keep newest from each 5-minute window
-      const toRemove: any[] = [];
-      const timeWindows = new Map<string, any>();
-      
-      for (const doc of group.docs) {
-        const docTime = new Date(doc.createdAt).getTime();
-        const timeWindow = Math.floor(docTime / (5 * 60 * 1000)).toString(); // 5-minute windows
-        
-        if (!timeWindows.has(timeWindow)) {
-          timeWindows.set(timeWindow, doc);
-        } else {
-          toRemove.push(doc);
-        }
-      }
-      
-      if (toRemove.length > 0) {
-        const idsToRemove = toRemove.map((doc: any) => doc._id);
-        await SurveyRedirectLogs.deleteMany({ _id: { $in: idsToRemove } });
-        totalDuplicatesRemoved += idsToRemove.length;
-        
-        console.log(`🗑️ Removed ${idsToRemove.length} UID-based duplicates for UID: ${group._id}`);
-      }
-    }
-
-    // Also process exact PID+UID duplicates
-    const duplicateGroups = await SurveyRedirectLogs.aggregate([
-      {
-        $group: {
-          _id: { pid: '$pid', uid: '$uid' },
-          docs: { $push: { _id: '$_id', createdAt: '$createdAt' } },
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $match: { count: { $gt: 1 } }
-      }
-    ]);
 
     for (const group of duplicateGroups) {
       // Sort by creation date (newest first) and keep only the newest one
@@ -1213,18 +1074,17 @@ app.post('/api/redirect-logs/cleanup', requireAdmin, async (req, res) => {
         await SurveyRedirectLogs.deleteMany({ _id: { $in: idsToRemove } });
         totalDuplicatesRemoved += idsToRemove.length;
         
-        console.log(`🗑️ Removed ${idsToRemove.length} PID+UID duplicates for PID: ${group._id.pid}, UID: ${group._id.uid}`);
+        console.log(`🗑️ Removed ${idsToRemove.length} duplicates for PID: ${group._id.pid}, UID: ${group._id.uid}, Status: ${group._id.status}`);
       }
     }
 
-    console.log(`✅ Enhanced cleanup completed: ${totalDuplicatesRemoved} duplicate logs removed permanently`);
+    console.log(`✅ Cleanup completed: ${totalDuplicatesRemoved} duplicate logs removed permanently`);
 
     res.json({
       success: true,
-      message: `Enhanced cleanup completed successfully`,
+      message: `Cleanup completed successfully`,
       duplicatesRemoved: totalDuplicatesRemoved,
-      uidGroupsProcessed: uidGroups.length,
-      pidUidGroupsProcessed: duplicateGroups.length
+      groupsProcessed: duplicateGroups.length
     });
   } catch (e) {
     console.error("❌ Error during cleanup:", e);
