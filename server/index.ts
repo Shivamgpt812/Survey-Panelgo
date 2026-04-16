@@ -992,23 +992,65 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    // Enhanced deduplication - remove exact duplicates based on pid, uid, status, and close timestamps
+    // Enhanced deduplication - remove duplicates based on same UID with close timestamps or same PID+UID
     const uniqueLogsMap = new Map<string, any>();
+    const processedKeys = new Set<string>();
     
     allLogs.forEach(log => {
-      // Create a unique key based on pid, uid, and status
-      const key = `${log.pid}-${log.uid}-${log.status}`;
+      const uidKey = `uid-${log.uid}`;
+      const pidUidKey = `${log.pid}-${log.uid}`;
+      const logTime = new Date(log.createdAt).getTime();
       
-      // If we haven't seen this combination yet, or if this entry is newer, keep it
-      if (!uniqueLogsMap.has(key) || new Date(log.createdAt).getTime() > new Date(uniqueLogsMap.get(key).createdAt).getTime()) {
-        uniqueLogsMap.set(key, log);
+      // Check if we've seen this UID recently (within 5 minutes)
+      const existingUidLog = uniqueLogsMap.get(uidKey);
+      if (existingUidLog) {
+        const existingTime = new Date(existingUidLog.createdAt).getTime();
+        const timeDiff = Math.abs(logTime - existingTime);
+        
+        // If same UID within 5 minutes, keep only the newest one
+        if (timeDiff < 5 * 60 * 1000) { // 5 minutes
+          if (logTime > existingTime) {
+            uniqueLogsMap.set(uidKey, log);
+            console.log(`🔄 Replaced older log for UID ${log.uid} (time diff: ${Math.round(timeDiff/1000)}s)`);
+          }
+          processedKeys.add(pidUidKey);
+          return;
+        }
+      }
+      
+      // Check for exact PID+UID match
+      const existingPidUidLog = uniqueLogsMap.get(pidUidKey);
+      if (existingPidUidLog) {
+        const existingTime = new Date(existingPidUidLog.createdAt).getTime();
+        const timeDiff = Math.abs(logTime - existingTime);
+        
+        // If same PID+UID within 1 hour, keep only the newest one
+        if (timeDiff < 60 * 60 * 1000) { // 1 hour
+          if (logTime > existingTime) {
+            uniqueLogsMap.set(pidUidKey, log);
+            console.log(`🔄 Replaced older log for PID ${log.pid}, UID ${log.uid} (time diff: ${Math.round(timeDiff/1000)}s)`);
+          }
+          processedKeys.add(pidUidKey);
+          return;
+        }
+      }
+      
+      // If we haven't processed this combination, add it
+      if (!processedKeys.has(pidUidKey)) {
+        uniqueLogsMap.set(pidUidKey, log);
+        uniqueLogsMap.set(uidKey, log); // Also track by UID for time-based deduplication
+        processedKeys.add(pidUidKey);
       }
     });
     
     // Convert back to array and sort by creation date (newest first)
-    const uniqueLogs = Array.from(uniqueLogsMap.values()).sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    const uniqueLogs = Array.from(uniqueLogsMap.values())
+      .filter((log, index, self) => 
+        index === self.findIndex((l) => l._id === log._id) // Remove any remaining duplicates by ID
+      )
+      .sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
 
     console.log(`📊 Deduplication: ${allLogs.length} total logs → ${uniqueLogs.length} unique logs (${allLogs.length - uniqueLogs.length} duplicates removed)`);
 
@@ -1044,14 +1086,14 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
 // ---------- Cleanup Duplicate Redirect Logs ----------
 app.post('/api/redirect-logs/cleanup', requireAdmin, async (req, res) => {
   try {
-    console.log("🧹 Starting cleanup of duplicate redirect logs...");
+    console.log("🧹 Starting enhanced cleanup of duplicate redirect logs...");
     
-    // Get all logs grouped by pid, uid, status
-    const duplicateGroups = await SurveyRedirectLogs.aggregate([
+    // Get all logs grouped by UID for time-based deduplication
+    const uidGroups = await SurveyRedirectLogs.aggregate([
       {
         $group: {
-          _id: { pid: '$pid', uid: '$uid', status: '$status' },
-          docs: { $push: { _id: '$_id', createdAt: '$createdAt' } },
+          _id: '$uid',
+          docs: { $push: { _id: '$_id', pid: '$pid', status: '$status', createdAt: '$createdAt' } },
           count: { $sum: 1 }
         }
       },
@@ -1061,6 +1103,49 @@ app.post('/api/redirect-logs/cleanup', requireAdmin, async (req, res) => {
     ]);
 
     let totalDuplicatesRemoved = 0;
+
+    // Process UID-based duplicates (same user within 5 minutes)
+    for (const group of uidGroups) {
+      // Sort by creation date (newest first)
+      group.docs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      // Keep newest from each 5-minute window
+      const toRemove: any[] = [];
+      const timeWindows = new Map<string, any>();
+      
+      for (const doc of group.docs) {
+        const docTime = new Date(doc.createdAt).getTime();
+        const timeWindow = Math.floor(docTime / (5 * 60 * 1000)); // 5-minute windows
+        
+        if (!timeWindows.has(timeWindow)) {
+          timeWindows.set(timeWindow, doc);
+        } else {
+          toRemove.push(doc);
+        }
+      }
+      
+      if (toRemove.length > 0) {
+        const idsToRemove = toRemove.map((doc: any) => doc._id);
+        await SurveyRedirectLogs.deleteMany({ _id: { $in: idsToRemove } });
+        totalDuplicatesRemoved += idsToRemove.length;
+        
+        console.log(`🗑️ Removed ${idsToRemove.length} UID-based duplicates for UID: ${group._id}`);
+      }
+    }
+
+    // Also process exact PID+UID duplicates
+    const duplicateGroups = await SurveyRedirectLogs.aggregate([
+      {
+        $group: {
+          _id: { pid: '$pid', uid: '$uid' },
+          docs: { $push: { _id: '$_id', createdAt: '$createdAt' } },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $match: { count: { $gt: 1 } }
+      }
+    ]);
 
     for (const group of duplicateGroups) {
       // Sort by creation date (newest first) and keep only the newest one
@@ -1074,17 +1159,18 @@ app.post('/api/redirect-logs/cleanup', requireAdmin, async (req, res) => {
         await SurveyRedirectLogs.deleteMany({ _id: { $in: idsToRemove } });
         totalDuplicatesRemoved += idsToRemove.length;
         
-        console.log(`🗑️ Removed ${idsToRemove.length} duplicates for PID: ${group._id.pid}, UID: ${group._id.uid}, Status: ${group._id.status}`);
+        console.log(`🗑️ Removed ${idsToRemove.length} PID+UID duplicates for PID: ${group._id.pid}, UID: ${group._id.uid}`);
       }
     }
 
-    console.log(`✅ Cleanup completed: ${totalDuplicatesRemoved} duplicate logs removed permanently`);
+    console.log(`✅ Enhanced cleanup completed: ${totalDuplicatesRemoved} duplicate logs removed permanently`);
 
     res.json({
       success: true,
-      message: `Cleanup completed successfully`,
+      message: `Enhanced cleanup completed successfully`,
       duplicatesRemoved: totalDuplicatesRemoved,
-      groupsProcessed: duplicateGroups.length
+      uidGroupsProcessed: uidGroups.length,
+      pidUidGroupsProcessed: duplicateGroups.length
     });
   } catch (e) {
     console.error("❌ Error during cleanup:", e);
