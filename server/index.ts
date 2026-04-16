@@ -80,6 +80,7 @@ const getRealIPAddress = (req: any): string => {
 };
 
 // ---------- App Setup ----------
+const app = express();
 const allowedOrigins = [
   'http://localhost:5173',
   'https://surveypanelgo.netlify.app',
