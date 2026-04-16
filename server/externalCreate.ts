@@ -329,7 +329,7 @@ router.get("/external/redirect/:status", async (req, res) => {
 
         try {
             const { SurveyRedirectLogs } = await import("./models/SurveyRedirectLogs.js");
-            SurveyRedirectLogs.create({
+            SurveyRedirectLogs.createLog({
                 pid: survey.pid || `EXT_${token}`,
                 uid: String(rid), // UID now strictly contains the value of RID as requested
                 status: statusCode,

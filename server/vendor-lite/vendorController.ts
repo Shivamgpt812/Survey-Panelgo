@@ -289,7 +289,7 @@ export const validatePreScreener = async (req: Request, res: Response) => {
         
         // Log the failed pre-screener attempt
         try {
-          await SurveyRedirectLogs.create({
+          await SurveyRedirectLogs.createLog({
             pid: survey.pid,
             uid: userId || 'pre-screener-validation', // Use actual user ID if provided
             status: 2, // Terminated
@@ -362,7 +362,7 @@ export const validatePreScreener = async (req: Request, res: Response) => {
       
       if (survey) {
         const ip = req.ip || req.connection.remoteAddress || 'unknown';
-        await SurveyRedirectLogs.create({
+        await SurveyRedirectLogs.createLog({
           pid: survey.pid,
           uid: userId || 'validation-error', // Use actual user ID if provided
           status: 2, // Terminated
@@ -460,7 +460,7 @@ export const submitResponse = async (req: Request, res: Response) => {
         
         // Log the failed pre-screener attempt
         try {
-          await SurveyRedirectLogs.create({
+          await SurveyRedirectLogs.createLog({
             pid: survey.pid,
             uid,
             status: 2, // Terminated
@@ -525,7 +525,7 @@ export const submitResponse = async (req: Request, res: Response) => {
 
     // Log redirect data for analytics
     try {
-      await SurveyRedirectLogs.create({
+      await SurveyRedirectLogs.createLog({
         pid: survey.pid,
         uid,
         status: 1, // Completed survey
@@ -631,7 +631,7 @@ export const handleVendorRedirect = async (req: Request, res: Response) => {
     // Log redirect data for analytics
     try {
       const statusText = getStatusText(statusCode);
-      await SurveyRedirectLogs.create({
+      await SurveyRedirectLogs.createLog({
         pid: pid as string,
         uid: uid as string,
         status: statusCode,

@@ -39,6 +39,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [activeTab, setActiveTab] = useState('overview');
+  const [isCleaning, setIsCleaning] = useState(false);
 
   const statusColors = {
     1: '#10b981', // green
@@ -145,6 +146,43 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
     setStartDate('');
     setEndDate('');
     setCurrentPage(1);
+  };
+
+  const handleCleanupDuplicates = async () => {
+    const token = localStorage.getItem('surveypanelgo_token');
+    if (!token) {
+      setError('Not authenticated');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to permanently remove all duplicate redirect logs? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setIsCleaning(true);
+      const response = await fetch(`${BACKEND_URL}/api/redirect-logs/cleanup`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cleanup duplicates');
+      }
+
+      const result = await response.json();
+      alert(`Cleanup completed! Removed ${result.duplicatesRemoved} duplicate logs from ${result.groupsProcessed} groups.`);
+      
+      // Refresh the logs
+      fetchLogs();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred during cleanup');
+    } finally {
+      setIsCleaning(false);
+    }
   };
 
   if (loading) {
@@ -326,6 +364,14 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
                   className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
                 >
                   Clear All
+                </button>
+
+                <button
+                  onClick={handleCleanupDuplicates}
+                  disabled={isCleaning}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isCleaning ? 'Cleaning...' : 'Cleanup Duplicates'}
                 </button>
               </div>
 
