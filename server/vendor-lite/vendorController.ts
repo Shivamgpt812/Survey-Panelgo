@@ -285,25 +285,11 @@ export const validatePreScreener = async (req: Request, res: Response) => {
       if (!validation.passed) {
         console.log("Pre-screener validation FAILED - terminating user");
         // User failed pre-screener - log as terminated and redirect
-        // Get real IP address
-        const xForwardedFor = req.headers['x-forwarded-for'];
-        const xRealIP = req.headers['x-real-ip'];
-        let ip = (req as any).ip || (req as any).connection?.remoteAddress || 'unknown';
-
-        if (Array.isArray(xForwardedFor)) {
-          ip = xForwardedFor[0];
-        } else if (typeof xForwardedFor === 'string') {
-          ip = xForwardedFor.split(',')[0].trim();
-        } else if (xRealIP) {
-          ip = xRealIP as string;
-        }
-
-        // Clean up IP address (remove ::ffff: prefix if present)
-        ip = ip.replace(/^::ffff:/, '');
+        const ip = req.ip || req.connection.remoteAddress || 'unknown';
         
         // Log the failed pre-screener attempt
         try {
-          await SurveyRedirectLogs.createLog({
+          await SurveyRedirectLogs.create({
             pid: survey.pid,
             uid: userId || 'pre-screener-validation', // Use actual user ID if provided
             status: 2, // Terminated
@@ -375,22 +361,8 @@ export const validatePreScreener = async (req: Request, res: Response) => {
       });
       
       if (survey) {
-        // Get real IP address
-        const xForwardedFor = req.headers['x-forwarded-for'];
-        const xRealIP = req.headers['x-real-ip'];
-        let ip = (req as any).ip || (req as any).connection?.remoteAddress || 'unknown';
-
-        if (Array.isArray(xForwardedFor)) {
-          ip = xForwardedFor[0];
-        } else if (typeof xForwardedFor === 'string') {
-          ip = xForwardedFor.split(',')[0].trim();
-        } else if (xRealIP) {
-          ip = xRealIP as string;
-        }
-
-        // Clean up IP address (remove ::ffff: prefix if present)
-        ip = ip.replace(/^::ffff:/, '');
-        await SurveyRedirectLogs.createLog({
+        const ip = req.ip || req.connection.remoteAddress || 'unknown';
+        await SurveyRedirectLogs.create({
           pid: survey.pid,
           uid: userId || 'validation-error', // Use actual user ID if provided
           status: 2, // Terminated
@@ -484,25 +456,11 @@ export const submitResponse = async (req: Request, res: Response) => {
       if (!validation.passed) {
         // User failed pre-screener - log as terminated and redirect
         const uid = userId.trim();
-        // Get real IP address
-        const xForwardedFor = req.headers['x-forwarded-for'];
-        const xRealIP = req.headers['x-real-ip'];
-        let ip = (req as any).ip || (req as any).connection?.remoteAddress || 'unknown';
-
-        if (Array.isArray(xForwardedFor)) {
-          ip = xForwardedFor[0];
-        } else if (typeof xForwardedFor === 'string') {
-          ip = xForwardedFor.split(',')[0].trim();
-        } else if (xRealIP) {
-          ip = xRealIP as string;
-        }
-
-        // Clean up IP address (remove ::ffff: prefix if present)
-        ip = ip.replace(/^::ffff:/, '');
+        const ip = req.ip || req.connection.remoteAddress || 'unknown';
         
         // Log the failed pre-screener attempt
         try {
-          await SurveyRedirectLogs.createLog({
+          await SurveyRedirectLogs.create({
             pid: survey.pid,
             uid,
             status: 2, // Terminated
@@ -554,21 +512,7 @@ export const submitResponse = async (req: Request, res: Response) => {
     }
 
     const uid = userId.trim();
-    // Get real IP address
-    const xForwardedFor = req.headers['x-forwarded-for'];
-    const xRealIP = req.headers['x-real-ip'];
-    let ip = (req as any).ip || (req as any).connection?.remoteAddress || 'unknown';
-
-    if (Array.isArray(xForwardedFor)) {
-      ip = xForwardedFor[0];
-    } else if (typeof xForwardedFor === 'string') {
-      ip = xForwardedFor.split(',')[0].trim();
-    } else if (xRealIP) {
-      ip = xRealIP as string;
-    }
-
-    // Clean up IP address (remove ::ffff: prefix if present)
-    ip = ip.replace(/^::ffff:/, '');
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
     const status = "complete";
 
     const response = await IVendorResponse.create({
@@ -581,7 +525,7 @@ export const submitResponse = async (req: Request, res: Response) => {
 
     // Log redirect data for analytics
     try {
-      await SurveyRedirectLogs.createLog({
+      await SurveyRedirectLogs.create({
         pid: survey.pid,
         uid,
         status: 1, // Completed survey
@@ -687,28 +631,12 @@ export const handleVendorRedirect = async (req: Request, res: Response) => {
     // Log redirect data for analytics
     try {
       const statusText = getStatusText(statusCode);
-      // Get real IP address
-      const xForwardedFor = req.headers['x-forwarded-for'];
-      const xRealIP = req.headers['x-real-ip'];
-      let ipAddress = (req as any).ip || (req as any).connection?.remoteAddress || 'unknown';
-
-      if (Array.isArray(xForwardedFor)) {
-        ipAddress = xForwardedFor[0];
-      } else if (typeof xForwardedFor === 'string') {
-        ipAddress = xForwardedFor.split(',')[0].trim();
-      } else if (xRealIP) {
-        ipAddress = xRealIP as string;
-      }
-
-      // Clean up IP address (remove ::ffff: prefix if present)
-      ipAddress = ipAddress.replace(/^::ffff:/, '');
-      
-      await SurveyRedirectLogs.createLog({
+      await SurveyRedirectLogs.create({
         pid: pid as string,
         uid: uid as string,
         status: statusCode,
         statusText,
-        ipAddress,
+        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
         userAgent: req.get('User-Agent') || 'unknown'
       });
       console.log("✅ Vendor redirect log saved:", { pid, uid, status: statusCode });

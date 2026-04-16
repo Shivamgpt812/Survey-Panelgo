@@ -806,16 +806,15 @@ app.get('/api/redirect', async (req, res) => {
     const statusText = statusMap[statusCode] || "Unknown";
 
     // Non-blocking log creation to avoid delaying the redirect
-    SurveyRedirectLogs.createLog({
+    SurveyRedirectLogs.create({
       pid: finalPid,
       uid,
       status: statusCode,
-      statusText: statusMap[statusCode] || "Unknown",
-      ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
-      userAgent: req.get('User-Agent') || 'unknown'
-    }).catch(err => {
-      console.error("❌ Error saving redirect log:", err);
-    });
+      statusText,
+      ipAddress: (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req.socket.remoteAddress,
+      userAgent: req.headers["user-agent"],
+      createdAt: new Date()
+    }).catch(err => console.error("❌ Background log error:", err));
 
     // Capture diagnostic info
     const rawIp = req.headers["x-forwarded-for"] as string;
@@ -992,25 +991,14 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    // Enhanced deduplication - remove exact duplicates based on pid, uid, status, and close timestamps
-    const uniqueLogsMap = new Map<string, any>();
-    
-    allLogs.forEach(log => {
-      // Create a unique key based on pid, uid, and status
-      const key = `${log.pid}-${log.uid}-${log.status}`;
-      
-      // If we haven't seen this combination yet, or if this entry is newer, keep it
-      if (!uniqueLogsMap.has(key) || new Date(log.createdAt).getTime() > new Date(uniqueLogsMap.get(key).createdAt).getTime()) {
-        uniqueLogsMap.set(key, log);
-      }
+    // Remove duplicates based on combination of pid, uid, and statusText
+    const uniqueLogs = allLogs.filter((log, index, self) => {
+      return index === self.findIndex((l) => 
+        l.pid === log.pid && 
+        l.uid === log.uid && 
+        l.statusText === log.statusText
+      );
     });
-    
-    // Convert back to array and sort by creation date (newest first)
-    const uniqueLogs = Array.from(uniqueLogsMap.values()).sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-
-    console.log(`📊 Deduplication: ${allLogs.length} total logs → ${uniqueLogs.length} unique logs (${allLogs.length - uniqueLogs.length} duplicates removed)`);
 
     // Apply pagination to unique records
     const paginatedLogs = uniqueLogs.slice(skip, skip + limitNum);
@@ -1038,57 +1026,6 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to load redirect logs' });
-  }
-});
-
-// ---------- Cleanup Duplicate Redirect Logs ----------
-app.post('/api/redirect-logs/cleanup', requireAdmin, async (req, res) => {
-  try {
-    console.log("🧹 Starting cleanup of duplicate redirect logs...");
-    
-    // Get all logs grouped by pid, uid, status
-    const duplicateGroups = await SurveyRedirectLogs.aggregate([
-      {
-        $group: {
-          _id: { pid: '$pid', uid: '$uid', status: '$status' },
-          docs: { $push: { _id: '$_id', createdAt: '$createdAt' } },
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $match: { count: { $gt: 1 } }
-      }
-    ]);
-
-    let totalDuplicatesRemoved = 0;
-
-    for (const group of duplicateGroups) {
-      // Sort by creation date (newest first) and keep only the newest one
-      group.docs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      
-      // Remove all except the newest one
-      const toRemove = group.docs.slice(1);
-      const idsToRemove = toRemove.map((doc: any) => doc._id);
-      
-      if (idsToRemove.length > 0) {
-        await SurveyRedirectLogs.deleteMany({ _id: { $in: idsToRemove } });
-        totalDuplicatesRemoved += idsToRemove.length;
-        
-        console.log(`🗑️ Removed ${idsToRemove.length} duplicates for PID: ${group._id.pid}, UID: ${group._id.uid}, Status: ${group._id.status}`);
-      }
-    }
-
-    console.log(`✅ Cleanup completed: ${totalDuplicatesRemoved} duplicate logs removed permanently`);
-
-    res.json({
-      success: true,
-      message: `Cleanup completed successfully`,
-      duplicatesRemoved: totalDuplicatesRemoved,
-      groupsProcessed: duplicateGroups.length
-    });
-  } catch (e) {
-    console.error("❌ Error during cleanup:", e);
-    res.status(500).json({ error: 'Failed to cleanup duplicate logs' });
   }
 });
 
