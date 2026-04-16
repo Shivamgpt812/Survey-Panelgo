@@ -26,7 +26,60 @@ import {
 } from './middleware/optionalAuth.js';
 import { OAuth2Client } from 'google-auth-library';
 
-const app = express();
+// ---------- Helper Functions ----------
+const getRealIPAddress = (req: any): string => {
+  // Try various headers for real IP address
+  const xForwardedFor = req.headers['x-forwarded-for'];
+  const xRealIP = req.headers['x-real-ip'];
+  const cfConnectingIP = req.headers['cf-connecting-ip']; // Cloudflare
+  const xClientIP = req.headers['x-client-ip'];
+  
+  let ipAddress = 'unknown';
+  
+  if (xForwardedFor) {
+    // X-Forwarded-For can contain multiple IPs, take the first one (original client)
+    ipAddress = Array.isArray(xForwardedFor) ? xForwardedFor[0] : xForwardedFor.split(',')[0].trim();
+  } else if (cfConnectingIP) {
+    ipAddress = cfConnectingIP as string;
+  } else if (xRealIP) {
+    ipAddress = xRealIP as string;
+  } else if (xClientIP) {
+    ipAddress = xClientIP as string;
+  } else if (req.socket?.remoteAddress) {
+    ipAddress = req.socket.remoteAddress;
+  } else if (req.connection?.remoteAddress) {
+    ipAddress = req.connection.remoteAddress;
+  } else if ((req as any).ip) {
+    ipAddress = (req as any).ip;
+  }
+  
+  // Clean up IPv6-mapped IPv4 addresses
+  if (ipAddress && ipAddress.startsWith('::ffff:')) {
+    ipAddress = ipAddress.substring(7);
+  }
+  
+  // Handle localhost addresses
+  if (ipAddress === '::1' || ipAddress === '127.0.0.1') {
+    return 'localhost';
+  }
+  
+  // Handle private IP ranges
+  const privateRanges = [
+    /^10\./,
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+    /^192\.168\./,
+    /^169\.254\./ // Link-local
+  ];
+  
+  const isPrivate = privateRanges.some(range => range.test(ipAddress));
+  if (isPrivate) {
+    return `${ipAddress} (private)`;
+  }
+  
+  return ipAddress || 'unknown';
+};
+
+// ---------- App Setup ----------
 const allowedOrigins = [
   'http://localhost:5173',
   'https://surveypanelgo.netlify.app',
@@ -185,7 +238,7 @@ app.post('/api/auth/google', async (req, res) => {
 
     console.log('Generating JWT token for user:', user._id);
     // Generate JWT token
-    const jwtToken = signToken(String(user._id), user.role);
+    const jwtToken = signToken(String(user._id), String(user.role));
     
     console.log('Google authentication successful for:', payload.email);
     res.json({ 
@@ -621,8 +674,8 @@ app.post('/api/internal-complete', requireAuth, async (req: AuthedRequest, res) 
         console.error('Failed to update vendor completion tracking:', vendorError);
       }
     }
-    user.points += survey.pointsReward;
-    user.surveysCompleted += 1;
+    (user as any).points += survey.pointsReward;
+    (user as any).surveysCompleted += 1;
     await user.save();
 
     await ActivityLog.create({
@@ -808,10 +861,10 @@ app.get('/api/redirect', async (req, res) => {
     // Non-blocking log creation to avoid delaying the redirect
     SurveyRedirectLogs.createLog({
       pid: finalPid,
-      uid,
+      uid: String(uid),
       status: statusCode,
       statusText: statusMap[statusCode] || "Unknown",
-      ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+      ipAddress: getRealIPAddress(req),
       userAgent: req.get('User-Agent') || 'unknown'
     }).catch(err => {
       console.error("❌ Error saving redirect log:", err);
@@ -872,7 +925,7 @@ app.get('/api/redirect', async (req, res) => {
     }
 
     // For regular browser requests, redirect as before
-    const redirectPages = {
+    const redirectPages: Record<number, string> = {
       1: `/survey-result/success?pid=${finalPid}&uid=${uid}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
       2: `/survey-result/terminated?pid=${finalPid}&uid=${uid}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
       3: `/survey-result/quota-full?pid=${finalPid}&uid=${uid}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
@@ -1115,7 +1168,7 @@ app.post('/api/redirect-logs/cleanup', requireAdmin, async (req, res) => {
       
       for (const doc of group.docs) {
         const docTime = new Date(doc.createdAt).getTime();
-        const timeWindow = Math.floor(docTime / (5 * 60 * 1000)); // 5-minute windows
+        const timeWindow = Math.floor(docTime / (5 * 60 * 1000)).toString(); // 5-minute windows
         
         if (!timeWindows.has(timeWindow)) {
           timeWindows.set(timeWindow, doc);

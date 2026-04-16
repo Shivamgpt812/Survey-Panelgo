@@ -4,6 +4,59 @@ import IVendorSurvey from './surveyModel.js';
 import IVendorResponse from './responseModel.js';
 import { SurveyRedirectLogs } from '../models/SurveyRedirectLogs.js';
 
+// Helper function to get real IP address
+const getRealIPAddress = (req: any): string => {
+  // Try various headers for real IP address
+  const xForwardedFor = req.headers['x-forwarded-for'];
+  const xRealIP = req.headers['x-real-ip'];
+  const cfConnectingIP = req.headers['cf-connecting-ip']; // Cloudflare
+  const xClientIP = req.headers['x-client-ip'];
+  
+  let ipAddress = 'unknown';
+  
+  if (xForwardedFor) {
+    // X-Forwarded-For can contain multiple IPs, take the first one (original client)
+    ipAddress = Array.isArray(xForwardedFor) ? xForwardedFor[0] : xForwardedFor.split(',')[0].trim();
+  } else if (cfConnectingIP) {
+    ipAddress = cfConnectingIP as string;
+  } else if (xRealIP) {
+    ipAddress = xRealIP as string;
+  } else if (xClientIP) {
+    ipAddress = xClientIP as string;
+  } else if (req.socket?.remoteAddress) {
+    ipAddress = req.socket.remoteAddress;
+  } else if (req.connection?.remoteAddress) {
+    ipAddress = req.connection.remoteAddress;
+  } else if ((req as any).ip) {
+    ipAddress = (req as any).ip;
+  }
+  
+  // Clean up IPv6-mapped IPv4 addresses
+  if (ipAddress && ipAddress.startsWith('::ffff:')) {
+    ipAddress = ipAddress.substring(7);
+  }
+  
+  // Handle localhost addresses
+  if (ipAddress === '::1' || ipAddress === '127.0.0.1') {
+    return 'localhost';
+  }
+  
+  // Handle private IP ranges
+  const privateRanges = [
+    /^10\./,
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+    /^192\.168\./,
+    /^169\.254\./ // Link-local
+  ];
+  
+  const isPrivate = privateRanges.some(range => range.test(ipAddress));
+  if (isPrivate) {
+    return `${ipAddress} (private)`;
+  }
+  
+  return ipAddress || 'unknown';
+};
+
 export const generateRandomToken = (): string => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
@@ -294,7 +347,7 @@ export const validatePreScreener = async (req: Request, res: Response) => {
             uid: userId || 'pre-screener-validation', // Use actual user ID if provided
             status: 2, // Terminated
             statusText: 'Terminated - Failed Pre-Screener',
-            ipAddress: ip,
+            ipAddress: getRealIPAddress(req),
             userAgent: req.get('User-Agent') || 'unknown'
           });
           console.log("✅ Pre-screener failure logged:", { pid: survey.pid, status: 2 });
@@ -361,13 +414,12 @@ export const validatePreScreener = async (req: Request, res: Response) => {
       });
       
       if (survey) {
-        const ip = req.ip || req.connection.remoteAddress || 'unknown';
         await SurveyRedirectLogs.createLog({
           pid: survey.pid,
           uid: userId || 'validation-error', // Use actual user ID if provided
           status: 2, // Terminated
           statusText: 'Terminated - Validation Error',
-          ipAddress: ip,
+          ipAddress: getRealIPAddress(req),
           userAgent: req.get('User-Agent') || 'unknown'
         });
         console.log("✅ Validation error logged:", { pid: survey.pid, status: 2 });
@@ -465,7 +517,7 @@ export const submitResponse = async (req: Request, res: Response) => {
             uid,
             status: 2, // Terminated
             statusText: 'Terminated - Failed Pre-Screener',
-            ipAddress: ip,
+            ipAddress: getRealIPAddress(req),
             userAgent: req.get('User-Agent') || 'unknown'
           });
           console.log("✅ Pre-screener failure logged:", { pid: survey.pid, uid, status: 2 });
@@ -530,18 +582,18 @@ export const submitResponse = async (req: Request, res: Response) => {
         uid,
         status: 1, // Completed survey
         statusText: 'Completed',
-        ipAddress: ip,
+        ipAddress: getRealIPAddress(req),
         userAgent: req.get('User-Agent') || 'unknown'
       });
       console.log("✅ Redirect log saved for vendor survey:", { pid: survey.pid, uid, status: 1 });
     } catch (logError) {
       console.error("❌ Error saving redirect log:", logError);
-      // Don't fail the response if logging fails
     }
 
     // Since status is always "complete", use complete_url
     let redirectUrl = (survey.vendor_id as any).complete_url;
     
+// ...
     console.log("=== VENDOR URL DEBUG ===");
     console.log("Vendor complete_url:", redirectUrl);
     console.log("Vendor complete_url type:", typeof redirectUrl);
@@ -636,7 +688,7 @@ export const handleVendorRedirect = async (req: Request, res: Response) => {
         uid: uid as string,
         status: statusCode,
         statusText,
-        ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
+        ipAddress: getRealIPAddress(req),
         userAgent: req.get('User-Agent') || 'unknown'
       });
       console.log("✅ Vendor redirect log saved:", { pid, uid, status: statusCode });
