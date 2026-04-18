@@ -991,13 +991,9 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    // Remove duplicates based on combination of pid, uid, and statusText
+    // Remove duplicates based on uid - keep only one record per uid
     const uniqueLogs = allLogs.filter((log, index, self) => {
-      return index === self.findIndex((l) => 
-        l.pid === log.pid && 
-        l.uid === log.uid && 
-        l.statusText === log.statusText
-      );
+      return index === self.findIndex((l) => l.uid === log.uid);
     });
 
     // Apply pagination to unique records
