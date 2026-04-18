@@ -992,13 +992,19 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
       .lean();
 
     // Remove duplicates based on combination of pid, uid, and statusText
-    const uniqueLogs = allLogs.filter((log, index, self) => {
-      return index === self.findIndex((l) => 
-        l.pid === log.pid && 
-        l.uid === log.uid && 
-        l.statusText === log.statusText
-      );
+    // Keep only the most recent entry for each combination
+    const uniqueLogsMap = new Map();
+    
+    allLogs.forEach(log => {
+      const key = `${log.pid}_${log.uid}_${log.statusText}`;
+      if (!uniqueLogsMap.has(key) || new Date(log.createdAt) > new Date(uniqueLogsMap.get(key).createdAt)) {
+        uniqueLogsMap.set(key, log);
+      }
     });
+    
+    const uniqueLogs = Array.from(uniqueLogsMap.values()).sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
     // Apply pagination to unique records
     const paginatedLogs = uniqueLogs.slice(skip, skip + limitNum);
