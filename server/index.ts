@@ -995,6 +995,9 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
     // Keep only the most recent entry for each combination
     const uniqueLogsMap = new Map();
     
+    console.log('=== DEDUPLICATION DEBUG ===');
+    console.log('Total logs before deduplication:', allLogs.length);
+    
     allLogs.forEach(log => {
       const key = `${log.pid}_${log.uid}_${log.statusText}`;
       if (!uniqueLogsMap.has(key) || new Date(log.createdAt) > new Date(uniqueLogsMap.get(key).createdAt)) {
@@ -1005,6 +1008,28 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
     const uniqueLogs = Array.from(uniqueLogsMap.values()).sort((a, b) => 
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
+    
+    console.log('Total logs after deduplication:', uniqueLogs.length);
+    console.log('Duplicates removed:', allLogs.length - uniqueLogs.length);
+    
+    // Log potential duplicates for debugging
+    const duplicateGroups = new Map();
+    allLogs.forEach(log => {
+      const key = `${log.pid}_${log.uid}_${log.statusText}`;
+      if (!duplicateGroups.has(key)) {
+        duplicateGroups.set(key, []);
+      }
+      duplicateGroups.get(key).push(log);
+    });
+    
+    const actualDuplicates = Array.from(duplicateGroups.entries()).filter(([key, logs]) => logs.length > 1);
+    if (actualDuplicates.length > 0) {
+      console.log('Found duplicate groups:', actualDuplicates.length);
+      actualDuplicates.slice(0, 3).forEach(([key, logs]) => {
+        console.log(`Duplicate group ${key}:`, logs.map(l => ({ id: l._id, createdAt: l.createdAt, ip: l.ipAddress })));
+      });
+    }
+    console.log('=========================');
 
     // Apply pagination to unique records
     const paginatedLogs = uniqueLogs.slice(skip, skip + limitNum);
