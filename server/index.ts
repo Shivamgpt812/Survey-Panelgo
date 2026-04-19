@@ -785,11 +785,14 @@ app.get('/api/redirect', async (req, res) => {
     const identifier = uid || user_id || user;
 
     console.log("🔥 Redirect HIT:", { pid, uid, user_id, user, status, identifier });
+    console.log("🔥 Request URL:", req.url);
+    console.log("🔥 Request headers:", req.headers);
 
     // 🔥 STEP 5: LOOKUP & REDIRECT - Check for survey session first
     let surveySession = null;
     if (identifier) {
       try {
+        console.log("🔍 Looking up survey session for identifier:", identifier);
         surveySession = await SurveySession.findOne({ identifier: String(identifier) })
           .populate('vendor_id')
           .exec();
@@ -801,9 +804,12 @@ app.get('/api/redirect', async (req, res) => {
             actual_user_id: surveySession.actual_user_id,
             base_url: surveySession.base_url
           });
+        } else {
+          console.log("⚠️ No survey session found for identifier:", identifier);
         }
       } catch (sessionError) {
         console.error("❌ Error looking up survey session:", sessionError);
+        console.error("   Stack trace:", sessionError.stack);
       }
     }
 
@@ -955,10 +961,19 @@ app.get('/api/redirect', async (req, res) => {
 
   } catch (error) {
     console.error("❌ REDIRECT CRASH:", error);
+    console.error("   Error message:", error.message);
+    console.error("   Stack trace:", error.stack);
+    console.error("   Request URL:", req.url);
+    console.error("   Query params:", req.query);
+    
     const fallback = "https://surveypanelgo.netlify.app";
     // For AJAX requests, return JSON error
     if (req.get('Accept')?.includes('application/json')) {
-      return res.status(500).json({ error: "Internal server error" });
+      return res.status(500).json({ 
+        error: "Internal server error",
+        details: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
     return res.redirect(`${fallback}/error`);
   }

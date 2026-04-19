@@ -21,7 +21,7 @@ const surveySessionSchema = new mongoose.Schema(
     },
     vendor_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'VendorLite',
+      ref: 'Vendor',
       required: true
     },
     actual_user_id: {

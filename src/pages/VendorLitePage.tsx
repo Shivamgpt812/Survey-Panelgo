@@ -493,27 +493,9 @@ export default function VendorLitePage() {
       return;
     }
 
-    // 🔥 CRITICAL FIX: Append return URL so external survey knows where to redirect after completion
-    // Common parameter names used by external survey providers
-    const apiUrl = import.meta.env.PROD
-      ? 'https://survey-panelgo.onrender.com'
-      : 'http://localhost:3000';
-    
-    // Build return URL - this tells the external survey where to send the user after completion
-    // Status 1 = Complete, 2 = Terminate, 3 = Quota
-    const returnUrl = `${apiUrl}/api/redirect?pid=${extSurvey.pid || ''}&uid=${rid}&status=1`;
-    
-    // Check if URL already has query parameters
-    const separator = finalUrl.includes('?') ? '&' : '?';
-    
-    // Try common return URL parameter names (providers use different names)
-    // We'll add multiple common ones to maximize compatibility
-    const returnUrlParams = `return_url=${encodeURIComponent(returnUrl)}&callback_url=${encodeURIComponent(returnUrl)}&redirect_url=${encodeURIComponent(returnUrl)}`;
-    
-    finalUrl = `${finalUrl}${separator}${returnUrlParams}`;
-    
-    console.log("🚀 Redirecting to External Survey with Return URL:", finalUrl);
-    console.log("   Return URL (for complete):", returnUrl);
+    // 🔥 SIMPLIFIED: Don't add return URL parameters to keep the external URL clean
+    // External surveys like SurveysGenie handle their own redirect logic
+    console.log("🚀 Redirecting to External Survey:", finalUrl);
     window.location.href = finalUrl;
   };
 
@@ -572,15 +554,7 @@ export default function VendorLitePage() {
         finalUrl = finalUrl.replace(/\[UID\]/g, rid);
       }
 
-      // 🔥 CRITICAL FIX: Append return URL so external survey knows where to redirect after completion
-      const apiUrl = import.meta.env.PROD
-        ? 'https://survey-panelgo.onrender.com'
-        : 'http://localhost:3000';
-      const returnUrl = `${apiUrl}/api/redirect?pid=${extSurvey.pid || ''}&uid=${rid}&status=1`;
-      const separator = finalUrl.includes('?') ? '&' : '?';
-      const returnUrlParams = `return_url=${encodeURIComponent(returnUrl)}&callback_url=${encodeURIComponent(returnUrl)}&redirect_url=${encodeURIComponent(returnUrl)}`;
-      finalUrl = `${finalUrl}${separator}${returnUrlParams}`;
-
+      // 🔥 SIMPLIFIED: Keep external URL clean without return parameters
       console.log("🚀 No prescreener questions - Redirecting directly to External Survey:", finalUrl);
       window.location.href = finalUrl;
       return <div className="min-h-screen bg-violet-50 flex items-center justify-center font-jakarta font-bold text-violet">Redirecting to survey...</div>;
