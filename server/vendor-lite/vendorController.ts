@@ -924,23 +924,56 @@ export const testSurveyEndpoint = async (req: Request, res: Response) => {
 
     // Get survey details to get vendor information
     console.log("   Looking for survey with token:", token);
-    const survey = await IVendorSurvey.findOne({ token: token }).populate({
-      path: 'vendor_id',
-      model: 'Vendor'
-    });
+    
+    // Add retry mechanism for survey lookup (handle timing issues)
+    let survey = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      console.log(`   Attempt ${attempt} to find survey...`);
+      survey = await IVendorSurvey.findOne({ token: token }).populate({
+        path: 'vendor_id',
+        model: 'Vendor'
+      });
+      
+      if (survey) {
+        console.log(`   ✅ Survey found on attempt ${attempt}`);
+        break;
+      }
+      
+      if (attempt < 3) {
+        console.log(`   ⏳ Waiting 500ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
 
     if (!survey) {
-      console.log("   ❌ Survey not found, checking what surveys exist...");
-      // Debug: Check what surveys exist in the database
-      const allSurveys = await IVendorSurvey.find({}).limit(5);
-      console.log("   Available surveys:", allSurveys.map(s => ({ token: s.token, title: s.title })));
+      console.log("   ❌ Survey not found after 3 attempts, using fallback URL");
       
-      // Also try finding by exact token without populate
+      // Try without populate as last resort
       const surveyWithoutPopulate = await IVendorSurvey.findOne({ token: token });
       console.log("   Survey found without populate:", surveyWithoutPopulate ? "YES" : "NO");
       
+      // Use fallback URL since we can't find the survey
       const originalUrl = "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjk2&r=39498070&source=17&PID=XXXX";
       let modifiedUrl = originalUrl.replace(/XXXX/g, userId);
+      
+      // Create a basic survey session even without full survey data
+      try {
+        const { SurveySession } = await import('../models/SurveySession.js');
+        console.log("   Creating basic survey session without vendor data...");
+        
+        await SurveySession.create({
+          identifier: userId,
+          vendor_id: null, // No vendor data available
+          actual_user_id: userId,
+          survey_id: token, // Use token as fallback
+          base_url: originalUrl,
+          identifier_param_name: 'r'
+        });
+        
+        console.log("   ✅ Basic survey session created");
+      } catch (dbError) {
+        console.error("   ❌ Failed to create basic survey session:", dbError);
+      }
       
       return res.json({
         success: true,
