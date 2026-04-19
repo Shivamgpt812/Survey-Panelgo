@@ -878,9 +878,13 @@ export const generateVendorLink = async (req: Request, res: Response) => {
   console.log("🔥 generateVendorLink endpoint HIT!");
   console.log("   Request body:", req.body);
   console.log("   Request headers:", req.headers);
+  console.log("   Request method:", req.method);
+  console.log("   Request URL:", req.url);
   
   try {
     const { token, userId } = req.body;
+    console.log("   Extracted token:", token);
+    console.log("   Extracted userId:", userId);
 
     if (!token || !userId) {
       return res.status(400).json({
@@ -890,20 +894,27 @@ export const generateVendorLink = async (req: Request, res: Response) => {
     }
 
     // Get survey details
+    console.log("   Looking up survey with token:", token);
     const survey = await IVendorSurvey.findOne({ token: token }).populate({
       path: 'vendor_id',
       model: 'Vendor'
     });
+    console.log("   Survey lookup result:", survey ? "FOUND" : "NOT FOUND");
 
     if (!survey) {
+      console.log("   ❌ Survey not found for token:", token);
       return res.status(404).json({
         success: false,
         message: 'Survey not found'
       });
     }
 
+    console.log("   Survey type:", survey.type);
+    console.log("   Survey externalLink:", survey.externalLink);
+
     // Only process external surveys
     if (survey.type !== 'external' || !survey.externalLink) {
+      console.log("   ❌ Not an external survey or missing externalLink");
       return res.status(400).json({
         success: false,
         message: 'This endpoint only works for external surveys'
@@ -942,10 +953,15 @@ export const generateVendorLink = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error generating vendor link:', error);
+    const err = error as Error;
+    console.error('❌ Error generating vendor link:', err);
+    console.error('   Error message:', err.message);
+    console.error('   Stack trace:', err.stack);
+    console.error('   Request body was:', req.body);
     res.status(500).json({
       success: false,
-      message: 'Failed to generate vendor link'
+      message: 'Failed to generate vendor link',
+      error: err.message
     });
   }
 };
