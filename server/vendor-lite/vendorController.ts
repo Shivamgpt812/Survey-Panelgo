@@ -875,6 +875,10 @@ export const getSurveyResponses = async (req: Request, res: Response) => {
 };
 
 export const generateVendorLink = async (req: Request, res: Response) => {
+  console.log("🔥 generateVendorLink endpoint HIT!");
+  console.log("   Request body:", req.body);
+  console.log("   Request headers:", req.headers);
+  
   try {
     const { token, userId } = req.body;
 

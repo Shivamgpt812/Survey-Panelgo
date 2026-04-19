@@ -793,9 +793,11 @@ app.get('/api/redirect', async (req, res) => {
     if (identifier) {
       try {
         console.log("🔍 Looking up survey session for identifier:", identifier);
+        console.log("   Searching in collection: survey_sessions");
         surveySession = await SurveySession.findOne({ identifier: String(identifier) })
           .populate('vendor_id')
           .exec();
+        console.log("   Query result:", surveySession ? "FOUND" : "NOT FOUND");
         
         if (surveySession) {
           console.log("📋 Found survey session:", {
