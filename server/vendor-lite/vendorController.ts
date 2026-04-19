@@ -920,16 +920,29 @@ export const generateVendorLink = async (req: Request, res: Response) => {
     const { SurveySession } = await import('../models/SurveySession.js');
     const { generateIdentifier, injectIdentifierIntoUrl } = await import('../lib/surveySessionUtils.js');
 
-    // Generate unique identifier
-    const identifier = generateIdentifier();
+    // 🔥 IMPORTANT: Use the actual user ID as identifier since external survey redirects with that
+    const identifier = userId; // Use actual user ID, not generated one
     const paramName = 'r'; // Default parameter name for SurveysGenie
 
     // Inject identifier into URL
-    const modifiedUrl = injectIdentifierIntoUrl(survey.externalLink, identifier, paramName);
+    let modifiedUrl = injectIdentifierIntoUrl(survey.externalLink, identifier, paramName);
+    
+    // 🔥 CRITICAL: Replace additional placeholder patterns that might exist
+    // Replace common placeholder patterns with the actual user ID
+    modifiedUrl = modifiedUrl.replace(/\[USER_ID\]/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[userid\]/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[uid\]/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[UID\]/g, userId);
+    
+    // Replace XXXX and similar literal placeholders
+    modifiedUrl = modifiedUrl.replace(/XXXX/g, userId);
+    modifiedUrl = modifiedUrl.replace(/xxxx/g, userId);
+    
+    console.log("   URL after placeholder replacement:", modifiedUrl);
 
-    // Create survey session in database
+    // Create survey session in database using the actual user ID as identifier
     await SurveySession.create({
-      identifier,
+      identifier: userId, // Use actual user ID as identifier
       vendor_id: survey.vendor_id._id,
       actual_user_id: userId,
       survey_id: survey.pid,
@@ -937,7 +950,7 @@ export const generateVendorLink = async (req: Request, res: Response) => {
       identifier_param_name: paramName
     });
 
-    console.log("   ✅ Survey session created with identifier:", identifier);
+    console.log("   ✅ Survey session created with user ID as identifier:", userId);
     console.log("   Modified URL:", modifiedUrl);
 
     res.json({
