@@ -876,9 +876,9 @@ export const getSurveyResponses = async (req: Request, res: Response) => {
 
 export const generateVendorLink = async (req: Request, res: Response) => {
   try {
-    const { surveyToken, userId } = req.body;
+    const { token, userId } = req.body;
 
-    if (!surveyToken || !userId) {
+    if (!token || !userId) {
       return res.status(400).json({
         success: false,
         message: 'Survey token and user ID are required'
@@ -886,9 +886,9 @@ export const generateVendorLink = async (req: Request, res: Response) => {
     }
 
     // Get survey details
-    const survey = await IVendorSurvey.findOne({ token: surveyToken }).populate({
+    const survey = await IVendorSurvey.findOne({ token: token }).populate({
       path: 'vendor_id',
-      model: 'VendorLite'
+      model: 'Vendor'
     });
 
     if (!survey) {
