@@ -374,30 +374,73 @@ export default function VendorLitePage() {
     const transactionId = localStorage.getItem("ext_transactionId") || "";
 
     // PART 5: PRESCREENER VALIDATION
+    console.log("=== EXTERNAL PRESCREENER VALIDATION DEBUG ===");
+    console.log("Total questions:", (extSurvey.questions || []).length);
+    console.log("User answers:", extAnswers);
+    
     let passed = true;
+    let failedQuestion = null;
+    
     (extSurvey.questions || []).forEach((q: any, i: number) => {
       const answer = (extAnswers[`q_${i}`] || '').trim();
       const target = (q.correctAnswer || '').trim();
+      
+      console.log(`\nQuestion ${i}:`, {
+        type: q.type,
+        question: q.question,
+        userAnswer: answer,
+        correctAnswer: target,
+        operator: q.operator
+      });
 
       if (q.type === 'age') {
         const numAns = parseInt(answer);
         const numTarget = parseInt(target);
+        console.log("Age comparison:", { numAns, numTarget, operator: q.operator });
+        
         if (isNaN(numAns) || isNaN(numTarget)) {
+          console.log("❌ FAILED: Invalid number");
           passed = false;
+          failedQuestion = q;
         } else {
-          if (q.operator === '>=') { if (!(numAns >= numTarget)) passed = false; }
-          else if (q.operator === '>') { if (!(numAns > numTarget)) passed = false; }
-          else if (q.operator === '<=') { if (!(numAns <= numTarget)) passed = false; }
-          else if (q.operator === '<') { if (!(numAns < numTarget)) passed = false; }
-          else { if (!(numAns === numTarget)) passed = false; }
+          let questionPassed = true;
+          if (q.operator === '>=') { if (!(numAns >= numTarget)) questionPassed = false; }
+          else if (q.operator === '>') { if (!(numAns > numTarget)) questionPassed = false; }
+          else if (q.operator === '<=') { if (!(numAns <= numTarget)) questionPassed = false; }
+          else if (q.operator === '<') { if (!(numAns < numTarget)) questionPassed = false; }
+          else { if (!(numAns === numTarget)) questionPassed = false; }
+          
+          if (!questionPassed) {
+            console.log("❌ FAILED: Age condition not met");
+            passed = false;
+            failedQuestion = q;
+          } else {
+            console.log("✅ PASSED: Age condition met");
+          }
         }
       } else {
         // Text or Select - case insensitive comparison
+        console.log("Text/Select comparison:", { 
+          userAnswer: answer.toLowerCase(), 
+          correctAnswer: target.toLowerCase(),
+          match: answer.toLowerCase() === target.toLowerCase()
+        });
+        
         if (answer.toLowerCase() !== target.toLowerCase()) {
+          console.log("❌ FAILED: Answer doesn't match");
           passed = false;
+          failedQuestion = q;
+        } else {
+          console.log("✅ PASSED: Answer matches");
         }
       }
     });
+    
+    console.log("\n=== VALIDATION RESULT ===");
+    console.log("Overall passed:", passed);
+    if (!passed) {
+      console.log("Failed question:", failedQuestion);
+    }
 
     // FAIL → punch in via backend and THEN redirect to vendor
     if (!passed) {
