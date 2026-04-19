@@ -1033,25 +1033,28 @@ export const testSurveyEndpoint = async (req: Request, res: Response) => {
       const { SurveySession } = await import('../models/SurveySession.js');
       console.log("   SurveySession model imported successfully");
 
-      const sessionData: any = {
-        identifier: userId, // Use actual user ID as identifier
-        vendor_id: survey.vendor_id?._id || null, // Handle null for external surveys
-        actual_user_id: userId,
-        survey_id: survey.pid,
-        base_url: survey.externalLink,
-        identifier_param_name: 'r'
-      };
-      console.log("   Session data to create:", sessionData);
+      // Check if session already exists to avoid duplicate key errors
+      const existingSession = await SurveySession.findOne({ identifier: userId });
+      if (existingSession) {
+        console.log("   ℹ️ Survey session already exists, skipping creation");
+        console.log("   Existing session ID:", existingSession._id);
+      } else {
+        const sessionData: any = {
+          identifier: userId, // Use actual user ID as identifier
+          vendor_id: survey.vendor_id?._id || null, // Handle null for external surveys
+          actual_user_id: userId,
+          survey_id: survey.pid,
+          base_url: survey.externalLink,
+          identifier_param_name: 'r'
+        };
+        console.log("   Session data to create:", sessionData);
 
-      const createdSession = await SurveySession.create(sessionData);
-      console.log("   ✅ Survey session created successfully!");
-      console.log("   Created session ID:", createdSession._id);
-      console.log("   Created session identifier:", createdSession.identifier);
-      
-      // Verify it was actually saved by trying to find it immediately
-      const verifySession = await SurveySession.findOne({ identifier: userId });
-      console.log("   Verification lookup result:", verifySession ? "FOUND" : "NOT FOUND");
-      
+        const createdSession = await SurveySession.create(sessionData);
+        console.log("   ✅ Survey session created successfully!");
+        console.log("   Created session ID:", createdSession._id);
+        console.log("   Created session identifier:", createdSession.identifier);
+      }
+
     } catch (dbError) {
       const err = dbError as Error;
       console.error("   ❌ Database error creating survey session:", err);
