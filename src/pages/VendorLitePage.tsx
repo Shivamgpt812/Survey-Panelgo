@@ -475,7 +475,23 @@ export default function VendorLitePage() {
       finalUrl = finalUrl.replace(/\[#PID#\]/g, extSurvey.pid);
     }
     
+    // 🔥 SAFETY FIX: Auto-detect and replace common placeholder patterns like XXXX
+    if (rid) {
+      // Replace any occurrence of "XXXX" or similar placeholder patterns with the actual RID
+      finalUrl = finalUrl.replace(/XXXX/g, rid);
+      finalUrl = finalUrl.replace(/xxxx/g, rid);
+      finalUrl = finalUrl.replace(/\[uid\]/g, rid);
+      finalUrl = finalUrl.replace(/\[UID\]/g, rid);
+    }
+    
     console.log("🔗 URL after placeholder replacement:", finalUrl);
+    
+    // 🔥 VALIDATION: Check if URL still contains placeholder patterns
+    if (finalUrl.includes('XXXX') || finalUrl.includes('xxxx') || finalUrl.includes('[#userid#]') || finalUrl.includes('[#rid#]')) {
+      console.error("❌ CRITICAL: URL still contains unreplaced placeholders!");
+      alert("Error: External survey URL has unreplaced placeholders. Please check the survey configuration.");
+      return;
+    }
 
     console.log("🚀 Redirecting to External Survey:", finalUrl);
     window.location.href = finalUrl;
@@ -526,6 +542,14 @@ export default function VendorLitePage() {
       if (extSurvey.pid) {
         finalUrl = finalUrl.replace(/\[#pid#\]/g, extSurvey.pid);
         finalUrl = finalUrl.replace(/\[#PID#\]/g, extSurvey.pid);
+      }
+      
+      // 🔥 SAFETY FIX: Auto-detect and replace common placeholder patterns like XXXX
+      if (rid) {
+        finalUrl = finalUrl.replace(/XXXX/g, rid);
+        finalUrl = finalUrl.replace(/xxxx/g, rid);
+        finalUrl = finalUrl.replace(/\[uid\]/g, rid);
+        finalUrl = finalUrl.replace(/\[UID\]/g, rid);
       }
 
       console.log("🚀 No prescreener questions - Redirecting directly to External Survey:", finalUrl);

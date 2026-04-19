@@ -235,6 +235,22 @@ router.get('/external/router', async (req, res) => {
         finalUrl = finalUrl.replace(/\[#rid#\]/g, rid as string);
         finalUrl = finalUrl.replace(/\[#pid#\]/g, survey.pid || '');
         finalUrl = finalUrl.replace(/\[#PID#\]/g, survey.pid || '');
+        
+        // 🔥 SAFETY FIX: Auto-detect and replace common placeholder patterns like XXXX
+        finalUrl = finalUrl.replace(/XXXX/g, rid as string);
+        finalUrl = finalUrl.replace(/xxxx/g, rid as string);
+        finalUrl = finalUrl.replace(/\[uid\]/g, rid as string);
+        finalUrl = finalUrl.replace(/\[UID\]/g, rid as string);
+        
+        // 🔥 VALIDATION: Check if URL still contains placeholder patterns
+        if (finalUrl.includes('XXXX') || finalUrl.includes('xxxx') || finalUrl.includes('[#userid#]') || finalUrl.includes('[#rid#]')) {
+            console.error("❌ CRITICAL: External URL still contains unreplaced placeholders!");
+            console.error("   Final URL:", finalUrl);
+            return res.status(500).json({ 
+                success: false, 
+                message: "External survey URL has unreplaced placeholders. Please check the survey configuration." 
+            });
+        }
 
         // Store mapping for late interception (if panel redirects to default routes)
         // This is now persisted to disk to survive cold starts
