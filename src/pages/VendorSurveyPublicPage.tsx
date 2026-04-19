@@ -199,8 +199,22 @@ export default function VendorSurveyPublicPage() {
       console.log("Redirect URL:", data.redirectUrl);
 
       if (data.success && !data.terminated) {
-        // Passed pre-screener, show survey questions
-        console.log("Pre-screener PASSED - showing survey questions");
+        // 🔥 CRITICAL FIX: Check if this is an external survey with a redirect URL
+        if (data.isExternal && data.externalUrl) {
+          console.log("✅ Pre-screener PASSED for EXTERNAL survey - redirecting to external URL");
+          console.log("External URL:", data.externalUrl);
+          console.log("Identifier:", data.identifier);
+          
+          // Show success message before redirect
+          alert('You qualify for this survey! Redirecting to the external survey...');
+          
+          // Redirect to the external survey URL with the injected identifier
+          window.location.href = data.externalUrl;
+          return;
+        }
+        
+        // For internal surveys, show survey questions
+        console.log("Pre-screener PASSED for INTERNAL survey - showing survey questions");
         setShowPreScreener(false);
       } else if (data.terminated) {
         // Failed pre-screener, redirect to terminate URL

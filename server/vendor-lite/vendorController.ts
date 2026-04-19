@@ -343,10 +343,55 @@ export const validatePreScreener = async (req: Request, res: Response) => {
 
     // Passed pre-screener
     console.log("Pre-screener validation PASSED - user can proceed");
+    
+    // 🔥 CRITICAL FIX: For external surveys, generate the dynamic vendor link
+    if (survey.type === 'external' && survey.externalLink) {
+      console.log("=== EXTERNAL SURVEY - GENERATING DYNAMIC LINK ===");
+      console.log("External Link:", survey.externalLink);
+      console.log("User ID:", userId);
+      
+      try {
+        // Generate dynamic vendor link with identifier
+        const { modifiedUrl, identifier, paramName } = await processExternalSurveyLink(
+          survey.externalLink,
+          (survey.vendor_id as any)._id.toString(),
+          userId || 'anonymous',
+          survey.pid
+        );
+        
+        console.log("✅ Generated external survey URL:", modifiedUrl);
+        console.log("   Identifier:", identifier);
+        console.log("   Param Name:", paramName);
+        
+        return res.json({
+          success: true,
+          terminated: false,
+          message: 'Pre-screener validation passed',
+          isExternal: true,
+          externalUrl: modifiedUrl,
+          identifier,
+          paramName
+        });
+      } catch (linkError) {
+        console.error("❌ Error generating external survey link:", linkError);
+        // Fallback: return the original external link without identifier injection
+        return res.json({
+          success: true,
+          terminated: false,
+          message: 'Pre-screener validation passed',
+          isExternal: true,
+          externalUrl: survey.externalLink,
+          warning: 'Could not inject tracking identifier'
+        });
+      }
+    }
+    
+    // For internal surveys, return success as before
     res.json({
       success: true,
       terminated: false,
-      message: 'Pre-screener validation passed'
+      message: 'Pre-screener validation passed',
+      isExternal: false
     });
 
   } catch (error) {
