@@ -778,62 +778,110 @@ app.get('/api/survey-tracking', requireAdmin, async (_req: any, res) => {
 // ---------- Survey Redirect Tracking ----------
 app.get('/api/redirect', async (req, res) => {
   try {
-    // 🔥 STEP 4: DETECT IDENTIFIER - Handle both uid and user_id parameters
+    // 🔥 STEP 1: IDENTIFY PARAMS - Handle pid, uid, user_id, user, status
     const { pid, uid, user_id, user, status } = req.query;
-    
+
     // Detect identifier from any possible parameter name
     const identifier = uid || user_id || user;
 
-    console.log("🔥 Redirect HIT:", { pid, uid, user_id, user, status, identifier });
-    console.log("🔥 Request URL:", req.url);
-    console.log("🔥 Request headers:", req.headers);
+    console.log("🔥 /api/redirect HIT ==========================================");
+    console.log("   PID:", pid);
+    console.log("   UID:", uid);
+    console.log("   User_ID:", user_id);
+    console.log("   User:", user);
+    console.log("   Status:", status);
+    console.log("   Extracted Identifier:", identifier);
+    console.log("   Request URL:", req.url);
+    console.log("================================================================");
 
-    // 🔥 STEP 5: LOOKUP & REDIRECT - Check for survey session first
+    // 🔥 STEP 2: LOOKUP SESSION - Find session by identifier
     let surveySession = null;
+    let vendor = null;
+
     if (identifier) {
       try {
-        console.log("🔍 Looking up survey session for identifier:", identifier);
-        console.log("   Searching in collection: survey_sessions");
+        console.log("🔍 STEP 2: Looking up survey session for identifier:", identifier);
         surveySession = await SurveySession.findOne({ identifier: String(identifier) })
           .populate('vendor_id')
           .exec();
-        console.log("   Query result:", surveySession ? "FOUND" : "NOT FOUND");
-        
+
         if (surveySession) {
-          console.log("📋 Found survey session:", {
-            identifier: surveySession.identifier,
-            vendor_id: surveySession.vendor_id?._id,
-            actual_user_id: surveySession.actual_user_id,
-            base_url: surveySession.base_url
-          });
+          console.log("✅ STEP 2: Survey session FOUND");
+          console.log("   - Session ID:", surveySession._id);
+          console.log("   - Identifier:", surveySession.identifier);
+          console.log("   - Vendor ID (from session):", surveySession.vendor_id?._id || surveySession.vendor_id);
+          console.log("   - Actual User ID:", surveySession.actual_user_id);
+          console.log("   - Survey ID (PID):", surveySession.survey_id);
+          console.log("   - Base URL:", surveySession.base_url);
+
+          // Check if vendor was populated successfully
+          vendor = surveySession.vendor_id as any;
+
+          if (!vendor || (!vendor.complete_url && !vendor.redirectLinks?.complete)) {
+            // 🔥 FALLBACK: Try to lookup vendor from VendorLite collection if populate failed
+            console.log("⚠️ Vendor not populated or missing URLs, trying VendorLite lookup...");
+            try {
+              const { default: VendorLite } = await import('./vendor-lite/vendorModel.js');
+              const vendorLite = await VendorLite.findById(surveySession.vendor_id);
+              if (vendorLite) {
+                console.log("✅ Found vendor in VendorLite collection");
+                vendor = vendorLite;
+              } else {
+                console.log("⚠️ Vendor not found in VendorLite collection either");
+              }
+            } catch (vendorLookupError) {
+              const error = vendorLookupError as Error;
+              console.error("❌ Error looking up VendorLite:", error.message);
+            }
+          }
         } else {
-          console.log("⚠️ No survey session found for identifier:", identifier);
+          console.log("⚠️ STEP 2: No survey session found for identifier:", identifier);
         }
       } catch (sessionError) {
         console.error("❌ Error looking up survey session:", sessionError);
-        console.error("   Stack trace:", sessionError.stack);
       }
+    } else {
+      console.log("⚠️ STEP 2: No identifier provided (no uid/user_id/user param)");
     }
 
     // If survey session found, handle vendor redirect
-    if (surveySession && surveySession.vendor_id) {
+    if (surveySession && vendor) {
       const statusCode = Number(status);
-      const vendor = surveySession.vendor_id as any;
-      
-      // Determine vendor redirect URL based on status
-      let vendorUrl = "";
-      if (statusCode === 1) vendorUrl = vendor.complete_url || vendor.redirectLinks?.complete;
-      else if (statusCode === 2) vendorUrl = vendor.terminate_url || vendor.redirectLinks?.terminate;
-      else if (statusCode === 3) vendorUrl = vendor.quota_full_url || vendor.redirectLinks?.quotaFull;
 
+      console.log("📋 STEP 3: Vendor data loaded");
+      console.log("   - Vendor ID:", vendor?._id || vendor?.id);
+      console.log("   - Has Complete URL:", !!(vendor?.complete_url || vendor?.redirectLinks?.complete));
+      console.log("   - Has Terminate URL:", !!(vendor?.terminate_url || vendor?.redirectLinks?.terminate));
+      console.log("   - Has Quota URL:", !!(vendor?.quota_full_url || vendor?.redirectLinks?.quotaFull));
+
+      // 🔥 STEP 3: FETCH VENDOR REDIRECTS - Support both Vendor and VendorLite models
+      // VendorLite has: complete_url, terminate_url, quota_full_url
+      // Main Vendor has: redirectLinks: { complete, terminate, quotaFull }
+      let vendorUrl = "";
+      if (statusCode === 1) {
+        vendorUrl = vendor.complete_url || vendor.redirectLinks?.complete || "";
+        console.log(`🎯 Status 1 (Complete): URL = ${vendorUrl || "NOT FOUND"}`);
+      }
+      else if (statusCode === 2) {
+        vendorUrl = vendor.terminate_url || vendor.redirectLinks?.terminate || "";
+        console.log(`🎯 Status 2 (Terminate): URL = ${vendorUrl || "NOT FOUND"}`);
+      }
+      else if (statusCode === 3) {
+        vendorUrl = vendor.quota_full_url || vendor.redirectLinks?.quotaFull || "";
+        console.log(`🎯 Status 3 (Quota Full): URL = ${vendorUrl || "NOT FOUND"}`);
+      }
+
+      // 🔥 STEP 4 & 5: REDIRECT BASED ON STATUS + PASS ORIGINAL USER ID
       if (vendorUrl) {
         // Replace [identifier] placeholder with actual_user_id
         const finalVendorUrl = vendorUrl.replace(/\[identifier\]/g, String(surveySession.actual_user_id));
-        
+
         console.log("🚀 Vendor redirect from session:", {
           statusCode,
+          vendorId: vendor?._id || vendor?.id,
           actualUserId: surveySession.actual_user_id,
-          vendorUrl: finalVendorUrl
+          finalRedirectUrl: finalVendorUrl,
+          source: 'survey_session'
         });
 
         // For AJAX requests, return JSON
@@ -848,6 +896,8 @@ app.get('/api/redirect', async (req, res) => {
 
         // For regular browser requests, redirect directly to vendor
         return res.redirect(finalVendorUrl);
+      } else {
+        console.log("⚠️ No vendor URL found for status:", statusCode, "- falling through to default redirect");
       }
     }
 
