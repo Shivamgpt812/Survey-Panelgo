@@ -928,17 +928,24 @@ export const generateVendorLink = async (req: Request, res: Response) => {
     console.log("   URL after placeholder replacement:", modifiedUrl);
 
     // Create survey session in database using the actual user ID as identifier
-    const { SurveySession } = await import('../models/SurveySession.js');
-    await SurveySession.create({
-      identifier: userId, // Use actual user ID as identifier
-      vendor_id: survey.vendor_id._id,
-      actual_user_id: userId,
-      survey_id: survey.pid,
-      base_url: survey.externalLink,
-      identifier_param_name: 'r'
-    });
+    try {
+      const { SurveySession } = await import('../models/SurveySession.js');
+      console.log("   SurveySession model imported successfully");
+      
+      await SurveySession.create({
+        identifier: userId, // Use actual user ID as identifier
+        vendor_id: survey.vendor_id._id,
+        actual_user_id: userId,
+        survey_id: survey.pid,
+        base_url: survey.externalLink,
+        identifier_param_name: 'r'
+      });
 
-    console.log("   ✅ Survey session created with user ID as identifier:", userId);
+      console.log("   ✅ Survey session created with user ID as identifier:", userId);
+    } catch (dbError) {
+      console.error("   ❌ Database error creating survey session:", dbError);
+      // Continue without session creation - at least the URL replacement works
+    }
 
     res.json({
       success: true,
