@@ -263,8 +263,18 @@ router.get('/external/router', async (req, res) => {
         // Save UID mapping to database for vendor redirect lookup with start IP
         await saveUidMapping(String(rid), String(token), survey.pid, startIp);
 
+        // 🔥 CRITICAL FIX: Append return URL so external survey knows where to redirect after completion
+        const apiBase = process.env.NODE_ENV === 'production' 
+            ? 'https://survey-panelgo.onrender.com' 
+            : 'http://localhost:3000';
+        const returnUrl = `${apiBase}/api/redirect?pid=${survey.pid || ''}&uid=${rid}&status=1`;
+        const separator = finalUrl.includes('?') ? '&' : '?';
+        const returnUrlParams = `return_url=${encodeURIComponent(returnUrl)}&callback_url=${encodeURIComponent(returnUrl)}&redirect_url=${encodeURIComponent(returnUrl)}`;
+        finalUrl = `${finalUrl}${separator}${returnUrlParams}`;
+        
         // Immediately redirect to final external URL
         console.log(`🚀 Redirecting directly to External Survey: ${finalUrl}`);
+        console.log(`   With Return URL: ${returnUrl}`);
         return res.redirect(finalUrl);
     } catch (err) {
         console.error('External Router Error:', err);
