@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import fs from 'fs';
+import path from 'path';
 import IVendor from './vendorModel.js';
 import IVendorSurvey from './surveyModel.js';
 import IVendorResponse from './responseModel.js';
@@ -11,6 +13,19 @@ export const generateRandomToken = (): string => {
 
 export const generateUID = (): string => {
   return "V_" + Math.random().toString(36).substring(2, 10);
+};
+
+// Helper function to load external surveys from JSON file
+const loadExternalSurveys = () => {
+  try {
+    const filePath = path.join(__dirname, '../externalSurveys.json');
+    if (!fs.existsSync(filePath)) return {};
+    const data = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(data || '{}');
+  } catch (err) {
+    console.error('Failed to load external surveys:', err);
+    return {};
+  }
 };
 
 export const createVendor = async (req: Request, res: Response) => {
@@ -924,33 +939,49 @@ export const testSurveyEndpoint = async (req: Request, res: Response) => {
 
     // Get survey details to get vendor information
     console.log("   Looking for survey with token:", token);
-    
-    // Add retry mechanism for survey lookup (handle timing issues)
+
+    // First check MongoDB for internal surveys
     let survey = null;
     for (let attempt = 1; attempt <= 3; attempt++) {
-      console.log(`   Attempt ${attempt} to find survey...`);
+      console.log(`   Attempt ${attempt} to find survey in MongoDB...`);
       survey = await IVendorSurvey.findOne({ token: token }).populate({
         path: 'vendor_id',
         model: 'Vendor'
       });
-      
+
       if (survey) {
-        console.log(`   ✅ Survey found on attempt ${attempt}`);
+        console.log(`   ✅ Survey found in MongoDB on attempt ${attempt}`);
         break;
       }
-      
+
       if (attempt < 3) {
         console.log(`   ⏳ Waiting 500ms before retry...`);
         await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
 
+    // If not found in MongoDB, check external JSON file
     if (!survey) {
-      console.log("   ❌ Survey not found after 3 attempts, using fallback URL");
-      
-      // Try without populate as last resort
-      const surveyWithoutPopulate = await IVendorSurvey.findOne({ token: token });
-      console.log("   Survey found without populate:", surveyWithoutPopulate ? "YES" : "NO");
+      console.log("   Survey not found in MongoDB, checking external JSON file...");
+      const externalSurveys = loadExternalSurveys();
+      const externalSurvey = externalSurveys[token];
+
+      if (externalSurvey) {
+        console.log("   ✅ Found external survey in JSON file:", externalSurvey.title);
+        // Create a mock survey object with the external survey data
+        survey = {
+          title: externalSurvey.title,
+          externalLink: externalSurvey.externalUrl,
+          pid: externalSurvey.pid,
+          token: token,
+          vendor_id: null, // External surveys don't have vendor in MongoDB
+          isExternal: true
+        };
+      }
+    }
+
+    if (!survey) {
+      console.log("   ❌ Survey not found in MongoDB or JSON file, using fallback URL");
       
       // Use fallback URL since we can't find the survey
       const originalUrl = "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjk2&r=39498070&source=17&PID=XXXX";
@@ -1001,17 +1032,17 @@ export const testSurveyEndpoint = async (req: Request, res: Response) => {
     try {
       const { SurveySession } = await import('../models/SurveySession.js');
       console.log("   SurveySession model imported successfully");
-      
-      const sessionData = {
+
+      const sessionData: any = {
         identifier: userId, // Use actual user ID as identifier
-        vendor_id: survey.vendor_id._id,
+        vendor_id: survey.vendor_id?._id || null, // Handle null for external surveys
         actual_user_id: userId,
         survey_id: survey.pid,
         base_url: survey.externalLink,
         identifier_param_name: 'r'
       };
       console.log("   Session data to create:", sessionData);
-      
+
       const createdSession = await SurveySession.create(sessionData);
       console.log("   ✅ Survey session created successfully!");
       console.log("   Created session ID:", createdSession._id);
