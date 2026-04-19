@@ -946,42 +946,76 @@ app.get('/api/redirect', async (req, res) => {
       : req.socket.remoteAddress || "Unknown";
     const timestamp = new Date().toISOString();
 
-    // 🔥 Check for external survey mapping to enable auto-forwarding to vendors
+    // 🔥 EMERGENCY FALLBACK: Try to find vendor by survey PID from vendor-lite surveys
     let vendorRedirectUrl = "";
-    try {
-      const { findTokenByUid, loadSurveys } = await import('./externalCreate.js');
-      // First try to find token by UID from database
-      const token = await findTokenByUid(String(identifier));
-      
-      // Fallback to old method if database lookup fails
-      const fallbackToken = await (async () => {
-        if (!token) {
-          const { findTokenByRid } = await import('./externalCreate.js');
-          return findTokenByRid(String(identifier));
+    
+    // FIRST: Try vendor-lite survey lookup by PID
+    if (pid && !vendorRedirectUrl) {
+      try {
+        console.log("🔥 EMERGENCY FALLBACK: Looking up vendor-lite survey by PID:", pid);
+        const { default: VendorLiteSurvey } = await import('./vendor-lite/surveyModel.js');
+        const { default: VendorLite } = await import('./vendor-lite/vendorModel.js');
+        
+        const survey = await VendorLiteSurvey.findOne({ pid: String(pid) });
+        if (survey && survey.vendor_id) {
+          console.log("✅ Found vendor-lite survey:", survey.title);
+          const vendor = await VendorLite.findById(survey.vendor_id);
+          if (vendor) {
+            let vendorUrl = "";
+            if (statusCode === 1) vendorUrl = vendor.complete_url;
+            else if (statusCode === 2) vendorUrl = vendor.terminate_url;
+            else if (statusCode === 3) vendorUrl = vendor.quota_full_url;
+            
+            if (vendorUrl) {
+              const sep = vendorUrl.includes("?") ? "&" : "?";
+              // Use identifier as the user_id for vendor redirect
+              vendorRedirectUrl = `${vendorUrl}${sep}pid=${pid}&uid=${identifier}&status=${statusCode}`;
+              console.log(`🚀 EMERGENCY: Vendor redirect URL from PID lookup: ${vendorRedirectUrl}`);
+            }
+          }
+        } else {
+          console.log("⚠️ No vendor-lite survey found for PID:", pid);
         }
-        return token;
-      })();
-      
-      const finalToken = token || fallbackToken;
-      
-      if (finalToken) {
-        const surveys = loadSurveys();
-        const survey = surveys[finalToken];
-        if (survey && survey.vendor) {
-          let vendorUrl = "";
-          if (statusCode === 1) vendorUrl = survey.vendor.complete_url;
-          else if (statusCode === 2) vendorUrl = survey.vendor.terminate_url;
-          else if (statusCode === 3) vendorUrl = survey.vendor.quota_full_url;
+      } catch (e: any) {
+        console.warn("⚠️ PID lookup failed:", e.message);
+      }
+    }
+    
+    // SECOND: Try externalCreate.js mapping lookup (for external surveys)
+    if (!vendorRedirectUrl) {
+      try {
+        const { findTokenByUid, loadSurveys } = await import('./externalCreate.js');
+        const token = await findTokenByUid(String(identifier));
+        
+        const fallbackToken = await (async () => {
+          if (!token) {
+            const { findTokenByRid } = await import('./externalCreate.js');
+            return findTokenByRid(String(identifier));
+          }
+          return token;
+        })();
+        
+        const finalToken = token || fallbackToken;
+        
+        if (finalToken) {
+          const surveys = loadSurveys();
+          const survey = surveys[finalToken];
+          if (survey && survey.vendor) {
+            let vendorUrl = "";
+            if (statusCode === 1) vendorUrl = survey.vendor.complete_url;
+            else if (statusCode === 2) vendorUrl = survey.vendor.terminate_url;
+            else if (statusCode === 3) vendorUrl = survey.vendor.quota_full_url;
 
-          if (vendorUrl) {
-            const sep = vendorUrl.includes("?") ? "&" : "?";
-            vendorRedirectUrl = `${vendorUrl}${sep}rid=${identifier}&uid=${identifier}&pid=${survey.pid || ''}&transactionId=AUTO`;
-            console.log(`🔥 Found vendor redirect for UID ${identifier}: ${vendorRedirectUrl}`);
+            if (vendorUrl) {
+              const sep = vendorUrl.includes("?") ? "&" : "?";
+              vendorRedirectUrl = `${vendorUrl}${sep}rid=${identifier}&uid=${identifier}&pid=${survey.pid || ''}&transactionId=AUTO`;
+              console.log(`🔥 Found vendor redirect for UID ${identifier}: ${vendorRedirectUrl}`);
+            }
           }
         }
+      } catch (e: any) {
+        console.warn("⚠️ Intercept lookup skipped or failed:", e.message);
       }
-    } catch (e: any) {
-      console.warn("⚠️ Intercept lookup skipped or failed:", e.message);
     }
 
     // For AJAX requests, return JSON with vendor redirect URL
