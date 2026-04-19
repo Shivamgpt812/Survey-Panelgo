@@ -892,15 +892,55 @@ export const createSurveySession = async (req: Request, res: Response) => {
       });
     }
 
-    // Simple placeholder replacement
-    const originalUrl = "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjk2&r=39498070&source=17&PID=XXXX";
-    let modifiedUrl = originalUrl.replace(/XXXX/g, userId);
+    // Get survey details to get vendor information
+    const survey = await IVendorSurvey.findOne({ token: token }).populate({
+      path: 'vendor_id',
+      model: 'Vendor'
+    });
+
+    if (!survey) {
+      return res.status(404).json({
+        success: false,
+        message: 'Survey not found'
+      });
+    }
+
+    console.log("   Found survey:", survey.title);
+
+    // Replace placeholders in the actual external URL
+    let modifiedUrl = survey.externalLink;
+    modifiedUrl = modifiedUrl.replace(/XXXX/g, userId);
+    modifiedUrl = modifiedUrl.replace(/xxxx/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[USER_ID\]/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[userid\]/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[uid\]/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[UID\]/g, userId);
     
     console.log("   URL after placeholder replacement:", modifiedUrl);
 
+    // Create survey session in database using the actual user ID as identifier
+    try {
+      const { SurveySession } = await import('../models/SurveySession.js');
+      console.log("   SurveySession model imported successfully");
+      
+      await SurveySession.create({
+        identifier: userId, // Use actual user ID as identifier
+        vendor_id: survey.vendor_id._id,
+        actual_user_id: userId,
+        survey_id: survey.pid,
+        base_url: survey.externalLink,
+        identifier_param_name: 'r'
+      });
+
+      console.log("   ✅ Survey session created with user ID as identifier:", userId);
+    } catch (dbError) {
+      console.error("   ❌ Database error creating survey session:", dbError);
+      // Continue without session creation - at least the URL replacement works
+    }
+
     res.json({
       success: true,
-      originalUrl: originalUrl,
+      originalUrl: survey.externalLink,
       modifiedUrl: modifiedUrl,
       identifier: userId,
       paramName: 'r'
