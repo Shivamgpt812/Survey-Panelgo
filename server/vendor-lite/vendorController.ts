@@ -889,65 +889,15 @@ export const createSurveySession = async (req: Request, res: Response) => {
     const { token, userId } = req.body;
     console.log("   Token:", token, "UserId:", userId);
 
-    // Step 1: Simple placeholder replacement first
+    // Simple placeholder replacement
     const originalUrl = "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjk2&r=39498070&source=17&PID=XXXX";
     let modifiedUrl = originalUrl.replace(/XXXX/g, userId);
     
     console.log("   URL after placeholder replacement:", modifiedUrl);
 
-    // Step 2: Try to get survey details (this might be causing the 404)
-    let survey = null;
-    try {
-      console.log("   Attempting to find survey...");
-      survey = await IVendorSurvey.findOne({ token: token }).populate({
-        path: 'vendor_id',
-        model: 'Vendor'
-      });
-      console.log("   Survey lookup result:", survey ? "FOUND" : "NOT FOUND");
-    } catch (surveyError) {
-      console.error("   ❌ Error finding survey:", surveyError);
-      // Continue with simple URL replacement
-    }
-
-    // Step 3: Try to create survey session (this might be causing the 404)
-    if (survey) {
-      try {
-        console.log("   Attempting to create survey session...");
-        const { SurveySession } = await import('../models/SurveySession.js');
-        console.log("   SurveySession model imported successfully");
-        
-        const sessionData = {
-          identifier: userId, // Use actual user ID as identifier
-          vendor_id: survey.vendor_id._id,
-          actual_user_id: userId,
-          survey_id: survey.pid,
-          base_url: survey.externalLink,
-          identifier_param_name: 'r'
-        };
-        console.log("   Session data to create:", sessionData);
-        
-        const createdSession = await SurveySession.create(sessionData);
-        console.log("   ✅ Survey session created successfully!");
-        console.log("   Created session ID:", createdSession._id);
-        console.log("   Created session identifier:", createdSession.identifier);
-        
-        // Verify it was actually saved by trying to find it immediately
-        const verifySession = await SurveySession.findOne({ identifier: userId });
-        console.log("   Verification lookup result:", verifySession ? "FOUND" : "NOT FOUND");
-        
-      } catch (dbError) {
-        const err = dbError as Error;
-        console.error("   ❌ Database error creating survey session:", err);
-        console.error("   Error details:", err.message);
-        // Continue without session creation - at least the URL replacement works
-      }
-    } else {
-      console.log("   ⚠️ No survey found, skipping session creation");
-    }
-
     res.json({
       success: true,
-      originalUrl: survey ? survey.externalLink : originalUrl,
+      originalUrl: originalUrl,
       modifiedUrl: modifiedUrl,
       identifier: userId,
       paramName: 'r'
@@ -956,7 +906,6 @@ export const createSurveySession = async (req: Request, res: Response) => {
   } catch (error) {
     const err = error as Error;
     console.error('❌ Error in createSurveySession:', err.message);
-    console.error('   Stack trace:', err.stack);
     res.status(500).json({
       success: false,
       message: 'Failed to create survey session',
