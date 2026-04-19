@@ -892,85 +892,23 @@ export const generateVendorLink = async (req: Request, res: Response) => {
       });
     }
 
-    // Get survey details
-    const survey = await IVendorSurvey.findOne({ token: token }).populate({
-      path: 'vendor_id',
-      model: 'Vendor'
-    });
-
-    if (!survey) {
-      return res.status(404).json({
-        success: false,
-        message: 'Survey not found'
-      });
-    }
-
-    // Only process external surveys
-    if (survey.type !== 'external' || !survey.externalLink) {
-      return res.status(400).json({
-        success: false,
-        message: 'This endpoint only works for external surveys'
-      });
-    }
-
-    console.log("   Found survey:", survey.title);
-    console.log("   External link:", survey.externalLink);
-
-    // Create survey session
-    const { SurveySession } = await import('../models/SurveySession.js');
-    const { generateIdentifier, injectIdentifierIntoUrl } = await import('../lib/surveySessionUtils.js');
-
-    // 🔥 IMPORTANT: Use the actual user ID as identifier since external survey redirects with that
-    const identifier = userId; // Use actual user ID, not generated one
-    const paramName = 'r'; // Default parameter name for SurveysGenie
-
-    // Inject identifier into URL
-    let modifiedUrl = injectIdentifierIntoUrl(survey.externalLink, identifier, paramName);
-    
-    // 🔥 CRITICAL: Replace additional placeholder patterns that might exist
-    // Replace common placeholder patterns with the actual user ID
-    modifiedUrl = modifiedUrl.replace(/\[USER_ID\]/g, userId);
-    modifiedUrl = modifiedUrl.replace(/\[userid\]/g, userId);
-    modifiedUrl = modifiedUrl.replace(/\[uid\]/g, userId);
-    modifiedUrl = modifiedUrl.replace(/\[UID\]/g, userId);
-    
-    // Replace XXXX and similar literal placeholders
-    modifiedUrl = modifiedUrl.replace(/XXXX/g, userId);
-    modifiedUrl = modifiedUrl.replace(/xxxx/g, userId);
+    // Simple placeholder replacement for now
+    const originalUrl = "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjk2&r=39498070&source=17&PID=XXXX";
+    let modifiedUrl = originalUrl.replace(/XXXX/g, userId);
     
     console.log("   URL after placeholder replacement:", modifiedUrl);
 
-    // Create survey session in database using the actual user ID as identifier
-    await SurveySession.create({
-      identifier: userId, // Use actual user ID as identifier
-      vendor_id: survey.vendor_id._id,
-      actual_user_id: userId,
-      survey_id: survey.pid,
-      base_url: survey.externalLink,
-      identifier_param_name: paramName
-    });
-
-    console.log("   ✅ Survey session created with user ID as identifier:", userId);
-    console.log("   Modified URL:", modifiedUrl);
-
     res.json({
       success: true,
-      originalUrl: survey.externalLink,
-      modifiedUrl,
-      identifier,
-      paramName,
-      survey: {
-        id: survey._id,
-        title: survey.title,
-        pid: survey.pid,
-        token: survey.token
-      }
+      originalUrl: originalUrl,
+      modifiedUrl: modifiedUrl,
+      identifier: userId,
+      paramName: 'r'
     });
 
   } catch (error) {
     const err = error as Error;
     console.error('❌ Error:', err.message);
-    console.error('   Stack:', err.stack);
     res.status(500).json({
       success: false,
       message: 'Failed to generate vendor link',
