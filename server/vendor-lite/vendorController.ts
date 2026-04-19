@@ -932,8 +932,9 @@ export const createSurveySession = async (req: Request, res: Response) => {
         console.log("   Verification lookup result:", verifySession ? "FOUND" : "NOT FOUND");
         
       } catch (dbError) {
-        console.error("   ❌ Database error creating survey session:", dbError);
-        console.error("   Error details:", dbError.message);
+        const err = dbError as Error;
+        console.error("   ❌ Database error creating survey session:", err);
+        console.error("   Error details:", err.message);
         // Continue without session creation - at least the URL replacement works
       }
     } else {
