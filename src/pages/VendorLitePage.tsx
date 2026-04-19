@@ -489,12 +489,23 @@ export default function VendorLitePage() {
         }),
       });
 
+      console.log("   Response status:", response.status);
+      console.log("   Response ok:", response.ok);
+      
       if (response.ok) {
         const data = await response.json();
         console.log("✅ Survey session created, using dynamic URL:", data.modifiedUrl);
         finalUrl = data.modifiedUrl;
       } else {
         console.error("❌ Failed to create survey session, using original URL");
+        console.error("   Status:", response.status);
+        console.error("   Status text:", response.statusText);
+        try {
+          const errorData = await response.text();
+          console.error("   Error response:", errorData);
+        } catch (e) {
+          console.error("   Could not read error response");
+        }
       }
     } catch (error) {
       console.error("❌ Error creating survey session:", error);
@@ -603,6 +614,14 @@ export default function VendorLitePage() {
             finalUrl = data.modifiedUrl;
           } else {
             console.error("❌ Failed to create survey session, using original URL");
+            console.error("   Status:", response.status);
+            console.error("   Status text:", response.statusText);
+            try {
+              const errorData = await response.text();
+              console.error("   Error response:", errorData);
+            } catch (e) {
+              console.error("   Could not read error response");
+            }
           }
         } catch (error) {
           console.error("❌ Error creating survey session:", error);
