@@ -218,8 +218,25 @@ export default function VendorSurveyPublicPage() {
         setShowPreScreener(false);
       } else if (data.terminated) {
         // Failed pre-screener, redirect to terminate URL
-        console.log("Pre-screener FAILED - redirecting to terminate URL");
-        alert(`You do not meet the survey criteria: ${data.reason}`);
+        console.log("❌ Pre-screener FAILED - DEBUG INFO:");
+        console.log("   Reason:", data.reason);
+        console.log("   Debug:", data.debug);
+        console.log("   Failed Criteria:", data.failedCriteria);
+        console.log("   Received Answers:", data.receivedAnswers);
+        console.log("   Questions:", data.questions);
+        console.log("   Redirect URL:", data.redirectUrl);
+        
+        // Show detailed error to user for debugging
+        let errorMsg = `You do not meet the survey criteria: ${data.reason}`;
+        if (data.debug?.reason === 'missing_answer') {
+          errorMsg += `\n\nMissing answer for: ${data.debug.questionType}`;
+        } else if (data.debug?.userAnswer !== undefined) {
+          errorMsg += `\n\nYour answer: ${data.debug.userAnswer}`;
+          errorMsg += `\nRequired: ${data.debug.requiredValue}`;
+          errorMsg += `\nOperator: ${data.debug.operator}`;
+        }
+        
+        alert(errorMsg);
         window.location.href = data.redirectUrl;
       } else {
         // Any validation error should terminate the user

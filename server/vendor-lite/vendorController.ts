@@ -193,16 +193,39 @@ export const getSurveyByToken = async (req: Request, res: Response) => {
   }
 };
 
-const validatePreScreenerAnswers = (preScreenerQuestions: any[], responses: any): { passed: boolean; failedCriteria?: any } => {
+const validatePreScreenerAnswers = (preScreenerQuestions: any[], responses: any): { passed: boolean; failedCriteria?: any; debug?: any } => {
   console.log("=== PRE SCREENER VALIDATION DEBUG ===");
-  console.log("preScreenerQuestions:", preScreenerQuestions);
-  console.log("responses:", responses);
+  console.log("preScreenerQuestions:", JSON.stringify(preScreenerQuestions, null, 2));
+  console.log("responses:", JSON.stringify(responses, null, 2));
   
   for (const question of preScreenerQuestions) {
-    if (!question.enabled) continue;
+    if (!question.enabled) {
+      console.log(`Question ${question.type} is disabled, skipping`);
+      continue;
+    }
     
-    const userAnswer = responses[question.type];
-    const requiredValue = question.value;
+    let userAnswer = responses[question.type];
+    let requiredValue = question.value;
+    
+    // Normalize values for comparison
+    if (typeof userAnswer === 'string' && userAnswer.trim() !== '') {
+      // Try to convert numeric strings to numbers for comparison
+      const numericValue = Number(userAnswer);
+      if (!isNaN(numericValue) && question.type === 'age') {
+        userAnswer = numericValue;
+      } else {
+        userAnswer = userAnswer.trim();
+      }
+    }
+    
+    if (typeof requiredValue === 'string' && requiredValue.trim() !== '') {
+      const numericValue = Number(requiredValue);
+      if (!isNaN(numericValue) && question.type === 'age') {
+        requiredValue = numericValue;
+      } else {
+        requiredValue = requiredValue.trim();
+      }
+    }
     
     console.log("Validating question:", {
       type: question.type,
@@ -212,41 +235,100 @@ const validatePreScreenerAnswers = (preScreenerQuestions: any[], responses: any)
       enabled: question.enabled
     });
     
+    // 🔥 CRITICAL FIX: Handle missing answers
+    if (userAnswer === undefined || userAnswer === null || userAnswer === '') {
+      console.log(`❌ VALIDATION FAILED: Missing answer for ${question.type}`);
+      return { 
+        passed: false, 
+        failedCriteria: question,
+        debug: { reason: 'missing_answer', questionType: question.type }
+      };
+    }
+    
     let passed = false;
     
     if (question.type === 'age') {
       const userAge = parseInt(userAnswer);
-      console.log("Age validation:", { userAge, requiredValue, operator: question.operator });
+      const requiredAge = parseInt(requiredValue);
+      console.log("Age validation:", { userAge, requiredAge, operator: question.operator });
+      
+      if (isNaN(userAge)) {
+        console.log("❌ VALIDATION FAILED: Invalid age value");
+        return { 
+          passed: false, 
+          failedCriteria: question,
+          debug: { reason: 'invalid_age', userAnswer }
+        };
+      }
       
       switch (question.operator) {
         case '>=':
-          passed = userAge >= requiredValue;
+          passed = userAge >= requiredAge;
           break;
         case '>':
-          passed = userAge > requiredValue;
+          passed = userAge > requiredAge;
           break;
         case '<=':
-          passed = userAge <= requiredValue;
+          passed = userAge <= requiredAge;
           break;
         case '<':
-          passed = userAge < requiredValue;
+          passed = userAge < requiredAge;
+          break;
+        case '==':
+        case '=':
+          passed = userAge === requiredAge;
           break;
         default:
-          passed = userAge >= requiredValue;
+          passed = userAge >= requiredAge;
       }
       console.log("Age validation result:", passed);
     } else if (question.type === 'gender') {
-      passed = userAnswer === requiredValue;
+      passed = String(userAnswer).toLowerCase() === String(requiredValue).toLowerCase();
       console.log("Gender validation:", { userAnswer, requiredValue, passed });
+    } else {
+      // 🔥 CRITICAL FIX: For custom/other question types, use generic comparison
+      console.log(`Custom question type: ${question.type}, using generic comparison`);
+      
+      switch (question.operator) {
+        case '==':
+        case '=':
+          passed = String(userAnswer).toLowerCase() === String(requiredValue).toLowerCase();
+          break;
+        case '!=':
+        case '!==':
+          passed = String(userAnswer).toLowerCase() !== String(requiredValue).toLowerCase();
+          break;
+        case '>=':
+          passed = Number(userAnswer) >= Number(requiredValue);
+          break;
+        case '>':
+          passed = Number(userAnswer) > Number(requiredValue);
+          break;
+        case '<=':
+          passed = Number(userAnswer) <= Number(requiredValue);
+          break;
+        case '<':
+          passed = Number(userAnswer) < Number(requiredValue);
+          break;
+        default:
+          // Default: pass if user provided any answer
+          passed = true;
+          console.log(`Unknown operator "${question.operator}", defaulting to pass`);
+      }
+      console.log(`Custom validation result:`, passed);
     }
     
     if (!passed) {
-      console.log("VALIDATION FAILED for question:", question);
-      return { passed: false, failedCriteria: question };
+      console.log("❌ VALIDATION FAILED for question:", question);
+      return { 
+        passed: false, 
+        failedCriteria: question,
+        debug: { userAnswer, requiredValue, operator: question.operator }
+      };
     }
   }
   
-  console.log("ALL VALIDATIONS PASSED");
+  console.log("✅ ALL VALIDATIONS PASSED");
   return { passed: true };
 };
 
@@ -336,7 +418,10 @@ export const validatePreScreener = async (req: Request, res: Response) => {
           redirectUrl,
           terminated: true,
           reason: 'Failed pre-screener criteria',
-          failedCriteria: validation.failedCriteria
+          failedCriteria: validation.failedCriteria,
+          debug: validation.debug,
+          receivedAnswers: preScreenerAnswers,
+          questions: survey.preScreenerQuestions
         });
       }
     }
