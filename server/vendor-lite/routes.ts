@@ -25,11 +25,13 @@ router.get('/survey/:token', getSurveyByToken);
 router.get('/survey/:token/responses', getSurveyResponses);
 
 router.post('/submit', submitResponse);
+console.log('🔧 Registering generate-vendor-link route...');
+router.post('/generate-vendor-link', generateVendorLink);
+console.log('✅ generate-vendor-link route registered');
 router.get('/redirect', handleVendorRedirect);
 router.get('/complete', handleVendorComplete);
 router.get('/check-uid/:uid', checkUserIdUnique);
 router.post('/validate-pre-screener', validatePreScreener);
 router.get('/test', testEndpoint);
-router.post('/generate-vendor-link', generateVendorLink);
 
 export default router;
