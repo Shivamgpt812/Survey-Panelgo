@@ -918,17 +918,91 @@ export const testSurveyEndpoint = async (req: Request, res: Response) => {
   console.log("🚀🚀🚀 testSurveyEndpoint HIT! 🚀");
   console.log("   Request body:", req.body);
   
-  const { token, userId } = req.body;
-  const originalUrl = "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjk2&r=39498070&source=17&PID=XXXX";
-  let modifiedUrl = originalUrl.replace(/XXXX/g, userId);
-  
-  res.json({
-    success: true,
-    originalUrl: originalUrl,
-    modifiedUrl: modifiedUrl,
-    identifier: userId,
-    paramName: 'r'
-  });
+  try {
+    const { token, userId } = req.body;
+    console.log("   Token:", token, "UserId:", userId);
+
+    // Get survey details to get vendor information
+    const survey = await IVendorSurvey.findOne({ token: token }).populate({
+      path: 'vendor_id',
+      model: 'Vendor'
+    });
+
+    if (!survey) {
+      console.log("   ❌ Survey not found, using fallback URL");
+      const originalUrl = "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjk2&r=39498070&source=17&PID=XXXX";
+      let modifiedUrl = originalUrl.replace(/XXXX/g, userId);
+      
+      return res.json({
+        success: true,
+        originalUrl: originalUrl,
+        modifiedUrl: modifiedUrl,
+        identifier: userId,
+        paramName: 'r'
+      });
+    }
+
+    console.log("   ✅ Found survey:", survey.title);
+
+    // Replace placeholders in the actual external URL
+    let modifiedUrl = survey.externalLink || "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjk2&r=39498070&source=17&PID=XXXX";
+    modifiedUrl = modifiedUrl.replace(/XXXX/g, userId);
+    modifiedUrl = modifiedUrl.replace(/xxxx/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[USER_ID\]/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[userid\]/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[uid\]/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[UID\]/g, userId);
+    
+    console.log("   URL after placeholder replacement:", modifiedUrl);
+
+    // Create survey session in database using the actual user ID as identifier
+    try {
+      const { SurveySession } = await import('../models/SurveySession.js');
+      console.log("   SurveySession model imported successfully");
+      
+      const sessionData = {
+        identifier: userId, // Use actual user ID as identifier
+        vendor_id: survey.vendor_id._id,
+        actual_user_id: userId,
+        survey_id: survey.pid,
+        base_url: survey.externalLink,
+        identifier_param_name: 'r'
+      };
+      console.log("   Session data to create:", sessionData);
+      
+      const createdSession = await SurveySession.create(sessionData);
+      console.log("   ✅ Survey session created successfully!");
+      console.log("   Created session ID:", createdSession._id);
+      console.log("   Created session identifier:", createdSession.identifier);
+      
+      // Verify it was actually saved by trying to find it immediately
+      const verifySession = await SurveySession.findOne({ identifier: userId });
+      console.log("   Verification lookup result:", verifySession ? "FOUND" : "NOT FOUND");
+      
+    } catch (dbError) {
+      const err = dbError as Error;
+      console.error("   ❌ Database error creating survey session:", err);
+      console.error("   Error details:", err.message);
+      // Continue without session creation - at least the URL replacement works
+    }
+
+    res.json({
+      success: true,
+      originalUrl: survey.externalLink,
+      modifiedUrl: modifiedUrl,
+      identifier: userId,
+      paramName: 'r'
+    });
+
+  } catch (error) {
+    const err = error as Error;
+    console.error('❌ Error in testSurveyEndpoint:', err.message);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create survey session',
+      error: err.message
+    });
+  }
 };
 
 export const generateVendorLink = async (req: Request, res: Response) => {
