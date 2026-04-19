@@ -849,6 +849,31 @@ app.get('/api/redirect', async (req, res) => {
         // For regular browser requests, redirect directly to vendor
         return res.redirect(finalVendorUrl);
       }
+    } else if (surveySession && !surveySession.vendor_id) {
+      // Session exists but no vendor data (fallback session) - use base_url
+      console.log("🚀 Using base_url from session without vendor data:", {
+        base_url: surveySession.base_url,
+        actual_user_id: surveySession.actual_user_id
+      });
+
+      // Replace placeholders in base_url
+      let finalUrl = surveySession.base_url
+        .replace(/XXXX/g, String(surveySession.actual_user_id))
+        .replace(/\[identifier\]/g, String(surveySession.actual_user_id))
+        .replace(/\[USER_ID\]/g, String(surveySession.actual_user_id));
+
+      // For AJAX requests, return JSON
+      if (req.get('Accept')?.includes('application/json')) {
+        return res.json({
+          success: true,
+          redirectUrl: finalUrl,
+          hasVendorRedirect: false,
+          source: 'survey_session_fallback'
+        });
+      }
+
+      // For regular browser requests, redirect
+      return res.redirect(finalUrl);
     }
 
     // 🔥 STEP 6: FALLBACK - Run existing redirect logic unchanged if no session found
