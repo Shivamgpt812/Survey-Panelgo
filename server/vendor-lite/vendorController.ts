@@ -881,15 +881,9 @@ export const testEndpoint = async (req: Request, res: Response) => {
 
 export const generateVendorLink = async (req: Request, res: Response) => {
   console.log("🔥 generateVendorLink endpoint HIT!");
-  console.log("   Request body:", req.body);
-  console.log("   Request headers:", req.headers);
-  console.log("   Request method:", req.method);
-  console.log("   Request URL:", req.url);
-  
   try {
     const { token, userId } = req.body;
-    console.log("   Extracted token:", token);
-    console.log("   Extracted userId:", userId);
+    console.log("   Token:", token, "UserId:", userId);
 
     if (!token || !userId) {
       return res.status(400).json({
@@ -898,71 +892,26 @@ export const generateVendorLink = async (req: Request, res: Response) => {
       });
     }
 
-    // Get survey details
-    console.log("   Looking up survey with token:", token);
-    const survey = await IVendorSurvey.findOne({ token: token }).populate({
-      path: 'vendor_id',
-      model: 'Vendor'
-    });
-    console.log("   Survey lookup result:", survey ? "FOUND" : "NOT FOUND");
-
-    if (!survey) {
-      console.log("   ❌ Survey not found for token:", token);
-      return res.status(404).json({
-        success: false,
-        message: 'Survey not found'
-      });
-    }
-
-    console.log("   Survey type:", survey.type);
-    console.log("   Survey externalLink:", survey.externalLink);
-
-    // Only process external surveys
-    if (survey.type !== 'external' || !survey.externalLink) {
-      console.log("   ❌ Not an external survey or missing externalLink");
-      return res.status(400).json({
-        success: false,
-        message: 'This endpoint only works for external surveys'
-      });
-    }
-
-    console.log("=== GENERATING DYNAMIC VENDOR LINK ===");
-    console.log("Survey:", survey.title);
-    console.log("External Link:", survey.externalLink);
-    console.log("User ID:", userId);
-
-    // Process the external link with dynamic identifier
-    const { modifiedUrl, identifier, paramName } = await processExternalSurveyLink(
-      survey.externalLink,
-      survey.vendor_id._id.toString(),
-      userId,
-      survey.pid
-    );
-
-    console.log("Generated identifier:", identifier);
-    console.log("Parameter name:", paramName);
-    console.log("Modified URL:", modifiedUrl);
-
+    // Simple test response for now
+    const testUrl = `https://test.com?token=${token}&user=${userId}`;
+    
     res.json({
       success: true,
-      originalUrl: survey.externalLink,
-      modifiedUrl,
-      identifier,
-      paramName,
+      originalUrl: "https://original.com",
+      modifiedUrl: testUrl,
+      identifier: "test-id",
+      paramName: "test-param",
       survey: {
-        id: survey._id,
-        title: survey.title,
-        pid: survey.pid,
-        token: survey.token
+        id: "test-id",
+        title: "Test Survey",
+        pid: "TEST123",
+        token: token
       }
     });
 
   } catch (error) {
     const err = error as Error;
-    console.error('❌ Error generating vendor link:', err);
-    console.error('   Error message:', err.message);
-    console.error('   Stack trace:', err.stack);
-    console.error('   Request body was:', req.body);
+    console.error('❌ Error:', err.message);
     res.status(500).json({
       success: false,
       message: 'Failed to generate vendor link',
