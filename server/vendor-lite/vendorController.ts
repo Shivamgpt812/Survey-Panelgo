@@ -3,7 +3,7 @@ import IVendor from './vendorModel.js';
 import IVendorSurvey from './surveyModel.js';
 import IVendorResponse from './responseModel.js';
 import { SurveyRedirectLogs } from '../models/SurveyRedirectLogs.js';
-import { processExternalSurveyLink, generateIdentifier } from '../lib/surveySessionUtils.js';
+import { processExternalSurveyLink } from '../lib/surveySessionUtils.js';
 
 export const generateRandomToken = (): string => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -439,18 +439,12 @@ export const validatePreScreener = async (req: Request, res: Response) => {
       console.log("User ID:", userId);
       
       try {
-        // Build backend base URL for return parameter
-        const host = req.get('host');
-        const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-        const backendBase = process.env.BACKEND_URL || `${protocol}://${host}`;
-
         // Generate dynamic vendor link with identifier
         const { modifiedUrl, identifier, paramName } = await processExternalSurveyLink(
           survey.externalLink,
           (survey.vendor_id as any)._id.toString(),
           userId || 'anonymous',
-          survey.pid,
-          backendBase
+          survey.pid
         );
         
         console.log("✅ Generated external survey URL:", modifiedUrl);
@@ -960,12 +954,7 @@ export const testSurveyEndpoint = async (req: Request, res: Response) => {
       
       // Use fallback URL since we can't find the survey
       const originalUrl = "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjk2&r=39498070&source=17&PID=XXXX";
-      
-      // Generate unique identifier for tracking (NOT the actual user ID)
-      const identifier = generateIdentifier();
-      console.log("   Generated unique identifier:", identifier);
-      
-      let modifiedUrl = originalUrl.replace(/XXXX/g, identifier);
+      let modifiedUrl = originalUrl.replace(/XXXX/g, userId);
       
       // Create a basic survey session even without full survey data
       try {
@@ -973,15 +962,15 @@ export const testSurveyEndpoint = async (req: Request, res: Response) => {
         console.log("   Creating basic survey session without vendor data...");
         
         await SurveySession.create({
-          identifier: identifier, // Use generated identifier, NOT userId
+          identifier: userId,
           vendor_id: null, // No vendor data available
-          actual_user_id: userId, // Store actual user ID separately
+          actual_user_id: userId,
           survey_id: token, // Use token as fallback
           base_url: originalUrl,
           identifier_param_name: 'r'
         });
         
-        console.log("   ✅ Basic survey session created with identifier:", identifier);
+        console.log("   ✅ Basic survey session created");
       } catch (dbError) {
         console.error("   ❌ Failed to create basic survey session:", dbError);
       }
@@ -990,77 +979,33 @@ export const testSurveyEndpoint = async (req: Request, res: Response) => {
         success: true,
         originalUrl: originalUrl,
         modifiedUrl: modifiedUrl,
-        identifier: identifier, // Return the generated identifier
-        actual_user_id: userId, // Return actual user ID for reference
+        identifier: userId,
         paramName: 'r'
       });
     }
 
     console.log("   ✅ Found survey:", survey.title);
 
-    // Generate unique identifier for tracking (NOT the actual user ID)
-    const identifier = generateIdentifier();
-    console.log("   Generated unique identifier:", identifier);
-
-    // Replace placeholders in the actual external URL with the IDENTIFIER (not userId)
+    // Replace placeholders in the actual external URL
     let modifiedUrl = survey.externalLink || "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjk2&r=39498070&source=17&PID=XXXX";
-    modifiedUrl = modifiedUrl.replace(/XXXX/g, identifier);
-    modifiedUrl = modifiedUrl.replace(/xxxx/g, identifier);
-    modifiedUrl = modifiedUrl.replace(/\[USER_ID\]/g, identifier);
-    modifiedUrl = modifiedUrl.replace(/\[userid\]/g, identifier);
-    modifiedUrl = modifiedUrl.replace(/\[uid\]/g, identifier);
-    modifiedUrl = modifiedUrl.replace(/\[UID\]/g, identifier);
-
-    // 🔥 CRITICAL FIX: Append return URL to external survey
-    const backendBase = process.env.BACKEND_URL || `https://${req.get('host')}`;
-    const returnUrl = `${backendBase}/api/redirect?pid=${survey.pid || ''}&uid=${identifier}&status=`;
-
-    // Detect and append return URL parameter
-    const returnParamNames = ['return', 'return_url', 'redirect', 'end_url', 'complete_url', 'c', 'redir', 'ret'];
-    const urlObj = new URL(modifiedUrl);
-    let returnParamAdded = false;
-
-    for (const paramName of returnParamNames) {
-      if (urlObj.searchParams.has(paramName)) {
-        urlObj.searchParams.set(paramName, returnUrl);
-        returnParamAdded = true;
-        console.log(`   Set return param '${paramName}': ${returnUrl}`);
-        break;
-      }
-    }
-
-    // If no return param found, try to detect from URL pattern
-    if (!returnParamAdded) {
-      if (modifiedUrl.includes('surveysgenie.com')) {
-        urlObj.searchParams.set('c', returnUrl);
-        returnParamAdded = true;
-      } else if (modifiedUrl.includes('sixsenseresearch.com')) {
-        urlObj.searchParams.set('return', returnUrl);
-        returnParamAdded = true;
-      } else if (modifiedUrl.includes('opinion') || modifiedUrl.includes('panel')) {
-        urlObj.searchParams.set('return_url', returnUrl);
-        returnParamAdded = true;
-      }
-    }
-
-    if (returnParamAdded) {
-      modifiedUrl = urlObj.toString();
-    }
-
+    modifiedUrl = modifiedUrl.replace(/XXXX/g, userId);
+    modifiedUrl = modifiedUrl.replace(/xxxx/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[USER_ID\]/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[userid\]/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[uid\]/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[UID\]/g, userId);
+    
     console.log("   URL after placeholder replacement:", modifiedUrl);
-    if (!returnParamAdded) {
-      console.log(`   ⚠️ Could not detect return URL parameter. Manual config: ${returnUrl}`);
-    }
 
-    // Create survey session in database using the generated IDENTIFIER
+    // Create survey session in database using the actual user ID as identifier
     try {
       const { SurveySession } = await import('../models/SurveySession.js');
       console.log("   SurveySession model imported successfully");
       
       const sessionData = {
-        identifier: identifier, // Use generated identifier for lookup
+        identifier: userId, // Use actual user ID as identifier
         vendor_id: survey.vendor_id._id,
-        actual_user_id: userId, // Store actual user ID separately
+        actual_user_id: userId,
         survey_id: survey.pid,
         base_url: survey.externalLink,
         identifier_param_name: 'r'
@@ -1073,7 +1018,7 @@ export const testSurveyEndpoint = async (req: Request, res: Response) => {
       console.log("   Created session identifier:", createdSession.identifier);
       
       // Verify it was actually saved by trying to find it immediately
-      const verifySession = await SurveySession.findOne({ identifier: identifier });
+      const verifySession = await SurveySession.findOne({ identifier: userId });
       console.log("   Verification lookup result:", verifySession ? "FOUND" : "NOT FOUND");
       
     } catch (dbError) {
@@ -1087,8 +1032,7 @@ export const testSurveyEndpoint = async (req: Request, res: Response) => {
       success: true,
       originalUrl: survey.externalLink,
       modifiedUrl: modifiedUrl,
-      identifier: identifier, // Return the generated identifier
-      actual_user_id: userId, // Return actual user ID for reference
+      identifier: userId,
       paramName: 'r'
     });
 
@@ -1140,76 +1084,32 @@ export const generateVendorLink = async (req: Request, res: Response) => {
     console.log("   Found survey:", survey.title);
     console.log("   External link:", survey.externalLink);
 
-    // Generate unique identifier for tracking (NOT the actual user ID)
-    const identifier = generateIdentifier();
-    console.log("   Generated unique identifier:", identifier);
-
-    // Replace placeholders in the actual external URL with the IDENTIFIER (not userId)
+    // Replace placeholders in the actual external URL
     let modifiedUrl = survey.externalLink;
-    modifiedUrl = modifiedUrl.replace(/XXXX/g, identifier);
-    modifiedUrl = modifiedUrl.replace(/xxxx/g, identifier);
-    modifiedUrl = modifiedUrl.replace(/\[USER_ID\]/g, identifier);
-    modifiedUrl = modifiedUrl.replace(/\[userid\]/g, identifier);
-    modifiedUrl = modifiedUrl.replace(/\[uid\]/g, identifier);
-    modifiedUrl = modifiedUrl.replace(/\[UID\]/g, identifier);
-
-    // 🔥 CRITICAL FIX: Append return URL to external survey
-    const backendBase = process.env.BACKEND_URL || `https://${req.get('host')}`;
-    const returnUrl = `${backendBase}/api/redirect?pid=${survey.pid || ''}&uid=${identifier}&status=`;
-
-    // Detect and append return URL parameter
-    const returnParamNames = ['return', 'return_url', 'redirect', 'end_url', 'complete_url', 'c', 'redir', 'ret'];
-    const urlObj = new URL(modifiedUrl);
-    let returnParamAdded = false;
-
-    for (const paramName of returnParamNames) {
-      if (urlObj.searchParams.has(paramName)) {
-        urlObj.searchParams.set(paramName, returnUrl);
-        returnParamAdded = true;
-        console.log(`   Set return param '${paramName}': ${returnUrl}`);
-        break;
-      }
-    }
-
-    // If no return param found, try to detect from URL pattern
-    if (!returnParamAdded) {
-      if (modifiedUrl.includes('surveysgenie.com')) {
-        urlObj.searchParams.set('c', returnUrl);
-        returnParamAdded = true;
-      } else if (modifiedUrl.includes('sixsenseresearch.com')) {
-        urlObj.searchParams.set('return', returnUrl);
-        returnParamAdded = true;
-      } else if (modifiedUrl.includes('opinion') || modifiedUrl.includes('panel')) {
-        urlObj.searchParams.set('return_url', returnUrl);
-        returnParamAdded = true;
-      }
-    }
-
-    if (returnParamAdded) {
-      modifiedUrl = urlObj.toString();
-    }
-
+    modifiedUrl = modifiedUrl.replace(/XXXX/g, userId);
+    modifiedUrl = modifiedUrl.replace(/xxxx/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[USER_ID\]/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[userid\]/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[uid\]/g, userId);
+    modifiedUrl = modifiedUrl.replace(/\[UID\]/g, userId);
+    
     console.log("   URL after placeholder replacement:", modifiedUrl);
-    if (!returnParamAdded) {
-      console.log(`   ⚠️ Could not detect return URL parameter. Manual config: ${returnUrl}`);
-    }
 
-    // Create survey session in database using the generated IDENTIFIER
+    // Create survey session in database using the actual user ID as identifier
     try {
       const { SurveySession } = await import('../models/SurveySession.js');
       console.log("   SurveySession model imported successfully");
       
       await SurveySession.create({
-        identifier: identifier, // Use generated identifier for lookup
+        identifier: userId, // Use actual user ID as identifier
         vendor_id: survey.vendor_id._id,
-        actual_user_id: userId, // Store actual user ID separately
+        actual_user_id: userId,
         survey_id: survey.pid,
         base_url: survey.externalLink,
         identifier_param_name: 'r'
       });
 
-      console.log("   ✅ Survey session created with identifier:", identifier);
-      console.log("   Stored actual_user_id:", userId);
+      console.log("   ✅ Survey session created with user ID as identifier:", userId);
     } catch (dbError) {
       console.error("   ❌ Database error creating survey session:", dbError);
       // Continue without session creation - at least the URL replacement works
@@ -1219,8 +1119,7 @@ export const generateVendorLink = async (req: Request, res: Response) => {
       success: true,
       originalUrl: survey.externalLink,
       modifiedUrl: modifiedUrl,
-      identifier: identifier, // Return the generated identifier
-      actual_user_id: userId, // Return actual user ID for reference
+      identifier: userId,
       paramName: 'r'
     });
 

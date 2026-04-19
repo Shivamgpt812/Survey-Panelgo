@@ -22,7 +22,7 @@ const surveySessionSchema = new mongoose.Schema(
     vendor_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Vendor',
-      required: false
+      required: true
     },
     actual_user_id: {
       type: String,
