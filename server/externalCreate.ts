@@ -367,25 +367,9 @@ router.get("/external/redirect/:status", async (req, res) => {
         // Include pid, uid, and rid for the vendor
         const finalVendorUrl = `${redirectUrl}${sep}rid=${rid}&uid=${rid}&pid=${survey.pid || ''}&transactionId=${transactionId}`;
 
-        // For terminate status from external prescreener, redirect directly to vendor
-        if (status === "terminate") {
-            console.log("🚀 External Prescreener Failed - Redirecting directly to Vendor Terminate URL:", finalVendorUrl);
-            res.redirect(finalVendorUrl);
-            return;
-        }
-
-        // For other statuses (complete, quota), redirect to frontend first for 2-second delay
-        const frontendBase = "https://surveypanelgo.netlify.app";
-        const resPath = status === "complete" ? "/survey-result/success" :
-            status === "quota" ? "/survey-result/quota-full" :
-                "/survey-result/terminated";
-
-        const time = new Date().toISOString();
-
-        const finalFrontendUrl = `${frontendBase}${resPath}?pid=${survey.pid || ''}&uid=${rid}&status=${statusCode}&ip=${encodeURIComponent(bothIps)}&time=${encodeURIComponent(time)}&redirect=${encodeURIComponent(finalVendorUrl)}`;
-
-        console.log("🚀 Redirecting to Frontend Result Page (with 2s delay before vendor):", finalFrontendUrl);
-        res.redirect(finalFrontendUrl);
+        // Redirect directly to vendor URL for all statuses (bypass frontend result page)
+        console.log("🚀 External Survey Return - Redirecting directly to Vendor URL:", finalVendorUrl);
+        res.redirect(finalVendorUrl);
 
     } catch (err) {
         console.error("Return Error:", err);
