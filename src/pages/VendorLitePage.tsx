@@ -460,14 +460,22 @@ export default function VendorLitePage() {
 
     // Replace placeholders - prioritizing respondent ID (rid)
     if (rid) {
-      finalUrl = finalUrl.replace('[#userid#]', rid);
-      finalUrl = finalUrl.replace('[#rid#]', rid);
+      finalUrl = finalUrl.replace(/\[#userid#\]/g, rid);
+      finalUrl = finalUrl.replace(/\[#rid#\]/g, rid);
     }
 
     // Replace transaction_id if it exists to complete the substitution
     if (transactionId) {
-      finalUrl = finalUrl.replace('[#transaction_id#]', transactionId);
+      finalUrl = finalUrl.replace(/\[#transaction_id#\]/g, transactionId);
     }
+    
+    // Replace PID placeholder with survey PID
+    if (extSurvey.pid) {
+      finalUrl = finalUrl.replace(/\[#pid#\]/g, extSurvey.pid);
+      finalUrl = finalUrl.replace(/\[#PID#\]/g, extSurvey.pid);
+    }
+    
+    console.log("🔗 URL after placeholder replacement:", finalUrl);
 
     console.log("🚀 Redirecting to External Survey:", finalUrl);
     window.location.href = finalUrl;
@@ -505,13 +513,19 @@ export default function VendorLitePage() {
 
       // Replace placeholders - prioritizing respondent ID (rid)
       if (rid) {
-        finalUrl = finalUrl.replace('[#userid#]', rid);
-        finalUrl = finalUrl.replace('[#rid#]', rid);
+        finalUrl = finalUrl.replace(/\[#userid#\]/g, rid);
+        finalUrl = finalUrl.replace(/\[#rid#\]/g, rid);
       }
 
       // Replace transaction_id if it exists to complete the substitution
       if (transactionId) {
-        finalUrl = finalUrl.replace('[#transaction_id#]', transactionId);
+        finalUrl = finalUrl.replace(/\[#transaction_id#\]/g, transactionId);
+      }
+      
+      // Replace PID placeholder with survey PID
+      if (extSurvey.pid) {
+        finalUrl = finalUrl.replace(/\[#pid#\]/g, extSurvey.pid);
+        finalUrl = finalUrl.replace(/\[#PID#\]/g, extSurvey.pid);
       }
 
       console.log("🚀 No prescreener questions - Redirecting directly to External Survey:", finalUrl);

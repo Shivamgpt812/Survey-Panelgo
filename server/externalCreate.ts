@@ -230,8 +230,11 @@ router.get('/external/router', async (req, res) => {
         let finalUrl = survey.externalUrl;
 
         // Replace placeholders
-        finalUrl = finalUrl.replace('[#transaction_id#]', transactionId as string);
-        finalUrl = finalUrl.replace('[#userid#]', rid as string);
+        finalUrl = finalUrl.replace(/\[#transaction_id#\]/g, transactionId as string);
+        finalUrl = finalUrl.replace(/\[#userid#\]/g, rid as string);
+        finalUrl = finalUrl.replace(/\[#rid#\]/g, rid as string);
+        finalUrl = finalUrl.replace(/\[#pid#\]/g, survey.pid || '');
+        finalUrl = finalUrl.replace(/\[#PID#\]/g, survey.pid || '');
 
         // Store mapping for late interception (if panel redirects to default routes)
         // This is now persisted to disk to survive cold starts
