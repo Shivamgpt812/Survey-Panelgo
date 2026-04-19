@@ -892,26 +892,72 @@ export const generateVendorLink = async (req: Request, res: Response) => {
       });
     }
 
-    // Simple test response for now
-    const testUrl = `https://test.com?token=${token}&user=${userId}`;
-    
+    // Get survey details
+    const survey = await IVendorSurvey.findOne({ token: token }).populate({
+      path: 'vendor_id',
+      model: 'Vendor'
+    });
+
+    if (!survey) {
+      return res.status(404).json({
+        success: false,
+        message: 'Survey not found'
+      });
+    }
+
+    // Only process external surveys
+    if (survey.type !== 'external' || !survey.externalLink) {
+      return res.status(400).json({
+        success: false,
+        message: 'This endpoint only works for external surveys'
+      });
+    }
+
+    console.log("   Found survey:", survey.title);
+    console.log("   External link:", survey.externalLink);
+
+    // Create survey session
+    const { SurveySession } = await import('../models/SurveySession.js');
+    const { generateIdentifier, injectIdentifierIntoUrl } = await import('../lib/surveySessionUtils.js');
+
+    // Generate unique identifier
+    const identifier = generateIdentifier();
+    const paramName = 'r'; // Default parameter name for SurveysGenie
+
+    // Inject identifier into URL
+    const modifiedUrl = injectIdentifierIntoUrl(survey.externalLink, identifier, paramName);
+
+    // Create survey session in database
+    await SurveySession.create({
+      identifier,
+      vendor_id: survey.vendor_id._id,
+      actual_user_id: userId,
+      survey_id: survey.pid,
+      base_url: survey.externalLink,
+      identifier_param_name: paramName
+    });
+
+    console.log("   ✅ Survey session created with identifier:", identifier);
+    console.log("   Modified URL:", modifiedUrl);
+
     res.json({
       success: true,
-      originalUrl: "https://original.com",
-      modifiedUrl: testUrl,
-      identifier: "test-id",
-      paramName: "test-param",
+      originalUrl: survey.externalLink,
+      modifiedUrl,
+      identifier,
+      paramName,
       survey: {
-        id: "test-id",
-        title: "Test Survey",
-        pid: "TEST123",
-        token: token
+        id: survey._id,
+        title: survey.title,
+        pid: survey.pid,
+        token: survey.token
       }
     });
 
   } catch (error) {
     const err = error as Error;
     console.error('❌ Error:', err.message);
+    console.error('   Stack:', err.stack);
     res.status(500).json({
       success: false,
       message: 'Failed to generate vendor link',
