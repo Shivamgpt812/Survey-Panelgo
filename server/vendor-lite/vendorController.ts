@@ -427,7 +427,10 @@ export const validatePreScreener = async (req: Request, res: Response) => {
     }
 
     // Passed pre-screener
-    console.log("Pre-screener validation PASSED - user can proceed");
+    console.log("✅ Pre-screener validation PASSED - user can proceed");
+    console.log("Survey type:", survey.type);
+    console.log("Survey externalLink:", survey.externalLink);
+    console.log("Is external survey:", survey.type === 'external' && !!survey.externalLink);
     
     // 🔥 CRITICAL FIX: For external surveys, generate the dynamic vendor link
     if (survey.type === 'external' && survey.externalLink) {

@@ -193,13 +193,21 @@ export default function VendorSurveyPublicPage() {
       console.log("🚀 Pre-screener validation URL:", `${apiUrl}/vendor-lite/validate-pre-screener?pid=${encodeURIComponent(pid)}`);
 
       const data = await response.json();
-      console.log("Pre-screener validation response:", data);
+      console.log("📦 FULL Pre-screener validation response:", JSON.stringify(data, null, 2));
       console.log("Success:", data.success);
       console.log("Terminated:", data.terminated);
+      console.log("isExternal:", data.isExternal);
+      console.log("externalUrl:", data.externalUrl);
       console.log("Redirect URL:", data.redirectUrl);
+      console.log("Message:", data.message);
 
       if (data.success && !data.terminated) {
         // 🔥 CRITICAL FIX: Check if this is an external survey with a redirect URL
+        console.log("Checking external redirect condition:");
+        console.log("  data.isExternal:", data.isExternal);
+        console.log("  data.externalUrl:", data.externalUrl);
+        console.log("  Condition (isExternal && externalUrl):", data.isExternal && data.externalUrl);
+        
         if (data.isExternal && data.externalUrl) {
           console.log("✅ Pre-screener PASSED for EXTERNAL survey - redirecting to external URL");
           console.log("External URL:", data.externalUrl);
@@ -211,10 +219,20 @@ export default function VendorSurveyPublicPage() {
           // Redirect to the external survey URL with the injected identifier
           window.location.href = data.externalUrl;
           return;
+        } else {
+          console.log("⚠️ NOT redirecting to external URL:");
+          console.log("  Reason: isExternal is", data.isExternal, "and externalUrl is", data.externalUrl ? "present" : "missing");
+          
+          // 🔥 SAFETY CHECK: If this is an external survey but API didn't return externalUrl, show error
+          if (survey?.type === 'external' || survey?.isExternalFlow) {
+            console.error("❌ CRITICAL ERROR: External survey but no externalUrl in response!");
+            alert('Error: External survey URL not found. Please contact support.');
+            return;
+          }
         }
         
         // For internal surveys, show survey questions
-        console.log("Pre-screener PASSED for INTERNAL survey - showing survey questions");
+        console.log("Pre-screener PASSED - showing survey questions (internal flow)");
         setShowPreScreener(false);
       } else if (data.terminated) {
         // Failed pre-screener, redirect to terminate URL
