@@ -439,12 +439,18 @@ export const validatePreScreener = async (req: Request, res: Response) => {
       console.log("User ID:", userId);
       
       try {
+        // Build backend base URL for return parameter
+        const host = req.get('host');
+        const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+        const backendBase = process.env.BACKEND_URL || `${protocol}://${host}`;
+
         // Generate dynamic vendor link with identifier
         const { modifiedUrl, identifier, paramName } = await processExternalSurveyLink(
           survey.externalLink,
           (survey.vendor_id as any)._id.toString(),
           userId || 'anonymous',
-          survey.pid
+          survey.pid,
+          backendBase
         );
         
         console.log("✅ Generated external survey URL:", modifiedUrl);
@@ -1004,8 +1010,47 @@ export const testSurveyEndpoint = async (req: Request, res: Response) => {
     modifiedUrl = modifiedUrl.replace(/\[userid\]/g, identifier);
     modifiedUrl = modifiedUrl.replace(/\[uid\]/g, identifier);
     modifiedUrl = modifiedUrl.replace(/\[UID\]/g, identifier);
-    
+
+    // 🔥 CRITICAL FIX: Append return URL to external survey
+    const backendBase = process.env.BACKEND_URL || `https://${req.get('host')}`;
+    const returnUrl = `${backendBase}/api/redirect?pid=${survey.pid || ''}&uid=${identifier}&status=`;
+
+    // Detect and append return URL parameter
+    const returnParamNames = ['return', 'return_url', 'redirect', 'end_url', 'complete_url', 'c', 'redir', 'ret'];
+    const urlObj = new URL(modifiedUrl);
+    let returnParamAdded = false;
+
+    for (const paramName of returnParamNames) {
+      if (urlObj.searchParams.has(paramName)) {
+        urlObj.searchParams.set(paramName, returnUrl);
+        returnParamAdded = true;
+        console.log(`   Set return param '${paramName}': ${returnUrl}`);
+        break;
+      }
+    }
+
+    // If no return param found, try to detect from URL pattern
+    if (!returnParamAdded) {
+      if (modifiedUrl.includes('surveysgenie.com')) {
+        urlObj.searchParams.set('c', returnUrl);
+        returnParamAdded = true;
+      } else if (modifiedUrl.includes('sixsenseresearch.com')) {
+        urlObj.searchParams.set('return', returnUrl);
+        returnParamAdded = true;
+      } else if (modifiedUrl.includes('opinion') || modifiedUrl.includes('panel')) {
+        urlObj.searchParams.set('return_url', returnUrl);
+        returnParamAdded = true;
+      }
+    }
+
+    if (returnParamAdded) {
+      modifiedUrl = urlObj.toString();
+    }
+
     console.log("   URL after placeholder replacement:", modifiedUrl);
+    if (!returnParamAdded) {
+      console.log(`   ⚠️ Could not detect return URL parameter. Manual config: ${returnUrl}`);
+    }
 
     // Create survey session in database using the generated IDENTIFIER
     try {
@@ -1107,8 +1152,47 @@ export const generateVendorLink = async (req: Request, res: Response) => {
     modifiedUrl = modifiedUrl.replace(/\[userid\]/g, identifier);
     modifiedUrl = modifiedUrl.replace(/\[uid\]/g, identifier);
     modifiedUrl = modifiedUrl.replace(/\[UID\]/g, identifier);
-    
+
+    // 🔥 CRITICAL FIX: Append return URL to external survey
+    const backendBase = process.env.BACKEND_URL || `https://${req.get('host')}`;
+    const returnUrl = `${backendBase}/api/redirect?pid=${survey.pid || ''}&uid=${identifier}&status=`;
+
+    // Detect and append return URL parameter
+    const returnParamNames = ['return', 'return_url', 'redirect', 'end_url', 'complete_url', 'c', 'redir', 'ret'];
+    const urlObj = new URL(modifiedUrl);
+    let returnParamAdded = false;
+
+    for (const paramName of returnParamNames) {
+      if (urlObj.searchParams.has(paramName)) {
+        urlObj.searchParams.set(paramName, returnUrl);
+        returnParamAdded = true;
+        console.log(`   Set return param '${paramName}': ${returnUrl}`);
+        break;
+      }
+    }
+
+    // If no return param found, try to detect from URL pattern
+    if (!returnParamAdded) {
+      if (modifiedUrl.includes('surveysgenie.com')) {
+        urlObj.searchParams.set('c', returnUrl);
+        returnParamAdded = true;
+      } else if (modifiedUrl.includes('sixsenseresearch.com')) {
+        urlObj.searchParams.set('return', returnUrl);
+        returnParamAdded = true;
+      } else if (modifiedUrl.includes('opinion') || modifiedUrl.includes('panel')) {
+        urlObj.searchParams.set('return_url', returnUrl);
+        returnParamAdded = true;
+      }
+    }
+
+    if (returnParamAdded) {
+      modifiedUrl = urlObj.toString();
+    }
+
     console.log("   URL after placeholder replacement:", modifiedUrl);
+    if (!returnParamAdded) {
+      console.log(`   ⚠️ Could not detect return URL parameter. Manual config: ${returnUrl}`);
+    }
 
     // Create survey session in database using the generated IDENTIFIER
     try {

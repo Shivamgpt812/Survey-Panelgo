@@ -255,18 +255,58 @@ router.get('/external/router', async (req, res) => {
         // Store mapping for late interception (if panel redirects to default routes)
         // This is now persisted to disk to survive cold starts
         saveRidToTokenMapping(String(rid), String(token));
-        
+
         // Capture start IP
         const rawIp = req.headers["x-forwarded-for"] as string;
         const startIp = rawIp ? rawIp.split(",")[0].trim() : req.socket.remoteAddress || "Unknown";
-        
+
         // Save UID mapping to database for vendor redirect lookup with start IP
         await saveUidMapping(String(rid), String(token), survey.pid, startIp);
 
-        // 🔥 SIMPLIFIED: Keep external URL clean without return parameters
-        // External surveys handle their own redirect logic
-        console.log(`🚀 Redirecting directly to External Survey: ${finalUrl}`);
-        return res.redirect(finalUrl);
+        // 🔥 CRITICAL FIX: Build backend return URL for external survey
+        // This ensures the external survey redirects to /api/redirect instead of frontend
+        const backendBase = process.env.BACKEND_URL || `https://${req.get('host')}`;
+        const returnUrl = `${backendBase}/api/redirect?pid=${survey.pid || ''}&uid=${rid}&status=`;
+
+        // Detect and append return URL parameter to external survey
+        // Common parameter names: return, return_url, redirect, end_url, complete_url
+        const returnParamNames = ['return', 'return_url', 'redirect', 'end_url', 'complete_url', 'c', 'redir'];
+        const urlObj = new URL(finalUrl);
+        let returnParamAdded = false;
+
+        for (const paramName of returnParamNames) {
+            if (urlObj.searchParams.has(paramName)) {
+                // Parameter exists, replace it
+                urlObj.searchParams.set(paramName, returnUrl);
+                returnParamAdded = true;
+                console.log(`✅ Set return param '${paramName}' to: ${returnUrl}`);
+                break;
+            }
+        }
+
+        // If no return param found, try to detect from URL pattern or use common defaults
+        if (!returnParamAdded) {
+            // Check for specific panel patterns
+            if (finalUrl.includes('surveysgenie.com')) {
+                urlObj.searchParams.set('c', returnUrl);
+                returnParamAdded = true;
+            } else if (finalUrl.includes('sixsenseresearch.com')) {
+                urlObj.searchParams.set('return', returnUrl);
+                returnParamAdded = true;
+            } else if (finalUrl.includes('opinion') || finalUrl.includes('panel')) {
+                urlObj.searchParams.set('return_url', returnUrl);
+                returnParamAdded = true;
+            }
+        }
+
+        const finalUrlWithReturn = returnParamAdded ? urlObj.toString() : finalUrl;
+
+        console.log(`🚀 Redirecting to External Survey: ${finalUrlWithReturn}`);
+        if (!returnParamAdded) {
+            console.log(`⚠️ WARNING: Could not detect return URL parameter. External survey may not redirect correctly.`);
+            console.log(`   Consider configuring the external survey with a return URL pointing to: ${returnUrl}`);
+        }
+        return res.redirect(finalUrlWithReturn);
     } catch (err) {
         console.error('External Router Error:', err);
         return res.status(500).send("Router error");

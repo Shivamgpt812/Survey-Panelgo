@@ -87,20 +87,65 @@ export async function processExternalSurveyLink(
   externalLink: string,
   vendor_id: string,
   actual_user_id: string,
-  survey_id?: string
+  survey_id?: string,
+  backendBaseUrl?: string
 ) {
   // Generate unique identifier
   const identifier = generateIdentifier();
-  
+
   // Detect parameter name
   const paramName = detectUserIdentifierParam(externalLink);
   if (!paramName) {
     throw new Error('Could not detect user identifier parameter in external link');
   }
-  
+
   // Inject identifier into URL
-  const modifiedUrl = injectIdentifierIntoUrl(externalLink, identifier, paramName);
-  
+  let modifiedUrl = injectIdentifierIntoUrl(externalLink, identifier, paramName);
+
+  // 🔥 CRITICAL FIX: Build and append return URL
+  // This ensures external survey redirects back to /api/redirect
+  const backendBase = backendBaseUrl || process.env.BACKEND_URL || '';
+  if (backendBase) {
+    const returnUrl = `${backendBase}/api/redirect?pid=${survey_id || ''}&uid=${identifier}&status=`;
+
+    // Detect and append return URL parameter
+    const returnParamNames = ['return', 'return_url', 'redirect', 'end_url', 'complete_url', 'c', 'redir', 'ret'];
+    const urlObj = new URL(modifiedUrl);
+    let returnParamAdded = false;
+
+    for (const paramName of returnParamNames) {
+      if (urlObj.searchParams.has(paramName)) {
+        urlObj.searchParams.set(paramName, returnUrl);
+        returnParamAdded = true;
+        console.log(`[processExternalSurveyLink] Set return param '${paramName}'`);
+        break;
+      }
+    }
+
+    // If no return param found, try to detect from URL pattern
+    if (!returnParamAdded) {
+      if (modifiedUrl.includes('surveysgenie.com')) {
+        urlObj.searchParams.set('c', returnUrl);
+        returnParamAdded = true;
+      } else if (modifiedUrl.includes('sixsenseresearch.com')) {
+        urlObj.searchParams.set('return', returnUrl);
+        returnParamAdded = true;
+      } else if (modifiedUrl.includes('opinion') || modifiedUrl.includes('panel')) {
+        urlObj.searchParams.set('return_url', returnUrl);
+        returnParamAdded = true;
+      }
+    }
+
+    if (returnParamAdded) {
+      modifiedUrl = urlObj.toString();
+      console.log(`[processExternalSurveyLink] Return URL appended: ${returnUrl}`);
+    } else {
+      console.log(`[processExternalSurveyLink] ⚠️ Could not detect return URL parameter`);
+      console.log(`   External survey may not redirect correctly.`);
+      console.log(`   Manual configuration needed: ${returnUrl}`);
+    }
+  }
+
   // Create survey session
   await createSurveySession({
     identifier,
@@ -110,7 +155,7 @@ export async function processExternalSurveyLink(
     base_url: externalLink,
     identifier_param_name: paramName
   });
-  
+
   return {
     modifiedUrl,
     identifier,
