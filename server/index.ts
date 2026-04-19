@@ -816,12 +816,6 @@ app.get('/api/redirect', async (req, res) => {
     }
 
     // If survey session found, handle vendor redirect
-    console.log("🔍 Checking survey session conditions:", {
-      hasSession: !!surveySession,
-      hasVendorId: !!surveySession?.vendor_id,
-      vendorIdValue: surveySession?.vendor_id
-    });
-
     if (surveySession && surveySession.vendor_id) {
       const statusCode = Number(status);
       const vendor = surveySession.vendor_id as any;
@@ -855,36 +849,6 @@ app.get('/api/redirect', async (req, res) => {
         // For regular browser requests, redirect directly to vendor
         return res.redirect(finalVendorUrl);
       }
-    } else if (surveySession && !surveySession.vendor_id) {
-      // Session exists but no vendor data (external survey) - ALWAYS use base_url, ignore passed PID
-      console.log("🚀 External survey detected - using base_url (ignoring passed PID):", {
-        base_url: surveySession.base_url,
-        actual_user_id: surveySession.actual_user_id,
-        passed_pid: pid
-      });
-
-      // Replace placeholders in base_url
-      let finalUrl = surveySession.base_url
-        .replace(/XXXX/g, String(surveySession.actual_user_id))
-        .replace(/\[identifier\]/g, String(surveySession.actual_user_id))
-        .replace(/\[USER_ID\]/g, String(surveySession.actual_user_id));
-
-      console.log("🎯 Final redirect URL:", finalUrl);
-
-      // For AJAX requests, return JSON
-      if (req.get('Accept')?.includes('application/json')) {
-        console.log("📤 Returning JSON response with redirectUrl");
-        return res.json({
-          success: true,
-          redirectUrl: finalUrl,
-          hasVendorRedirect: false,
-          source: 'survey_session_fallback'
-        });
-      }
-
-      // For browser requests, do HTTP redirect
-      console.log("📤 Performing HTTP redirect to external survey");
-      return res.redirect(finalUrl);
     }
 
     // 🔥 STEP 6: FALLBACK - Run existing redirect logic unchanged if no session found

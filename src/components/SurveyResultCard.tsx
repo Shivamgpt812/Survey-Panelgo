@@ -25,7 +25,6 @@ export default function SurveyResultCard() {
   const ip = params.get("ip");
   const time = params.get("time");
   const redirectUrl = params.get("redirect"); // New parameter for vendor redirect
-  const source = params.get("source"); // Source parameter to identify external survey flow
 
   const config = status ? statusConfig[status] : { label: "Result", color: "#7C83FD" };
 
@@ -63,9 +62,7 @@ export default function SurveyResultCard() {
       }
 
       // If no redirect URL but we have uid and status, check for vendor redirect
-      // Skip this for external surveys (redirectUrl already present) or if source indicates external survey
-      const isExternalSurvey = redirectUrl || source === 'survey_session_fallback';
-      if (uid && status && !redirectUrl && !isExternalSurvey) {
+      if (uid && status && !redirectUrl) {
         try {
           const response = await fetch(`/api/redirect?uid=${uid}&status=${status}${pid ? `&pid=${pid}` : ''}`, {
             headers: {
@@ -73,7 +70,7 @@ export default function SurveyResultCard() {
             }
           });
           const data = await response.json();
-
+          
           if (data.success && data.redirectUrl) {
             setCountdown(2);
             const timer = setInterval(() => {

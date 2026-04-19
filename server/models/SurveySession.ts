@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 export interface ISurveySession {
   id: string;
   identifier: string;
-  vendor_id?: mongoose.Types.ObjectId | null;
+  vendor_id: mongoose.Types.ObjectId;
   actual_user_id: string;
   survey_id?: string | null;
   base_url: string;
@@ -22,7 +22,7 @@ const surveySessionSchema = new mongoose.Schema(
     vendor_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Vendor',
-      required: false
+      required: true
     },
     actual_user_id: {
       type: String,
