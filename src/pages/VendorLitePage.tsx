@@ -367,7 +367,7 @@ export default function VendorLitePage() {
   /**
    * Respondent Handle Submit (External Flow)
    */
-  const handleExtSubmit = () => {
+  const handleExtSubmit = async () => {
     if (!extSurvey) return;
 
     const rid = localStorage.getItem("ext_rid") || "";
