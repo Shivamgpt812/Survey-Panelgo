@@ -923,13 +923,22 @@ export const testSurveyEndpoint = async (req: Request, res: Response) => {
     console.log("   Token:", token, "UserId:", userId);
 
     // Get survey details to get vendor information
+    console.log("   Looking for survey with token:", token);
     const survey = await IVendorSurvey.findOne({ token: token }).populate({
       path: 'vendor_id',
       model: 'Vendor'
     });
 
     if (!survey) {
-      console.log("   ❌ Survey not found, using fallback URL");
+      console.log("   ❌ Survey not found, checking what surveys exist...");
+      // Debug: Check what surveys exist in the database
+      const allSurveys = await IVendorSurvey.find({}).limit(5);
+      console.log("   Available surveys:", allSurveys.map(s => ({ token: s.token, title: s.title })));
+      
+      // Also try finding by exact token without populate
+      const surveyWithoutPopulate = await IVendorSurvey.findOne({ token: token });
+      console.log("   Survey found without populate:", surveyWithoutPopulate ? "YES" : "NO");
+      
       const originalUrl = "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjk2&r=39498070&source=17&PID=XXXX";
       let modifiedUrl = originalUrl.replace(/XXXX/g, userId);
       
