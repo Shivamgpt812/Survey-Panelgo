@@ -10,6 +10,7 @@ import {
   handleVendorComplete,
   checkUserIdUnique,
   validatePreScreener,
+  testEndpoint,
   generateVendorLink
 } from './vendorController';
 
@@ -28,6 +29,7 @@ router.get('/redirect', handleVendorRedirect);
 router.get('/complete', handleVendorComplete);
 router.get('/check-uid/:uid', checkUserIdUnique);
 router.post('/validate-pre-screener', validatePreScreener);
+router.get('/test', testEndpoint);
 router.post('/generate-vendor-link', generateVendorLink);
 
 export default router;

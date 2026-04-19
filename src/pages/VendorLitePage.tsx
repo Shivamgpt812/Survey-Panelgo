@@ -465,6 +465,17 @@ export default function VendorLitePage() {
         ? 'https://survey-panelgo.onrender.com'
         : 'http://localhost:3000';
 
+      // First test if vendor-lite routes are working
+      console.log("=== TESTING VENDOR-LITE ROUTES ===");
+      const testResponse = await fetch(`${apiUrl}/vendor-lite/test`);
+      console.log("Test response status:", testResponse.status);
+      if (testResponse.ok) {
+        const testData = await testResponse.json();
+        console.log("Test response:", testData);
+      } else {
+        console.error("Vendor-lite routes not accessible!");
+      }
+
       // Generate dynamic vendor link with identifier
       console.log("=== CREATING SURVEY SESSION FOR EXTERNAL SURVEY ===");
       const response = await fetch(`${apiUrl}/vendor-lite/generate-vendor-link`, {

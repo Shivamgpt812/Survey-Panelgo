@@ -874,6 +874,11 @@ export const getSurveyResponses = async (req: Request, res: Response) => {
   }
 };
 
+export const testEndpoint = async (req: Request, res: Response) => {
+  console.log("🔥 TEST ENDPOINT HIT!");
+  res.json({ success: true, message: "Vendor-lite routes are working!" });
+};
+
 export const generateVendorLink = async (req: Request, res: Response) => {
   console.log("🔥 generateVendorLink endpoint HIT!");
   console.log("   Request body:", req.body);
