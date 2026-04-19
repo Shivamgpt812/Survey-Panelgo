@@ -9,7 +9,8 @@ import {
   handleVendorRedirect,
   handleVendorComplete,
   checkUserIdUnique,
-  validatePreScreener
+  validatePreScreener,
+  generateVendorLink
 } from './vendorController';
 
 const router = Router();
@@ -27,5 +28,6 @@ router.get('/redirect', handleVendorRedirect);
 router.get('/complete', handleVendorComplete);
 router.get('/check-uid/:uid', checkUserIdUnique);
 router.post('/validate-pre-screener', validatePreScreener);
+router.post('/generate-vendor-link', generateVendorLink);
 
 export default router;

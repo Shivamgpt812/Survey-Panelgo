@@ -14,6 +14,7 @@ import { Response } from './models/Response.js';
 import { ActivityLog } from './models/ActivityLog.js';
 import { SurveyTracking } from './models/SurveyTracking.js';
 import { SurveyRedirectLogs } from './models/SurveyRedirectLogs.js';
+import { SurveySession } from './models/SurveySession.js';
 import { preScreenerTemplates } from './preScreenerTemplates.js';
 import { REDIRECT_URLS, getStatusText, isValidStatus } from './config/redirectConfig.js';
 import vendorLiteRoutes from './vendor-lite/routes.js';
@@ -777,14 +778,78 @@ app.get('/api/survey-tracking', requireAdmin, async (_req: any, res) => {
 // ---------- Survey Redirect Tracking ----------
 app.get('/api/redirect', async (req, res) => {
   try {
-    const { pid, uid, status } = req.query;
+    // 🔥 STEP 4: DETECT IDENTIFIER - Handle both uid and user_id parameters
+    const { pid, uid, user_id, user, status } = req.query;
+    
+    // Detect identifier from any possible parameter name
+    const identifier = uid || user_id || user;
 
-    console.log("🔥 Redirect HIT:", { pid, uid, status });
+    console.log("🔥 Redirect HIT:", { pid, uid, user_id, user, status, identifier });
+
+    // 🔥 STEP 5: LOOKUP & REDIRECT - Check for survey session first
+    let surveySession = null;
+    if (identifier) {
+      try {
+        surveySession = await SurveySession.findOne({ identifier: String(identifier) })
+          .populate('vendor_id')
+          .exec();
+        
+        if (surveySession) {
+          console.log("📋 Found survey session:", {
+            identifier: surveySession.identifier,
+            vendor_id: surveySession.vendor_id?._id,
+            actual_user_id: surveySession.actual_user_id,
+            base_url: surveySession.base_url
+          });
+        }
+      } catch (sessionError) {
+        console.error("❌ Error looking up survey session:", sessionError);
+      }
+    }
+
+    // If survey session found, handle vendor redirect
+    if (surveySession && surveySession.vendor_id) {
+      const statusCode = Number(status);
+      const vendor = surveySession.vendor_id as any;
+      
+      // Determine vendor redirect URL based on status
+      let vendorUrl = "";
+      if (statusCode === 1) vendorUrl = vendor.complete_url || vendor.redirectLinks?.complete;
+      else if (statusCode === 2) vendorUrl = vendor.terminate_url || vendor.redirectLinks?.terminate;
+      else if (statusCode === 3) vendorUrl = vendor.quota_full_url || vendor.redirectLinks?.quotaFull;
+
+      if (vendorUrl) {
+        // Replace [identifier] placeholder with actual_user_id
+        const finalVendorUrl = vendorUrl.replace(/\[identifier\]/g, String(surveySession.actual_user_id));
+        
+        console.log("🚀 Vendor redirect from session:", {
+          statusCode,
+          actualUserId: surveySession.actual_user_id,
+          vendorUrl: finalVendorUrl
+        });
+
+        // For AJAX requests, return JSON
+        if (req.get('Accept')?.includes('application/json')) {
+          return res.json({
+            success: true,
+            redirectUrl: finalVendorUrl,
+            hasVendorRedirect: true,
+            source: 'survey_session'
+          });
+        }
+
+        // For regular browser requests, redirect directly to vendor
+        return res.redirect(finalVendorUrl);
+      }
+    }
+
+    // 🔥 STEP 6: FALLBACK - Run existing redirect logic unchanged if no session found
+    console.log("⚠️ No survey session found, running existing redirect logic");
 
     // 🔥 Explicitly use the Netlify domain where the frontend is reliable
     const BASE_URL = "https://surveypanelgo.netlify.app";
 
-    if (!uid || !status) {
+    if (!identifier || !status) {
       console.error("❌ Missing required parameters (uid/status)");
       // For AJAX requests, return JSON error
       if (req.get('Accept')?.includes('application/json')) {
@@ -796,19 +861,19 @@ app.get('/api/redirect', async (req, res) => {
     const finalPid = pid || "AUTO_" + Date.now();
     const statusCode = Number(status);
 
-    const statusMap: Record<number, string> = {
-      1: "Completed",
-      2: "Terminated",
-      3: "Quota Full",
-      4: "Security Terminated"
+    const statusMap: Record<string, string> = {
+      "1": "Completed",
+      "2": "Terminated",
+      "3": "Quota Full",
+      "4": "Security Terminated"
     };
 
-    const statusText = statusMap[statusCode] || "Unknown";
+    const statusText = statusMap[String(statusCode)] || "Unknown";
 
     // Non-blocking log creation to avoid delaying the redirect
     SurveyRedirectLogs.create({
       pid: finalPid,
-      uid,
+      uid: identifier,
       status: statusCode,
       statusText,
       ipAddress: (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req.socket.remoteAddress,
@@ -828,13 +893,13 @@ app.get('/api/redirect', async (req, res) => {
     try {
       const { findTokenByUid, loadSurveys } = await import('./externalCreate.js');
       // First try to find token by UID from database
-      const token = await findTokenByUid(String(uid));
+      const token = await findTokenByUid(String(identifier));
       
       // Fallback to old method if database lookup fails
       const fallbackToken = await (async () => {
         if (!token) {
           const { findTokenByRid } = await import('./externalCreate.js');
-          return findTokenByRid(String(uid));
+          return findTokenByRid(String(identifier));
         }
         return token;
       })();
@@ -852,8 +917,8 @@ app.get('/api/redirect', async (req, res) => {
 
           if (vendorUrl) {
             const sep = vendorUrl.includes("?") ? "&" : "?";
-            vendorRedirectUrl = `${vendorUrl}${sep}rid=${uid}&uid=${uid}&pid=${survey.pid || ''}&transactionId=AUTO`;
-            console.log(`🔥 Found vendor redirect for UID ${uid}: ${vendorRedirectUrl}`);
+            vendorRedirectUrl = `${vendorUrl}${sep}rid=${identifier}&uid=${identifier}&pid=${survey.pid || ''}&transactionId=AUTO`;
+            console.log(`🔥 Found vendor redirect for UID ${identifier}: ${vendorRedirectUrl}`);
           }
         }
       }
@@ -872,13 +937,13 @@ app.get('/api/redirect', async (req, res) => {
 
     // For regular browser requests, redirect as before
     const redirectPages = {
-      1: `/survey-result/success?pid=${finalPid}&uid=${uid}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      2: `/survey-result/terminated?pid=${finalPid}&uid=${uid}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      3: `/survey-result/quota-full?pid=${finalPid}&uid=${uid}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      4: `/survey-result/security?pid=${finalPid}&uid=${uid}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
+      1: `/survey-result/success?pid=${finalPid}&uid=${identifier}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      2: `/survey-result/terminated?pid=${finalPid}&uid=${identifier}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      3: `/survey-result/quota-full?pid=${finalPid}&uid=${identifier}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      4: `/survey-result/security?pid=${finalPid}&uid=${identifier}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
     };
 
-    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${uid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
+    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${identifier}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
     let finalUrl = `${BASE_URL}${finalPath}`;
 
     if (vendorRedirectUrl) {

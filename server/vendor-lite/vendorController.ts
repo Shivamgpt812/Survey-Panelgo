@@ -3,6 +3,7 @@ import IVendor from './vendorModel.js';
 import IVendorSurvey from './surveyModel.js';
 import IVendorResponse from './responseModel.js';
 import { SurveyRedirectLogs } from '../models/SurveyRedirectLogs.js';
+import { processExternalSurveyLink } from '../lib/surveySessionUtils.js';
 
 export const generateRandomToken = (): string => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -736,6 +737,78 @@ export const getSurveyResponses = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: 'Internal server error'
+    });
+  }
+};
+
+export const generateVendorLink = async (req: Request, res: Response) => {
+  try {
+    const { surveyToken, userId } = req.body;
+
+    if (!surveyToken || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Survey token and user ID are required'
+      });
+    }
+
+    // Get survey details
+    const survey = await IVendorSurvey.findOne({ token: surveyToken }).populate({
+      path: 'vendor_id',
+      model: 'VendorLite'
+    });
+
+    if (!survey) {
+      return res.status(404).json({
+        success: false,
+        message: 'Survey not found'
+      });
+    }
+
+    // Only process external surveys
+    if (survey.type !== 'external' || !survey.externalLink) {
+      return res.status(400).json({
+        success: false,
+        message: 'This endpoint only works for external surveys'
+      });
+    }
+
+    console.log("=== GENERATING DYNAMIC VENDOR LINK ===");
+    console.log("Survey:", survey.title);
+    console.log("External Link:", survey.externalLink);
+    console.log("User ID:", userId);
+
+    // Process the external link with dynamic identifier
+    const { modifiedUrl, identifier, paramName } = await processExternalSurveyLink(
+      survey.externalLink,
+      survey.vendor_id._id.toString(),
+      userId,
+      survey.pid
+    );
+
+    console.log("Generated identifier:", identifier);
+    console.log("Parameter name:", paramName);
+    console.log("Modified URL:", modifiedUrl);
+
+    res.json({
+      success: true,
+      originalUrl: survey.externalLink,
+      modifiedUrl,
+      identifier,
+      paramName,
+      survey: {
+        id: survey._id,
+        title: survey.title,
+        pid: survey.pid,
+        token: survey.token
+      }
+    });
+
+  } catch (error) {
+    console.error('Error generating vendor link:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate vendor link'
     });
   }
 };
