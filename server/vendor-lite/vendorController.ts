@@ -914,6 +914,23 @@ export const createSurveySession = async (req: Request, res: Response) => {
   }
 };
 
+export const testSurveyEndpoint = async (req: Request, res: Response) => {
+  console.log("🚀🚀🚀 testSurveyEndpoint HIT! 🚀");
+  console.log("   Request body:", req.body);
+  
+  const { token, userId } = req.body;
+  const originalUrl = "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjk2&r=39498070&source=17&PID=XXXX";
+  let modifiedUrl = originalUrl.replace(/XXXX/g, userId);
+  
+  res.json({
+    success: true,
+    originalUrl: originalUrl,
+    modifiedUrl: modifiedUrl,
+    identifier: userId,
+    paramName: 'r'
+  });
+};
+
 export const generateVendorLink = async (req: Request, res: Response) => {
   console.log("🔥 generateVendorLink endpoint HIT!");
   try {

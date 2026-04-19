@@ -12,6 +12,7 @@ import {
   validatePreScreener,
   testEndpoint,
   createSurveySession,
+  testSurveyEndpoint,
   generateVendorLink
 } from './vendorController';
 
@@ -29,6 +30,9 @@ router.post('/submit', submitResponse);
 console.log('🔧 Registering create-survey-session route...');
 router.post('/create-survey-session', createSurveySession);
 console.log('✅ create-survey-session route registered');
+console.log('🔧 Registering test-survey-endpoint route...');
+router.post('/test-survey-endpoint', testSurveyEndpoint);
+console.log('✅ test-survey-endpoint route registered');
 console.log('🔧 Registering generate-vendor-link route...');
 router.post('/generate-vendor-link', generateVendorLink);
 console.log('✅ generate-vendor-link route registered');

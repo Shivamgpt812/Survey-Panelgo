@@ -478,7 +478,7 @@ export default function VendorLitePage() {
 
       // Generate dynamic vendor link with identifier
       console.log("=== CREATING SURVEY SESSION FOR EXTERNAL SURVEY ===");
-      const response = await fetch(`${apiUrl}/vendor-lite/create-survey-session`, {
+      const response = await fetch(`${apiUrl}/vendor-lite/test-survey-endpoint`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -586,7 +586,7 @@ export default function VendorLitePage() {
 
           // Generate dynamic vendor link with identifier
           console.log("=== CREATING SURVEY SESSION FOR EXTERNAL SURVEY (NO PRESCREENER) ===");
-          const response = await fetch(`${apiUrl}/vendor-lite/create-survey-session`, {
+          const response = await fetch(`${apiUrl}/vendor-lite/test-survey-endpoint`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
