@@ -816,6 +816,12 @@ app.get('/api/redirect', async (req, res) => {
     }
 
     // If survey session found, handle vendor redirect
+    console.log("🔍 Checking survey session conditions:", {
+      hasSession: !!surveySession,
+      hasVendorId: !!surveySession?.vendor_id,
+      vendorIdValue: surveySession?.vendor_id
+    });
+
     if (surveySession && surveySession.vendor_id) {
       const statusCode = Number(status);
       const vendor = surveySession.vendor_id as any;
@@ -862,17 +868,10 @@ app.get('/api/redirect', async (req, res) => {
         .replace(/\[identifier\]/g, String(surveySession.actual_user_id))
         .replace(/\[USER_ID\]/g, String(surveySession.actual_user_id));
 
-      // For AJAX requests, return JSON
-      if (req.get('Accept')?.includes('application/json')) {
-        return res.json({
-          success: true,
-          redirectUrl: finalUrl,
-          hasVendorRedirect: false,
-          source: 'survey_session_fallback'
-        });
-      }
+      console.log("🎯 Final redirect URL:", finalUrl);
+      console.log("� Performing HTTP redirect to external survey");
 
-      // For regular browser requests, redirect
+      // Always do HTTP redirect for external surveys (ignore AJAX header)
       return res.redirect(finalUrl);
     }
 
