@@ -879,6 +879,44 @@ export const testEndpoint = async (req: Request, res: Response) => {
   res.json({ success: true, message: "Vendor-lite routes are working!" });
 };
 
+export const createSurveySession = async (req: Request, res: Response) => {
+  console.log("🔥 createSurveySession endpoint HIT!");
+  try {
+    const { token, userId } = req.body;
+    console.log("   Token:", token, "UserId:", userId);
+
+    if (!token || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Survey token and user ID are required'
+      });
+    }
+
+    // Simple placeholder replacement
+    const originalUrl = "https://surveys.surveysgenie.com/survey?s=MTAwMDEyMjk2&r=39498070&source=17&PID=XXXX";
+    let modifiedUrl = originalUrl.replace(/XXXX/g, userId);
+    
+    console.log("   URL after placeholder replacement:", modifiedUrl);
+
+    res.json({
+      success: true,
+      originalUrl: originalUrl,
+      modifiedUrl: modifiedUrl,
+      identifier: userId,
+      paramName: 'r'
+    });
+
+  } catch (error) {
+    const err = error as Error;
+    console.error('❌ Error:', err.message);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create survey session',
+      error: err.message
+    });
+  }
+};
+
 export const generateVendorLink = async (req: Request, res: Response) => {
   console.log("🔥 generateVendorLink endpoint HIT!");
   try {

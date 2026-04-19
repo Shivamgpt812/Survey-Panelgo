@@ -11,6 +11,7 @@ import {
   checkUserIdUnique,
   validatePreScreener,
   testEndpoint,
+  createSurveySession,
   generateVendorLink
 } from './vendorController';
 
@@ -25,6 +26,9 @@ router.get('/survey/:token', getSurveyByToken);
 router.get('/survey/:token/responses', getSurveyResponses);
 
 router.post('/submit', submitResponse);
+console.log('🔧 Registering create-survey-session route...');
+router.post('/create-survey-session', createSurveySession);
+console.log('✅ create-survey-session route registered');
 console.log('🔧 Registering generate-vendor-link route...');
 router.post('/generate-vendor-link', generateVendorLink);
 console.log('✅ generate-vendor-link route registered');
