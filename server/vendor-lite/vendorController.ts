@@ -880,7 +880,11 @@ export const testEndpoint = async (req: Request, res: Response) => {
 };
 
 export const createSurveySession = async (req: Request, res: Response) => {
-  console.log("🔥 createSurveySession endpoint HIT!");
+  console.log("🔥🔥🔥 createSurveySession endpoint HIT! 🚀");
+  console.log("   Request method:", req.method);
+  console.log("   Request URL:", req.url);
+  console.log("   Request body:", req.body);
+  
   try {
     const { token, userId } = req.body;
     console.log("   Token:", token, "UserId:", userId);
