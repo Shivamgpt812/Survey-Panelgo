@@ -869,9 +869,20 @@ app.get('/api/redirect', async (req, res) => {
         .replace(/\[USER_ID\]/g, String(surveySession.actual_user_id));
 
       console.log("🎯 Final redirect URL:", finalUrl);
-      console.log("� Performing HTTP redirect to external survey");
 
-      // Always do HTTP redirect for external surveys (ignore AJAX header)
+      // For AJAX requests, return JSON
+      if (req.get('Accept')?.includes('application/json')) {
+        console.log("📤 Returning JSON response with redirectUrl");
+        return res.json({
+          success: true,
+          redirectUrl: finalUrl,
+          hasVendorRedirect: false,
+          source: 'survey_session_fallback'
+        });
+      }
+
+      // For browser requests, do HTTP redirect
+      console.log("📤 Performing HTTP redirect to external survey");
       return res.redirect(finalUrl);
     }
 
