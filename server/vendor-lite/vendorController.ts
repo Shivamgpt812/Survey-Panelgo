@@ -912,20 +912,32 @@ export const createSurveySession = async (req: Request, res: Response) => {
         const { SurveySession } = await import('../models/SurveySession.js');
         console.log("   SurveySession model imported successfully");
         
-        await SurveySession.create({
+        const sessionData = {
           identifier: userId, // Use actual user ID as identifier
           vendor_id: survey.vendor_id._id,
           actual_user_id: userId,
           survey_id: survey.pid,
           base_url: survey.externalLink,
           identifier_param_name: 'r'
-        });
-
-        console.log("   ✅ Survey session created with user ID as identifier:", userId);
+        };
+        console.log("   Session data to create:", sessionData);
+        
+        const createdSession = await SurveySession.create(sessionData);
+        console.log("   ✅ Survey session created successfully!");
+        console.log("   Created session ID:", createdSession._id);
+        console.log("   Created session identifier:", createdSession.identifier);
+        
+        // Verify it was actually saved by trying to find it immediately
+        const verifySession = await SurveySession.findOne({ identifier: userId });
+        console.log("   Verification lookup result:", verifySession ? "FOUND" : "NOT FOUND");
+        
       } catch (dbError) {
         console.error("   ❌ Database error creating survey session:", dbError);
+        console.error("   Error details:", dbError.message);
         // Continue without session creation - at least the URL replacement works
       }
+    } else {
+      console.log("   ⚠️ No survey found, skipping session creation");
     }
 
     res.json({
