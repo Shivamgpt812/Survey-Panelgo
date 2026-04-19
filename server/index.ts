@@ -884,6 +884,29 @@ app.get('/api/redirect', async (req, res) => {
       // For browser requests, do HTTP redirect
       console.log("📤 Performing HTTP redirect to external survey");
       return res.redirect(finalUrl);
+    } else if (surveySession && surveySession.vendor_id && pid) {
+      // Session has vendor but PID might not match - check if this is an external survey redirect
+      // If the survey session has no vendor_id but a vendor PID is passed, use base_url instead
+      if (surveySession.survey_id && pid !== surveySession.survey_id) {
+        console.log("⚠️ PID mismatch - using external survey base_url instead of vendor redirect");
+        let finalUrl = surveySession.base_url
+          .replace(/XXXX/g, String(surveySession.actual_user_id))
+          .replace(/\[identifier\]/g, String(surveySession.actual_user_id))
+          .replace(/\[USER_ID\]/g, String(surveySession.actual_user_id));
+
+        console.log("🎯 Final redirect URL (PID mismatch):", finalUrl);
+
+        if (req.get('Accept')?.includes('application/json')) {
+          return res.json({
+            success: true,
+            redirectUrl: finalUrl,
+            hasVendorRedirect: false,
+            source: 'survey_session_pid_mismatch'
+          });
+        }
+
+        return res.redirect(finalUrl);
+      }
     }
 
     // 🔥 STEP 6: FALLBACK - Run existing redirect logic unchanged if no session found
