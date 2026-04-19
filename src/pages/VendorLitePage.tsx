@@ -458,30 +458,66 @@ export default function VendorLitePage() {
     // PASS → External Survey (redirect directly to configured external URL)
     let finalUrl = extSurvey.externalUrl || "";
 
-    // Replace placeholders - prioritizing respondent ID (rid)
-    if (rid) {
-      finalUrl = finalUrl.replace(/\[#userid#\]/g, rid);
-      finalUrl = finalUrl.replace(/\[#rid#\]/g, rid);
+    // 🔥 CRITICAL: Create survey session with unique identifier for tracking
+    try {
+      const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
+      const apiUrl = isProduction
+        ? 'https://survey-panelgo.onrender.com'
+        : 'http://localhost:3000';
+
+      // Generate dynamic vendor link with identifier
+      console.log("=== CREATING SURVEY SESSION FOR EXTERNAL SURVEY ===");
+      const response = await fetch(`${apiUrl}/vendor-lite/generate-vendor-link`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token: localStorage.getItem("ext_token") || "",
+          userId: rid
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("✅ Survey session created, using dynamic URL:", data.modifiedUrl);
+        finalUrl = data.modifiedUrl;
+      } else {
+        console.error("❌ Failed to create survey session, using original URL");
+      }
+    } catch (error) {
+      console.error("❌ Error creating survey session:", error);
+      // Fall back to manual placeholder replacement
     }
 
-    // Replace transaction_id if it exists to complete the substitution
-    if (transactionId) {
-      finalUrl = finalUrl.replace(/\[#transaction_id#\]/g, transactionId);
-    }
-    
-    // Replace PID placeholder with survey PID
-    if (extSurvey.pid) {
-      finalUrl = finalUrl.replace(/\[#pid#\]/g, extSurvey.pid);
-      finalUrl = finalUrl.replace(/\[#PID#\]/g, extSurvey.pid);
-    }
-    
-    // 🔥 SAFETY FIX: Auto-detect and replace common placeholder patterns like XXXX
-    if (rid) {
-      // Replace any occurrence of "XXXX" or similar placeholder patterns with the actual RID
-      finalUrl = finalUrl.replace(/XXXX/g, rid);
-      finalUrl = finalUrl.replace(/xxxx/g, rid);
-      finalUrl = finalUrl.replace(/\[uid\]/g, rid);
-      finalUrl = finalUrl.replace(/\[UID\]/g, rid);
+    // Fallback: Manual placeholder replacement if session creation failed
+    if (finalUrl === extSurvey.externalUrl) {
+      console.log("Using fallback placeholder replacement");
+      // Replace placeholders - prioritizing respondent ID (rid)
+      if (rid) {
+        finalUrl = finalUrl.replace(/\[#userid#\]/g, rid);
+        finalUrl = finalUrl.replace(/\[#rid#\]/g, rid);
+      }
+
+      // Replace transaction_id if it exists to complete the substitution
+      if (transactionId) {
+        finalUrl = finalUrl.replace(/\[#transaction_id#\]/g, transactionId);
+      }
+      
+      // Replace PID placeholder with survey PID
+      if (extSurvey.pid) {
+        finalUrl = finalUrl.replace(/\[#pid#\]/g, extSurvey.pid);
+        finalUrl = finalUrl.replace(/\[#PID#\]/g, extSurvey.pid);
+      }
+      
+      // 🔥 SAFETY FIX: Auto-detect and replace common placeholder patterns like XXXX
+      if (rid) {
+        // Replace any occurrence of "XXXX" or similar placeholder patterns with the actual RID
+        finalUrl = finalUrl.replace(/XXXX/g, rid);
+        finalUrl = finalUrl.replace(/xxxx/g, rid);
+        finalUrl = finalUrl.replace(/\[uid\]/g, rid);
+        finalUrl = finalUrl.replace(/\[UID\]/g, rid);
+      }
     }
     
     console.log("🔗 URL after placeholder replacement:", finalUrl);
@@ -529,32 +565,67 @@ export default function VendorLitePage() {
       const transactionId = localStorage.getItem("ext_transactionId") || "";
       let finalUrl = extSurvey.externalUrl || "";
 
-      // Replace placeholders - prioritizing respondent ID (rid)
-      if (rid) {
-        finalUrl = finalUrl.replace(/\[#userid#\]/g, rid);
-        finalUrl = finalUrl.replace(/\[#rid#\]/g, rid);
+      // 🔥 CRITICAL: Create survey session with unique identifier for tracking
+      try {
+        const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
+        const apiUrl = isProduction
+          ? 'https://survey-panelgo.onrender.com'
+          : 'http://localhost:3000';
+
+        // Generate dynamic vendor link with identifier
+        console.log("=== CREATING SURVEY SESSION FOR EXTERNAL SURVEY (NO PRESCREENER) ===");
+        const response = await fetch(`${apiUrl}/vendor-lite/generate-vendor-link`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            token: localStorage.getItem("ext_token") || "",
+            userId: rid
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log("✅ Survey session created, using dynamic URL:", data.modifiedUrl);
+          finalUrl = data.modifiedUrl;
+        } else {
+          console.error("❌ Failed to create survey session, using original URL");
+        }
+      } catch (error) {
+        console.error("❌ Error creating survey session:", error);
+        // Fall back to manual placeholder replacement
       }
 
-      // Replace transaction_id if it exists to complete the substitution
-      if (transactionId) {
-        finalUrl = finalUrl.replace(/\[#transaction_id#\]/g, transactionId);
-      }
-      
-      // Replace PID placeholder with survey PID
-      if (extSurvey.pid) {
-        finalUrl = finalUrl.replace(/\[#pid#\]/g, extSurvey.pid);
-        finalUrl = finalUrl.replace(/\[#PID#\]/g, extSurvey.pid);
-      }
-      
-      // 🔥 SAFETY FIX: Auto-detect and replace common placeholder patterns like XXXX
-      if (rid) {
-        finalUrl = finalUrl.replace(/XXXX/g, rid);
-        finalUrl = finalUrl.replace(/xxxx/g, rid);
-        finalUrl = finalUrl.replace(/\[uid\]/g, rid);
-        finalUrl = finalUrl.replace(/\[UID\]/g, rid);
+      // Fallback: Manual placeholder replacement if session creation failed
+      if (finalUrl === extSurvey.externalUrl) {
+        console.log("Using fallback placeholder replacement");
+        // Replace placeholders - prioritizing respondent ID (rid)
+        if (rid) {
+          finalUrl = finalUrl.replace(/\[#userid#\]/g, rid);
+          finalUrl = finalUrl.replace(/\[#rid#\]/g, rid);
+        }
+
+        // Replace transaction_id if it exists to complete the substitution
+        if (transactionId) {
+          finalUrl = finalUrl.replace(/\[#transaction_id#\]/g, transactionId);
+        }
+        
+        // Replace PID placeholder with survey PID
+        if (extSurvey.pid) {
+          finalUrl = finalUrl.replace(/\[#pid#\]/g, extSurvey.pid);
+          finalUrl = finalUrl.replace(/\[#PID#\]/g, extSurvey.pid);
+        }
+        
+        // 🔥 SAFETY FIX: Auto-detect and replace common placeholder patterns like XXXX
+        if (rid) {
+          finalUrl = finalUrl.replace(/XXXX/g, rid);
+          finalUrl = finalUrl.replace(/xxxx/g, rid);
+          finalUrl = finalUrl.replace(/\[uid\]/g, rid);
+          finalUrl = finalUrl.replace(/\[UID\]/g, rid);
+        }
       }
 
-      // 🔥 SIMPLIFIED: Keep external URL clean without return parameters
       console.log("🚀 No prescreener questions - Redirecting directly to External Survey:", finalUrl);
       window.location.href = finalUrl;
       return <div className="min-h-screen bg-violet-50 flex items-center justify-center font-jakarta font-bold text-violet">Redirecting to survey...</div>;
