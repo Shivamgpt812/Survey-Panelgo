@@ -51,5 +51,6 @@ const SurveyRedirectLogsSchema: Schema = new Schema({
 SurveyRedirectLogsSchema.index({ pid: 1, uid: 1 });
 SurveyRedirectLogsSchema.index({ status: 1 });
 SurveyRedirectLogsSchema.index({ createdAt: -1 });
+SurveyRedirectLogsSchema.index({ createdAt: -1, uid: 1 }); // Compound index for sort + group optimization
 
 export const SurveyRedirectLogs = mongoose.model<ISurveyRedirectLogs>('SurveyRedirectLogs', SurveyRedirectLogsSchema);

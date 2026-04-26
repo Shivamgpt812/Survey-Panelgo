@@ -1118,22 +1118,55 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
       }
     }
 
-    // Get all matching records first for proper deduplication
-    const allLogs = await SurveyRedirectLogs.find(filter)
-      .sort({ createdAt: -1 })
-      .lean();
+    // Use aggregation pipeline for efficient deduplication and pagination at database level
+    const pipeline: any[] = [
+      { $match: filter },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: '$uid',
+          doc: { $first: '$$ROOT' }
+        }
+      },
+      {
+        $replaceRoot: { newRoot: '$doc' }
+      }
+    ];
 
-    // Remove duplicates based on uid - keep only one record per uid
-    const uniqueLogs = allLogs.filter((log, index, self) => {
-      return index === self.findIndex((l) => l.uid === log.uid);
-    });
+    // Get total count of unique records for pagination
+    const countPipeline = [...pipeline, { $count: 'total' }];
+    const countResult = await SurveyRedirectLogs.aggregate(countPipeline);
+    const totalUnique = countResult[0]?.total || 0;
 
-    // Apply pagination to unique records
-    const paginatedLogs = uniqueLogs.slice(skip, skip + limitNum);
+    // Add pagination to main pipeline
+    pipeline.push(
+      { $skip: skip },
+      { $limit: limitNum }
+    );
 
-    // Calculate status counts from unique records only
-    const uniqueStatusCounts = uniqueLogs.reduce((acc, log) => {
-      acc[log.status] = (acc[log.status] || 0) + 1;
+    // Execute aggregation
+    const paginatedLogs = await SurveyRedirectLogs.aggregate(pipeline);
+
+    // Calculate status counts from all unique records (using aggregation)
+    const statusCountPipeline = [
+      { $match: filter },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: { uid: '$uid', status: '$status' },
+          doc: { $first: '$$ROOT' }
+        }
+      },
+      {
+        $group: {
+          _id: '$_id.status',
+          count: { $sum: 1 }
+        }
+      }
+    ];
+    const statusCountResult = await SurveyRedirectLogs.aggregate(statusCountPipeline);
+    const uniqueStatusCounts = statusCountResult.reduce((acc, item) => {
+      acc[item._id] = item.count;
       return acc;
     }, {} as Record<number, number>);
 
@@ -1146,8 +1179,8 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
       pagination: {
         page: pageNum,
         limit: limitNum,
-        total: uniqueLogs.length, // Total unique records
-        pages: Math.ceil(uniqueLogs.length / limitNum)
+        total: totalUnique,
+        pages: Math.ceil(totalUnique / limitNum)
       },
       statusCounts: uniqueStatusCounts
     });
