@@ -1130,7 +1130,8 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
       },
       {
         $replaceRoot: { newRoot: '$doc' }
-      }
+      },
+      { $sort: { createdAt: -1 } } // Re-sort after grouping to maintain date order
     ];
 
     // Get total count of unique records for pagination
