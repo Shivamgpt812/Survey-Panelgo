@@ -332,13 +332,37 @@ router.get("/external/redirect/:status", async (req, res) => {
         // Update end IP in respondent mapping
         await updateEndIp(String(rid), endIp);
 
-        // Get both IPs from database
+        // Get both IPs from database and actual user ID
         let startIp = endIp; // fallback to endIp if startIp not found
+        let actualUid = String(rid); // Default to rid if not found in mapping
+        
+        // Detect if rid looks like an IP address (which would be wrong)
+        const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
+        if (ipPattern.test(String(rid))) {
+            console.error("⚠️ WARNING: rid appears to be an IP address instead of user ID:", rid);
+            // Try to find the correct user ID from RespondentMapping using the IP as a fallback
+            try {
+                const RespondentMapping = (await import("./models/RespondentMapping.js")).default;
+                const mapping = await RespondentMapping.findOne({ startIp: String(rid) }) || 
+                                   await RespondentMapping.findOne({ endIp: String(rid) });
+                if (mapping && mapping.uid) {
+                    console.log("✅ Found correct user ID from IP mapping:", mapping.uid);
+                    actualUid = mapping.uid;
+                }
+            } catch (e) {
+                console.error("❌ Error looking up user ID by IP:", e);
+            }
+        }
+        
         try {
             const RespondentMapping = (await import("./models/RespondentMapping.js")).default;
             const mapping = await RespondentMapping.findOne({ uid: String(rid) });
-            if (mapping && mapping.startIp) {
-                startIp = mapping.startIp;
+            if (mapping) {
+                if (mapping.startIp) {
+                    startIp = mapping.startIp;
+                }
+                // Use the actual user ID from mapping if available
+                actualUid = mapping.uid;
             }
         } catch (e) {
             console.error("❌ Error fetching start IP:", e);
@@ -351,7 +375,7 @@ router.get("/external/redirect/:status", async (req, res) => {
             const { SurveyRedirectLogs } = await import("./models/SurveyRedirectLogs.js");
             SurveyRedirectLogs.create({
                 pid: survey.pid || `EXT_${token}`,
-                uid: String(rid), // UID now strictly contains the value of RID as requested
+                uid: actualUid, // Use actual user ID from mapping instead of rid
                 status: statusCode,
                 statusText: statusMap[statusCode] || "Unknown",
                 ipAddress: bothIps, // Store both IPs as comma-separated
