@@ -928,21 +928,10 @@ app.get('/api/redirect', async (req, res) => {
 
     const statusText = statusMap[String(statusCode)] || "Unknown";
 
-    // Detect if identifier looks like an IP address (which would be wrong for UID)
-    // Match IP addresses even if they have extra characters appended (e.g., "68.67.245.25021")
-    const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
-    let uidToLog = identifier;
-    if (identifier && ipPattern.test(String(identifier))) {
-      console.error("⚠️ WARNING: identifier appears to be an IP address instead of user ID:", identifier);
-      // Swap the values - use IP as ipAddress and generate a fallback UID
-      uidToLog = `IP_${Date.now()}`; // Generate a fallback UID
-      console.log("✅ Using fallback UID:", uidToLog);
-    }
-
     // Non-blocking log creation to avoid delaying the redirect
     SurveyRedirectLogs.create({
       pid: finalPid,
-      uid: uidToLog,
+      uid: identifier,
       status: statusCode,
       statusText,
       ipAddress: (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req.socket.remoteAddress,
