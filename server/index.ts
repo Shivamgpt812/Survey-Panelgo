@@ -929,6 +929,7 @@ app.get('/api/redirect', async (req, res) => {
     const statusText = statusMap[String(statusCode)] || "Unknown";
 
     // Detect if identifier looks like an IP address (which would be wrong for UID)
+    // Match IP addresses even if they have extra characters appended (e.g., "68.67.245.25021")
     const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
     let uidToLog = identifier;
     if (identifier && ipPattern.test(String(identifier))) {

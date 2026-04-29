@@ -370,11 +370,20 @@ export const validatePreScreener = async (req: Request, res: Response) => {
         // User failed pre-screener - log as terminated and redirect
         const ip = req.ip || req.connection.remoteAddress || 'unknown';
         
+        // Detect if userId looks like an IP address (which would be wrong for UID)
+        const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
+        let uidToLog = userId || 'pre-screener-validation';
+        if (userId && ipPattern.test(String(userId))) {
+          console.error("⚠️ WARNING: userId appears to be an IP address instead of user ID:", userId);
+          uidToLog = `IP_${Date.now()}`; // Generate a fallback UID
+          console.log("✅ Using fallback UID:", uidToLog);
+        }
+        
         // Log the failed pre-screener attempt
         try {
           await SurveyRedirectLogs.create({
             pid: survey.pid,
-            uid: userId || 'pre-screener-validation', // Use actual user ID if provided
+            uid: uidToLog, // Use validated UID
             status: 2, // Terminated
             statusText: 'Terminated - Failed Pre-Screener',
             ipAddress: ip,
@@ -496,9 +505,19 @@ export const validatePreScreener = async (req: Request, res: Response) => {
       
       if (survey) {
         const ip = req.ip || req.connection.remoteAddress || 'unknown';
+        
+        // Detect if userId looks like an IP address (which would be wrong for UID)
+        const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
+        let uidToLog = userId || 'validation-error';
+        if (userId && ipPattern.test(String(userId))) {
+          console.error("⚠️ WARNING: userId appears to be an IP address instead of user ID:", userId);
+          uidToLog = `IP_${Date.now()}`; // Generate a fallback UID
+          console.log("✅ Using fallback UID:", uidToLog);
+        }
+        
         await SurveyRedirectLogs.create({
           pid: survey.pid,
-          uid: userId || 'validation-error', // Use actual user ID if provided
+          uid: uidToLog, // Use validated UID
           status: 2, // Terminated
           statusText: 'Terminated - Validation Error',
           ipAddress: ip,
@@ -592,17 +611,26 @@ export const submitResponse = async (req: Request, res: Response) => {
         const uid = userId.trim();
         const ip = req.ip || req.connection.remoteAddress || 'unknown';
         
+        // Detect if uid looks like an IP address (which would be wrong for UID)
+        const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
+        let uidToLog = uid;
+        if (uid && ipPattern.test(String(uid))) {
+          console.error("⚠️ WARNING: uid appears to be an IP address instead of user ID:", uid);
+          uidToLog = `IP_${Date.now()}`; // Generate a fallback UID
+          console.log("✅ Using fallback UID:", uidToLog);
+        }
+        
         // Log the failed pre-screener attempt
         try {
           await SurveyRedirectLogs.create({
             pid: survey.pid,
-            uid,
+            uid: uidToLog, // Use validated UID
             status: 2, // Terminated
             statusText: 'Terminated - Failed Pre-Screener',
             ipAddress: ip,
             userAgent: req.get('User-Agent') || 'unknown'
           });
-          console.log("✅ Pre-screener failure logged:", { pid: survey.pid, uid, status: 2 });
+          console.log("✅ Pre-screener failure logged:", { pid: survey.pid, uid: uidToLog, status: 2 });
         } catch (logError) {
           console.error("❌ Error logging pre-screener failure:", logError);
         }
@@ -657,17 +685,26 @@ export const submitResponse = async (req: Request, res: Response) => {
       answers
     });
 
+    // Detect if uid looks like an IP address (which would be wrong for UID)
+    const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
+    let uidToLog = uid;
+    if (uid && ipPattern.test(String(uid))) {
+      console.error("⚠️ WARNING: uid appears to be an IP address instead of user ID:", uid);
+      uidToLog = `IP_${Date.now()}`; // Generate a fallback UID
+      console.log("✅ Using fallback UID:", uidToLog);
+    }
+
     // Log redirect data for analytics
     try {
       await SurveyRedirectLogs.create({
         pid: survey.pid,
-        uid,
+        uid: uidToLog, // Use validated UID
         status: 1, // Completed survey
         statusText: 'Completed',
         ipAddress: ip,
         userAgent: req.get('User-Agent') || 'unknown'
       });
-      console.log("✅ Redirect log saved for vendor survey:", { pid: survey.pid, uid, status: 1 });
+      console.log("✅ Redirect log saved for vendor survey:", { pid: survey.pid, uid: uidToLog, status: 1 });
     } catch (logError) {
       console.error("❌ Error saving redirect log:", logError);
       // Don't fail the response if logging fails
@@ -762,18 +799,27 @@ export const handleVendorRedirect = async (req: Request, res: Response) => {
     const vendor = survey.vendor_id as any;
     const statusCode = parseInt(status as string);
     
+    // Detect if uid looks like an IP address (which would be wrong for UID)
+    const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
+    let uidToLog = uid as string;
+    if (uid && ipPattern.test(String(uid))) {
+      console.error("⚠️ WARNING: uid appears to be an IP address instead of user ID:", uid);
+      uidToLog = `IP_${Date.now()}`; // Generate a fallback UID
+      console.log("✅ Using fallback UID:", uidToLog);
+    }
+    
     // Log redirect data for analytics
     try {
       const statusText = getStatusText(statusCode);
       await SurveyRedirectLogs.create({
         pid: pid as string,
-        uid: uid as string,
+        uid: uidToLog, // Use validated UID
         status: statusCode,
         statusText,
         ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
         userAgent: req.get('User-Agent') || 'unknown'
       });
-      console.log("✅ Vendor redirect log saved:", { pid, uid, status: statusCode });
+      console.log("✅ Vendor redirect log saved:", { pid, uid: uidToLog, status: statusCode });
     } catch (logError) {
       console.error("❌ Error saving vendor redirect log:", logError);
     }
