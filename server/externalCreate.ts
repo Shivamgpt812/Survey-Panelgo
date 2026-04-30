@@ -332,8 +332,26 @@ router.get("/external/redirect/:status", async (req, res) => {
         // Update end IP in respondent mapping
         await updateEndIp(String(rid), endIp);
 
-        // Get both IPs from database
+        // Get both IPs from database and original user ID
         let startIp = endIp; // fallback to endIp if startIp not found
+        let originalUid = String(rid); // Default to rid if not found in mapping
+        
+        // Detect if rid looks like an IP address - if so, try to find original user ID from RespondentMapping
+        const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
+        if (ipPattern.test(String(rid))) {
+            console.log("⚠️ rid appears to be an IP address, looking up original user ID from RespondentMapping...");
+            try {
+                const RespondentMapping = (await import("./models/RespondentMapping.js")).default;
+                const mapping = await RespondentMapping.findOne({ uid: String(rid) });
+                if (mapping && mapping.uid) {
+                    console.log("✅ Found original user ID from mapping:", mapping.uid);
+                    originalUid = mapping.uid;
+                }
+            } catch (e) {
+                console.error("❌ Error looking up original user ID:", e);
+            }
+        }
+        
         try {
             const RespondentMapping = (await import("./models/RespondentMapping.js")).default;
             const mapping = await RespondentMapping.findOne({ uid: String(rid) });
@@ -351,7 +369,7 @@ router.get("/external/redirect/:status", async (req, res) => {
             const { SurveyRedirectLogs } = await import("./models/SurveyRedirectLogs.js");
             SurveyRedirectLogs.create({
                 pid: survey.pid || `EXT_${token}`,
-                uid: String(rid),
+                uid: originalUid, // Use original user ID from mapping
                 status: statusCode,
                 statusText: statusMap[statusCode] || "Unknown",
                 ipAddress: bothIps, // Store both IPs as comma-separated

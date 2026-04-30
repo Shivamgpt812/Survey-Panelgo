@@ -790,14 +790,31 @@ app.get('/api/redirect', async (req, res) => {
     console.log("   Request URL:", req.url);
     console.log("================================================================");
 
+    // Detect if uid looks like an IP address - if so, try to find original user ID from RespondentMapping
+    let finalUid = uid;
+    const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
+    if (uid && ipPattern.test(String(uid))) {
+      console.log("⚠️ UID appears to be an IP address, looking up original user ID from RespondentMapping...");
+      try {
+        const { default: RespondentMapping } = await import('./models/RespondentMapping.js');
+        const mapping = await RespondentMapping.findOne({ uid: String(uid) });
+        if (mapping && mapping.uid) {
+          console.log("✅ Found original user ID from mapping:", mapping.uid);
+          finalUid = mapping.uid;
+        }
+      } catch (e) {
+        console.error("❌ Error looking up original user ID:", e);
+      }
+    }
+
     // 🔥 STEP 2: LOOKUP SESSION - Find session by uid
     let surveySession = null;
     let vendor = null;
 
-    if (uid) {
+    if (finalUid) {
       try {
-        console.log("🔍 STEP 2: Looking up survey session for uid:", uid);
-        surveySession = await SurveySession.findOne({ identifier: String(uid) })
+        console.log("🔍 STEP 2: Looking up survey session for uid:", finalUid);
+        surveySession = await SurveySession.findOne({ identifier: String(finalUid) })
           .populate('vendor_id')
           .exec();
 
@@ -927,7 +944,7 @@ app.get('/api/redirect', async (req, res) => {
     // Non-blocking log creation to avoid delaying the redirect
     SurveyRedirectLogs.create({
       pid: finalPid,
-      uid: uid,
+      uid: finalUid,
       status: statusCode,
       statusText,
       ipAddress: (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req.socket.remoteAddress,
@@ -991,13 +1008,13 @@ app.get('/api/redirect', async (req, res) => {
 
     // For regular browser requests, redirect as before
     const redirectPages = {
-      1: `/survey-result/success?pid=${finalPid}&uid=${uid}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      2: `/survey-result/terminated?pid=${finalPid}&uid=${uid}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      3: `/survey-result/quota-full?pid=${finalPid}&uid=${uid}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      4: `/survey-result/security?pid=${finalPid}&uid=${uid}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
+      1: `/survey-result/success?pid=${finalPid}&uid=${finalUid}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      2: `/survey-result/terminated?pid=${finalPid}&uid=${finalUid}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      3: `/survey-result/quota-full?pid=${finalPid}&uid=${finalUid}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      4: `/survey-result/security?pid=${finalPid}&uid=${finalUid}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
     };
 
-    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${uid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
+    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${finalUid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
     let finalUrl = `${BASE_URL}${finalPath}`;
 
     if (vendorRedirectUrl) {
