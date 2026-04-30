@@ -781,44 +781,23 @@ app.get('/api/redirect', async (req, res) => {
     // 🔥 STEP 1: IDENTIFY PARAMS - Handle pid, uid, user_id, user, status
     const { pid, uid, user_id, user, status } = req.query;
 
-    // Detect identifier from any possible parameter name
-    const identifier = uid || user_id || user;
-
     console.log("🔥 /api/redirect HIT ==========================================");
     console.log("   PID:", pid);
     console.log("   UID:", uid);
     console.log("   User_ID:", user_id);
     console.log("   User:", user);
     console.log("   Status:", status);
-    console.log("   Extracted Identifier:", identifier);
     console.log("   Request URL:", req.url);
     console.log("================================================================");
 
-    // Detect if identifier looks like an IP address - if so, try to find original user ID
-    let finalIdentifier = identifier;
-    const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
-    if (identifier && ipPattern.test(String(identifier))) {
-      console.log("⚠️ Identifier appears to be an IP address, looking up original user ID...");
-      try {
-        const { default: RespondentMapping } = await import('./models/RespondentMapping.js');
-        const mapping = await RespondentMapping.findOne({ uid: String(identifier) });
-        if (mapping && mapping.uid) {
-          console.log("✅ Found original user ID from mapping:", mapping.uid);
-          finalIdentifier = mapping.uid;
-        }
-      } catch (e) {
-        console.error("❌ Error looking up original user ID:", e);
-      }
-    }
-
-    // 🔥 STEP 2: LOOKUP SESSION - Find session by identifier
+    // 🔥 STEP 2: LOOKUP SESSION - Find session by uid
     let surveySession = null;
     let vendor = null;
 
-    if (finalIdentifier) {
+    if (uid) {
       try {
-        console.log("🔍 STEP 2: Looking up survey session for identifier:", finalIdentifier);
-        surveySession = await SurveySession.findOne({ identifier: String(finalIdentifier) })
+        console.log("🔍 STEP 2: Looking up survey session for uid:", uid);
+        surveySession = await SurveySession.findOne({ identifier: String(uid) })
           .populate('vendor_id')
           .exec();
 
@@ -852,13 +831,13 @@ app.get('/api/redirect', async (req, res) => {
             }
           }
         } else {
-          console.log("⚠️ STEP 2: No survey session found for identifier:", identifier);
+          console.log("⚠️ STEP 2: No survey session found for uid:", uid);
         }
       } catch (sessionError) {
         console.error("❌ Error looking up survey session:", sessionError);
       }
     } else {
-      console.log("⚠️ STEP 2: No identifier provided (no uid/user_id/user param)");
+      console.log("⚠️ STEP 2: No uid provided");
     }
 
     // If survey session found, handle vendor redirect
@@ -924,7 +903,7 @@ app.get('/api/redirect', async (req, res) => {
     // 🔥 Explicitly use the Netlify domain where the frontend is reliable
     const BASE_URL = "https://surveypanelgo.netlify.app";
 
-    if (!identifier || !status) {
+    if (!uid || !status) {
       console.error("❌ Missing required parameters (uid/status)");
       // For AJAX requests, return JSON error
       if (req.get('Accept')?.includes('application/json')) {
@@ -948,7 +927,7 @@ app.get('/api/redirect', async (req, res) => {
     // Non-blocking log creation to avoid delaying the redirect
     SurveyRedirectLogs.create({
       pid: finalPid,
-      uid: finalIdentifier,
+      uid: uid,
       status: statusCode,
       statusText,
       ipAddress: (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req.socket.remoteAddress,
@@ -968,19 +947,19 @@ app.get('/api/redirect', async (req, res) => {
     try {
       const { findTokenByUid, loadSurveys } = await import('./externalCreate.js');
       // First try to find token by UID from database
-      const token = await findTokenByUid(String(identifier));
-      
+      const token = await findTokenByUid(String(uid));
+
       // Fallback to old method if database lookup fails
       const fallbackToken = await (async () => {
         if (!token) {
           const { findTokenByRid } = await import('./externalCreate.js');
-          return findTokenByRid(String(identifier));
+          return findTokenByRid(String(uid));
         }
         return token;
       })();
-      
+
       const finalToken = token || fallbackToken;
-      
+
       if (finalToken) {
         const surveys = loadSurveys();
         const survey = surveys[finalToken];
@@ -992,8 +971,8 @@ app.get('/api/redirect', async (req, res) => {
 
           if (vendorUrl) {
             const sep = vendorUrl.includes("?") ? "&" : "?";
-            vendorRedirectUrl = `${vendorUrl}${sep}rid=${identifier}&uid=${identifier}&pid=${survey.pid || ''}&transactionId=AUTO`;
-            console.log(`🔥 Found vendor redirect for UID ${identifier}: ${vendorRedirectUrl}`);
+            vendorRedirectUrl = `${vendorUrl}${sep}rid=${uid}&uid=${uid}&pid=${survey.pid || ''}&transactionId=AUTO`;
+            console.log(`🔥 Found vendor redirect for UID ${uid}: ${vendorRedirectUrl}`);
           }
         }
       }
@@ -1012,13 +991,13 @@ app.get('/api/redirect', async (req, res) => {
 
     // For regular browser requests, redirect as before
     const redirectPages = {
-      1: `/survey-result/success?pid=${finalPid}&uid=${identifier}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      2: `/survey-result/terminated?pid=${finalPid}&uid=${identifier}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      3: `/survey-result/quota-full?pid=${finalPid}&uid=${identifier}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      4: `/survey-result/security?pid=${finalPid}&uid=${identifier}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
+      1: `/survey-result/success?pid=${finalPid}&uid=${uid}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      2: `/survey-result/terminated?pid=${finalPid}&uid=${uid}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      3: `/survey-result/quota-full?pid=${finalPid}&uid=${uid}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      4: `/survey-result/security?pid=${finalPid}&uid=${uid}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
     };
 
-    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${identifier}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
+    const finalPath = redirectPages[statusCode] || `/survey-result?pid=${finalPid}&uid=${uid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
     let finalUrl = `${BASE_URL}${finalPath}`;
 
     if (vendorRedirectUrl) {
