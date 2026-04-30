@@ -332,13 +332,18 @@ router.get("/external/redirect/:status", async (req, res) => {
         // Update end IP in respondent mapping
         await updateEndIp(String(rid), endIp);
 
-        // Get both IPs from database
+        // Get both IPs from database and original user ID
         let startIp = endIp; // fallback to endIp if startIp not found
+        let originalUid = String(rid); // Default to rid if not found in mapping
         try {
             const RespondentMapping = (await import("./models/RespondentMapping.js")).default;
             const mapping = await RespondentMapping.findOne({ uid: String(rid) });
-            if (mapping && mapping.startIp) {
-                startIp = mapping.startIp;
+            if (mapping) {
+                if (mapping.startIp) {
+                    startIp = mapping.startIp;
+                }
+                // Use the original user ID from mapping (this is what the user originally added to the link)
+                originalUid = mapping.uid;
             }
         } catch (e) {
             console.error("❌ Error fetching start IP:", e);
@@ -351,7 +356,7 @@ router.get("/external/redirect/:status", async (req, res) => {
             const { SurveyRedirectLogs } = await import("./models/SurveyRedirectLogs.js");
             SurveyRedirectLogs.create({
                 pid: survey.pid || `EXT_${token}`,
-                uid: String(rid),
+                uid: originalUid, // Use original user ID from mapping
                 status: statusCode,
                 statusText: statusMap[statusCode] || "Unknown",
                 ipAddress: bothIps, // Store both IPs as comma-separated

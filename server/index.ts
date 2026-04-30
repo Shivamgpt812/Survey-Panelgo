@@ -794,14 +794,31 @@ app.get('/api/redirect', async (req, res) => {
     console.log("   Request URL:", req.url);
     console.log("================================================================");
 
+    // Detect if identifier looks like an IP address - if so, try to find original user ID
+    let finalIdentifier = identifier;
+    const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
+    if (identifier && ipPattern.test(String(identifier))) {
+      console.log("⚠️ Identifier appears to be an IP address, looking up original user ID...");
+      try {
+        const { default: RespondentMapping } = await import('./models/RespondentMapping.js');
+        const mapping = await RespondentMapping.findOne({ uid: String(identifier) });
+        if (mapping && mapping.uid) {
+          console.log("✅ Found original user ID from mapping:", mapping.uid);
+          finalIdentifier = mapping.uid;
+        }
+      } catch (e) {
+        console.error("❌ Error looking up original user ID:", e);
+      }
+    }
+
     // 🔥 STEP 2: LOOKUP SESSION - Find session by identifier
     let surveySession = null;
     let vendor = null;
 
-    if (identifier) {
+    if (finalIdentifier) {
       try {
-        console.log("🔍 STEP 2: Looking up survey session for identifier:", identifier);
-        surveySession = await SurveySession.findOne({ identifier: String(identifier) })
+        console.log("🔍 STEP 2: Looking up survey session for identifier:", finalIdentifier);
+        surveySession = await SurveySession.findOne({ identifier: String(finalIdentifier) })
           .populate('vendor_id')
           .exec();
 
@@ -931,7 +948,7 @@ app.get('/api/redirect', async (req, res) => {
     // Non-blocking log creation to avoid delaying the redirect
     SurveyRedirectLogs.create({
       pid: finalPid,
-      uid: identifier,
+      uid: finalIdentifier,
       status: statusCode,
       statusText,
       ipAddress: (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req.socket.remoteAddress,
