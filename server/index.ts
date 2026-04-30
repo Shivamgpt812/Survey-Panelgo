@@ -790,6 +790,20 @@ app.get('/api/redirect', async (req, res) => {
     console.log("   Request URL:", req.url);
     console.log("================================================================");
 
+    // 🔥 VALIDATION: Reject if uid looks like an IP address
+    const isIpAddress = (str: string) => {
+      const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+      return ipPattern.test(str);
+    };
+
+    if (uid && isIpAddress(String(uid))) {
+      console.error("❌ INVALID UID: IP address detected instead of user ID:", uid);
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid uid parameter: IP address detected. Please provide a valid user ID.'
+      });
+    }
+
     // 🔥 STEP 2: LOOKUP SESSION - Find session by uid
     let surveySession = null;
     let vendor = null;

@@ -336,8 +336,22 @@ export const validatePreScreener = async (req: Request, res: Response) => {
   try {
     console.log("=== VALIDATE PRE SCREENER ENDPOINT DEBUG ===");
     const { token, preScreenerAnswers, userId } = req.body;
-    
+
     console.log("Received data:", { token, preScreenerAnswers, userId });
+
+    // 🔥 VALIDATION: Reject if userId looks like an IP address
+    const isIpAddress = (str: string) => {
+      const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+      return ipPattern.test(str);
+    };
+
+    if (userId && isIpAddress(String(userId))) {
+      console.error("❌ INVALID USERID: IP address detected instead of user ID:", userId);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid userId parameter: IP address detected. Please provide a valid user ID.'
+      });
+    }
 
     if (!token) {
       return res.status(400).json({
@@ -744,6 +758,20 @@ export const handleVendorRedirect = async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         message: 'Missing required parameters: pid, uid, status'
+      });
+    }
+
+    // 🔥 VALIDATION: Reject if uid looks like an IP address
+    const isIpAddress = (str: string) => {
+      const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+      return ipPattern.test(str);
+    };
+
+    if (isIpAddress(String(uid))) {
+      console.error("❌ INVALID UID: IP address detected instead of user ID:", uid);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid uid parameter: IP address detected. Please provide a valid user ID.'
       });
     }
 
