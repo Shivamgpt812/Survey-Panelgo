@@ -370,28 +370,11 @@ export const validatePreScreener = async (req: Request, res: Response) => {
         // User failed pre-screener - log as terminated and redirect
         const ip = req.ip || req.connection.remoteAddress || 'unknown';
         
-        // Detect if userId looks like an IP address - if so, try to find original user ID from RespondentMapping
-        let uidToLog = userId || 'pre-screener-validation';
-        const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
-        if (userId && ipPattern.test(String(userId))) {
-          console.log("⚠️ userId appears to be an IP address, looking up original user ID from RespondentMapping...");
-          try {
-            const { default: RespondentMapping } = await import('../models/RespondentMapping.js');
-            const mapping = await RespondentMapping.findOne({ uid: String(userId) });
-            if (mapping && mapping.uid) {
-              console.log("✅ Found original user ID from mapping:", mapping.uid);
-              uidToLog = mapping.uid;
-            }
-          } catch (e) {
-            console.error("❌ Error looking up original user ID:", e);
-          }
-        }
-        
         // Log the failed pre-screener attempt
         try {
           await SurveyRedirectLogs.create({
             pid: survey.pid,
-            uid: uidToLog,
+            uid: userId || 'pre-screener-validation',
             status: 2, // Terminated
             statusText: 'Terminated - Failed Pre-Screener',
             ipAddress: ip,
@@ -514,26 +497,9 @@ export const validatePreScreener = async (req: Request, res: Response) => {
       if (survey) {
         const ip = req.ip || req.connection.remoteAddress || 'unknown';
         
-        // Detect if userId looks like an IP address - if so, try to find original user ID from RespondentMapping
-        let uidToLog = userId || 'validation-error';
-        const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
-        if (userId && ipPattern.test(String(userId))) {
-          console.log("⚠️ userId appears to be an IP address, looking up original user ID from RespondentMapping...");
-          try {
-            const { default: RespondentMapping } = await import('../models/RespondentMapping.js');
-            const mapping = await RespondentMapping.findOne({ uid: String(userId) });
-            if (mapping && mapping.uid) {
-              console.log("✅ Found original user ID from mapping:", mapping.uid);
-              uidToLog = mapping.uid;
-            }
-          } catch (e) {
-            console.error("❌ Error looking up original user ID:", e);
-          }
-        }
-        
         await SurveyRedirectLogs.create({
           pid: survey.pid,
-          uid: uidToLog,
+          uid: userId || 'validation-error',
           status: 2, // Terminated
           statusText: 'Terminated - Validation Error',
           ipAddress: ip,
@@ -627,34 +593,17 @@ export const submitResponse = async (req: Request, res: Response) => {
         const uid = userId.trim();
         const ip = req.ip || req.connection.remoteAddress || 'unknown';
         
-        // Detect if uid looks like an IP address - if so, try to find original user ID from RespondentMapping
-        let uidToLog = uid;
-        const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
-        if (uid && ipPattern.test(String(uid))) {
-          console.log("⚠️ uid appears to be an IP address, looking up original user ID from RespondentMapping...");
-          try {
-            const { default: RespondentMapping } = await import('../models/RespondentMapping.js');
-            const mapping = await RespondentMapping.findOne({ uid: String(uid) });
-            if (mapping && mapping.uid) {
-              console.log("✅ Found original user ID from mapping:", mapping.uid);
-              uidToLog = mapping.uid;
-            }
-          } catch (e) {
-            console.error("❌ Error looking up original user ID:", e);
-          }
-        }
-        
         // Log the failed pre-screener attempt
         try {
           await SurveyRedirectLogs.create({
             pid: survey.pid,
-            uid: uidToLog,
+            uid,
             status: 2, // Terminated
             statusText: 'Terminated - Failed Pre-Screener',
             ipAddress: ip,
             userAgent: req.get('User-Agent') || 'unknown'
           });
-          console.log("✅ Pre-screener failure logged:", { pid: survey.pid, uid: uidToLog, status: 2 });
+          console.log("✅ Pre-screener failure logged:", { pid: survey.pid, uid, status: 2 });
         } catch (logError) {
           console.error("❌ Error logging pre-screener failure:", logError);
         }
@@ -709,34 +658,17 @@ export const submitResponse = async (req: Request, res: Response) => {
       answers
     });
 
-    // Detect if uid looks like an IP address - if so, try to find original user ID from RespondentMapping
-    let uidToLog = uid;
-    const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
-    if (uid && ipPattern.test(String(uid))) {
-      console.log("⚠️ uid appears to be an IP address, looking up original user ID from RespondentMapping...");
-      try {
-        const { default: RespondentMapping } = await import('../models/RespondentMapping.js');
-        const mapping = await RespondentMapping.findOne({ uid: String(uid) });
-        if (mapping && mapping.uid) {
-          console.log("✅ Found original user ID from mapping:", mapping.uid);
-          uidToLog = mapping.uid;
-        }
-      } catch (e) {
-        console.error("❌ Error looking up original user ID:", e);
-      }
-    }
-
     // Log redirect data for analytics
     try {
       await SurveyRedirectLogs.create({
         pid: survey.pid,
-        uid: uidToLog,
+        uid,
         status: 1, // Completed survey
         statusText: 'Completed',
         ipAddress: ip,
         userAgent: req.get('User-Agent') || 'unknown'
       });
-      console.log("✅ Redirect log saved for vendor survey:", { pid: survey.pid, uid: uidToLog, status: 1 });
+      console.log("✅ Redirect log saved for vendor survey:", { pid: survey.pid, uid, status: 1 });
     } catch (logError) {
       console.error("❌ Error saving redirect log:", logError);
       // Don't fail the response if logging fails
@@ -831,35 +763,18 @@ export const handleVendorRedirect = async (req: Request, res: Response) => {
     const vendor = survey.vendor_id as any;
     const statusCode = parseInt(status as string);
     
-    // Detect if uid looks like an IP address - if so, try to find original user ID from RespondentMapping
-    let uidToLog = uid as string;
-    const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
-    if (uid && ipPattern.test(String(uid))) {
-      console.log("⚠️ uid appears to be an IP address, looking up original user ID from RespondentMapping...");
-      try {
-        const { default: RespondentMapping } = await import('../models/RespondentMapping.js');
-        const mapping = await RespondentMapping.findOne({ uid: String(uid) });
-        if (mapping && mapping.uid) {
-          console.log("✅ Found original user ID from mapping:", mapping.uid);
-          uidToLog = mapping.uid;
-        }
-      } catch (e) {
-        console.error("❌ Error looking up original user ID:", e);
-      }
-    }
-    
     // Log redirect data for analytics
     try {
       const statusText = getStatusText(statusCode);
       await SurveyRedirectLogs.create({
         pid: pid as string,
-        uid: uidToLog,
+        uid: uid as string,
         status: statusCode,
         statusText,
         ipAddress: req.ip || req.connection.remoteAddress || 'unknown',
         userAgent: req.get('User-Agent') || 'unknown'
       });
-      console.log("✅ Vendor redirect log saved:", { pid, uid: uidToLog, status: statusCode });
+      console.log("✅ Vendor redirect log saved:", { pid, uid, status: statusCode });
     } catch (logError) {
       console.error("❌ Error saving vendor redirect log:", logError);
     }
