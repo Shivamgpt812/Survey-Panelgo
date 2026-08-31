@@ -181,14 +181,25 @@ const PreScreenerPage: React.FC = () => {
   }
 
   // Check if uid is required for external surveys
-  if (survey.isExternal && !uid && !vendorId && !user) {
+  // ALWAYS require uid for external surveys (even for logged-in users and vendors)
+  console.log('=== UID VALIDATION CHECK ===');
+  console.log('survey.isExternal:', survey.isExternal);
+  console.log('uid value:', uid);
+  console.log('uid is empty?:', !uid || uid.trim() === '');
+  console.log('vendorId:', vendorId);
+  console.log('user:', user);
+  console.log('Should block?:', survey.isExternal && (!uid || uid.trim() === ''));
+  console.log('===========================');
+  
+  if (survey.isExternal && (!uid || uid.trim() === '')) {
+    console.log('UID VALIDATION FAILED - Blocking access (uid required for all external surveys)');
     return (
       <div className="min-h-screen flex items-center justify-center bg-periwinkle p-4">
         <PlayfulCard className="p-8 text-center max-w-md">
           <AlertCircle className="w-16 h-16 text-orange-500 mx-auto mb-4" />
           <h2 className="font-outfit font-bold text-2xl text-navy mb-2">User ID Required</h2>
           <p className="font-jakarta text-navy-light mb-4">
-            This survey requires a user ID (uid) parameter to access.
+            This survey requires a valid user ID (uid) parameter to access.
           </p>
           <div className="bg-yellow/20 border-2 border-navy rounded-2xl p-4 mb-6">
             <p className="font-mono text-sm text-navy mb-2">Expected URL format:</p>
