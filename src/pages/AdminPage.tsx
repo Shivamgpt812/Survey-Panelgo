@@ -1090,14 +1090,14 @@ const AdminPage: React.FC = () => {
                             </button>
                             <button
                               onClick={() => {
-                                const link = `${window.location.origin}/survey/${survey.id}/precheck`;
+                                const link = `${window.location.origin}/survey/${survey.id}/precheck?uid=`;
                                 navigator.clipboard.writeText(link);
-                                addToast('✓ Link copied to clipboard!', 'success');
+                                addToast('✓ Link copied! Add uid parameter value before sharing.', 'success');
                               }}
                               className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-white border-2 border-navy rounded-pill font-jakarta font-medium text-sm text-navy hover:bg-yellow/30 transition-colors"
                             >
                               <Copy className="w-4 h-4" />
-                              Copy Survey Link
+                              Copy Survey Link (with uid)
                             </button>
                           </>
                         ) : (
@@ -1136,14 +1136,14 @@ const AdminPage: React.FC = () => {
                         </button>
                         <button
                           onClick={() => {
-                            const link = `${window.location.origin}/survey/${survey.id}/precheck`;
+                            const link = `${window.location.origin}/survey/${survey.id}/precheck?uid=`;
                             navigator.clipboard.writeText(link);
-                            addToast('✓ Survey link copied to clipboard!', 'success');
+                            addToast('✓ Survey link copied! Add uid parameter value before sharing.', 'success');
                           }}
                           className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-white border-2 border-navy rounded-pill font-jakarta font-medium text-sm text-navy hover:bg-yellow/30 transition-colors"
                         >
                           <Copy className="w-4 h-4" />
-                          Copy Survey Link
+                          Copy Survey Link (with uid)
                         </button>
                       </div>
                     )}

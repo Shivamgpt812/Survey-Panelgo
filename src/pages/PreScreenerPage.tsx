@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Coins,
@@ -37,9 +37,15 @@ const PreScreenerPage: React.FC = () => {
   const { surveyId } = useParams<{ surveyId: string }>();
   const { addToast } = useToast();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
 
   const [survey, setSurvey] = useState<Survey | undefined>(undefined);
   const [loadingSurvey, setLoadingSurvey] = useState(true);
+
+  // Get uid from URL parameters
+  const uid = searchParams.get('uid');
+  
+  console.log('PreScreenerPage loaded - UID:', uid);
 
   // Check for vendor session
   const [vendorId, setVendorId] = useState<string | null>(null);
@@ -174,6 +180,30 @@ const PreScreenerPage: React.FC = () => {
     );
   }
 
+  // Check if uid is required for external surveys
+  if (survey.isExternal && !uid && !vendorId && !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-periwinkle p-4">
+        <PlayfulCard className="p-8 text-center max-w-md">
+          <AlertCircle className="w-16 h-16 text-orange-500 mx-auto mb-4" />
+          <h2 className="font-outfit font-bold text-2xl text-navy mb-2">User ID Required</h2>
+          <p className="font-jakarta text-navy-light mb-4">
+            This survey requires a user ID (uid) parameter to access.
+          </p>
+          <div className="bg-yellow/20 border-2 border-navy rounded-2xl p-4 mb-6">
+            <p className="font-mono text-sm text-navy mb-2">Expected URL format:</p>
+            <p className="font-mono text-xs text-navy-light break-all">
+              {window.location.origin}/survey/{surveyId}/precheck?uid=YOUR_USER_ID
+            </p>
+          </div>
+          <p className="font-jakarta text-sm text-navy-light">
+            Please contact the survey provider to get the correct link with your user ID.
+          </p>
+        </PlayfulCard>
+      </div>
+    );
+  }
+
   if (preScreenerQuestions.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-periwinkle">
@@ -270,6 +300,7 @@ const PreScreenerPage: React.FC = () => {
     console.log('Survey link:', survey?.link);
     console.log('Current vendorId:', vendorId);
     console.log('Current vendor:', vendor);
+    console.log('UID from URL:', uid);
     console.log('=====================================');
 
     const recordStart = async () => {
@@ -292,6 +323,24 @@ const PreScreenerPage: React.FC = () => {
       }
     };
 
+    // Helper function to append uid to external link
+    const appendUidToLink = (link: string): string => {
+      console.log('=== APPEND UID DEBUG ===');
+      console.log('uid value:', uid);
+      console.log('original link:', link);
+      
+      if (!uid) {
+        console.log('No uid found, returning original link');
+        return link;
+      }
+      
+      const separator = link.includes('?') ? '&' : '?';
+      const finalLink = `${link}${separator}uid=${uid}`;
+      console.log('final link with uid:', finalLink);
+      console.log('=======================');
+      return finalLink;
+    };
+
     if (vendorId) {
       console.log('Vendor flow detected');
       await recordStart();
@@ -308,10 +357,14 @@ const PreScreenerPage: React.FC = () => {
           navigate(`/survey/${survey!.id}/take${vendorId ? `?vendorId=${vendorId}` : ''}`);
         } else if (vendor) {
           console.log('Vendor external survey - redirecting to vendor complete URL:', vendor.redirectLinks.complete);
-          window.location.href = vendor.redirectLinks.complete;
+          const completeUrl = appendUidToLink(vendor.redirectLinks.complete);
+          console.log('Complete URL with uid:', completeUrl);
+          window.location.href = completeUrl;
         } else {
           console.log('Opening external survey link:', survey?.link);
-          window.open(survey?.link, '_blank');
+          const externalLink = appendUidToLink(survey?.link || '');
+          console.log('External link with uid:', externalLink);
+          window.open(externalLink, '_blank');
           navigateToDashboard();
         }
       }, 3000);
@@ -331,7 +384,9 @@ const PreScreenerPage: React.FC = () => {
           navigate(`/survey/${survey!.id}/take${vendorId ? `?vendorId=${vendorId}` : ''}`);
         } else if (survey!.link) {
           console.log('Opening external survey link:', survey!.link);
-          window.open(survey!.link, '_blank');
+          const externalLink = appendUidToLink(survey!.link);
+          console.log('External link with uid:', externalLink);
+          window.open(externalLink, '_blank');
           navigateToDashboard();
         } else {
           console.log('No survey link, going to dashboard');
