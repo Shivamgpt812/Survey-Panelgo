@@ -66,7 +66,20 @@ const VendorSurveySchema = new Schema<IVendorSurvey>({
     enabled: {
       type: Boolean,
       required: true,
-    }
+    },
+    isCustom: {
+      type: Boolean,
+      default: false,
+    },
+    questionType: {
+      type: String,
+      enum: ['text', 'mcq', 'number'],
+      default: 'text',
+    },
+    correctAnswer: {
+      type: String,
+      required: false,
+    },
   }],
   vendor_id: {
     type: Schema.Types.ObjectId,

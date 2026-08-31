@@ -538,6 +538,7 @@ export default function VendorSurveyPublicPage() {
                         {preScreen.question} <span className="text-red-500">*</span>
                       </label>
 
+                      {/* Age input (number type for age/default numeric) */}
                       {preScreen.type === 'age' ? (
                         <input
                           type="number"
@@ -548,6 +549,7 @@ export default function VendorSurveyPublicPage() {
                           className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
                         />
                       ) : preScreen.type === 'gender' ? (
+                        /* Gender select (MCQ type for gender/default select) */
                         <select
                           required
                           value={preScreenerAnswers[preScreen.type] || ''}
@@ -559,6 +561,39 @@ export default function VendorSurveyPublicPage() {
                             <option key={option} value={option}>{option}</option>
                           ))}
                         </select>
+                      ) : preScreen.type === 'mcq' || preScreen.questionType === 'mcq' ? (
+                        /* Custom MCQ - use value array for options */
+                        <select
+                          required
+                          value={preScreenerAnswers[preScreen.type] || ''}
+                          onChange={(e) => handlePreScreenerAnswer(preScreen.type, e.target.value)}
+                          className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
+                        >
+                          <option value="">Select an option</option>
+                          {(Array.isArray(preScreen.value) ? preScreen.value : preScreen.options || []).map((option: string) => (
+                            <option key={option} value={option}>{option}</option>
+                          ))}
+                        </select>
+                      ) : preScreen.questionType === 'number' ? (
+                        /* Custom Number */
+                        <input
+                          type="number"
+                          required
+                          value={preScreenerAnswers[preScreen.type] || ''}
+                          onChange={(e) => handlePreScreenerAnswer(preScreen.type, e.target.value)}
+                          placeholder="Enter a number"
+                          className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
+                        />
+                      ) : preScreen.questionType === 'text' ? (
+                        /* Custom Text */
+                        <input
+                          type="text"
+                          required
+                          value={preScreenerAnswers[preScreen.type] || ''}
+                          onChange={(e) => handlePreScreenerAnswer(preScreen.type, e.target.value)}
+                          placeholder="Enter your answer"
+                          className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet focus:border-transparent transition-all"
+                        />
                       ) : null}
                     </div>
                   </div>

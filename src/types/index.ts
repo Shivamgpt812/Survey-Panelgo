@@ -13,9 +13,10 @@ export interface User {
 export interface PreScreenerQuestion {
   id: string;
   question: string;
-  type: "text" | "number" | "boolean";
+  type: "text" | "number" | "boolean" | "mcq";
   condition: "equals" | "greater_than" | "less_than" | "not_equals";
-  value: string | number | boolean;
+  value: string | number | boolean | string[]; // string[] for MCQ options
+  correctAnswer?: string; // For MCQ correct answer
 }
 
 export interface Survey {

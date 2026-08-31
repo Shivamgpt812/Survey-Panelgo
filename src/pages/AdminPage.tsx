@@ -50,6 +50,7 @@ import type {
 import { downloadExcel } from '@/lib/excel';
 import SurveyLogs from '@/components/admin/SurveyLogs';
 import RedirectAnalytics from '@/components/admin/RedirectAnalytics';
+import { CustomPreScreenerForm } from '@/components/CustomPreScreenerForm';
 import {
   LineChart,
   Line,
@@ -145,6 +146,7 @@ const AdminPage: React.FC = () => {
 
   const [selectedPreScreeners, setSelectedPreScreeners] = useState<PreScreenerQuestion[]>([]);
   const [showPreScreenerForm, setShowPreScreenerForm] = useState(false);
+  const [customPreScreeners, setCustomPreScreeners] = useState<PreScreenerQuestion[]>([]);
 
   // Vendor form state
   const [vendorForm, setVendorForm] = useState({
@@ -190,6 +192,7 @@ const AdminPage: React.FC = () => {
         difficulty: 'easy',
       });
       setSelectedPreScreeners([]);
+      setCustomPreScreeners([]);
       setInternalQuestions([]);
       addToast('🎉 Survey created successfully!', 'success');
       setActiveTab('surveys');
@@ -326,6 +329,28 @@ const AdminPage: React.FC = () => {
       }
       return [...prev, ps];
     });
+  };
+
+  const addCustomPreScreener = () => {
+    const newQuestion: PreScreenerQuestion = {
+      id: `custom_${Date.now()}`,
+      question: '',
+      type: 'text',
+      condition: 'equals',
+      value: '',
+    };
+    setCustomPreScreeners([...customPreScreeners, newQuestion]);
+  };
+
+  const removeCustomPreScreener = (id: string) => {
+    setCustomPreScreeners(customPreScreeners.filter((q) => q.id !== id));
+    setSelectedPreScreeners(selectedPreScreeners.filter((q) => q.id !== id));
+  };
+
+  const updateCustomPreScreener = (id: string, updates: Partial<PreScreenerQuestion>) => {
+    setCustomPreScreeners(customPreScreeners.map((q) => (q.id === id ? { ...q, ...updates } : q)));
+    // Also update in selectedPreScreeners if it exists there
+    setSelectedPreScreeners(selectedPreScreeners.map((q) => (q.id === id ? { ...q, ...updates } : q)));
   };
 
   // Vendor handlers
@@ -1052,15 +1077,28 @@ const AdminPage: React.FC = () => {
                     </div>
 
                     {survey.isExternal ? (
-                      <a
-                        href={survey.link ? (survey.link.startsWith('http') ? survey.link : `https://${survey.link}`) : '#'}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-periwinkle border-2 border-navy rounded-pill font-jakarta font-medium text-sm text-navy hover:bg-violet hover:text-white transition-colors"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        View External Link
-                      </a>
+                      <>
+                        {/* If survey has prescreener, link to prescreener page, otherwise direct link */}
+                        {survey.preScreener && survey.preScreener.length > 0 ? (
+                          <button
+                            onClick={() => navigate(`/survey/${survey.id}/precheck`)}
+                            className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-periwinkle border-2 border-navy rounded-pill font-jakarta font-medium text-sm text-navy hover:bg-violet hover:text-white transition-colors"
+                          >
+                            <FileText className="w-4 h-4" />
+                            View Survey (With Pre-screener)
+                          </button>
+                        ) : (
+                          <a
+                            href={survey.link ? (survey.link.startsWith('http') ? survey.link : `https://${survey.link}`) : '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-periwinkle border-2 border-navy rounded-pill font-jakarta font-medium text-sm text-navy hover:bg-violet hover:text-white transition-colors"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            View External Link
+                          </a>
+                        )}
+                      </>
                     ) : (
                       <button
                         onClick={() => navigate(`/survey/${survey.id}?preview=true`)}
@@ -1394,56 +1432,15 @@ const AdminPage: React.FC = () => {
                   </div>
 
                   {showPreScreenerForm && (
-                    <div className="mt-6 space-y-3">
-                      <p className="font-jakarta text-sm text-navy-light mb-4">
-                        Select questions to filter participants:
-                      </p>
-                      {templateList.map((ps) => (
-                        <button
-                          key={ps.id}
-                          type="button"
-                          onClick={() => togglePreScreener(ps)}
-                          className={`w-full flex items-center gap-4 p-4 border-2 border-navy rounded-2xl transition-all text-left ${selectedPreScreeners.find((p) => p.id === ps.id)
-                            ? 'bg-violet text-white shadow-hard'
-                            : 'bg-white hover:bg-periwinkle'
-                            }`}
-                        >
-                          <div
-                            className={`w-6 h-6 border-2 border-navy rounded flex items-center justify-center ${selectedPreScreeners.find((p) => p.id === ps.id) ? 'bg-white' : 'bg-white'
-                              }`}
-                          >
-                            {selectedPreScreeners.find((p) => p.id === ps.id) && (
-                              <Check className="w-4 h-4 text-violet" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <p
-                              className={`font-jakarta font-medium ${selectedPreScreeners.find((p) => p.id === ps.id) ? 'text-white' : 'text-navy'
-                                }`}
-                            >
-                              {ps.question}
-                            </p>
-                            <p
-                              className={`font-mono text-xs ${selectedPreScreeners.find((p) => p.id === ps.id)
-                                ? 'text-white/70'
-                                : 'text-navy-light'
-                                }`}
-                            >
-                              {ps.condition} {String(ps.value)}
-                            </p>
-                          </div>
-                        </button>
-                      ))}
-
-                      {selectedPreScreeners.length > 0 && (
-                        <div className="mt-4 p-4 bg-yellow/30 border-2 border-navy rounded-2xl">
-                          <p className="font-jakarta text-sm text-navy">
-                            <span className="font-semibold">{selectedPreScreeners.length}</span> pre-screener
-                            question(s) selected
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                    <CustomPreScreenerForm
+                      templateList={templateList}
+                      customPreScreeners={customPreScreeners}
+                      selectedPreScreeners={selectedPreScreeners}
+                      onTogglePreScreener={togglePreScreener}
+                      onAddCustom={addCustomPreScreener}
+                      onRemoveCustom={removeCustomPreScreener}
+                      onUpdateCustom={updateCustomPreScreener}
+                    />
                   )}
                 </PlayfulCard>
 
@@ -1707,56 +1704,15 @@ const AdminPage: React.FC = () => {
                   </div>
 
                   {showPreScreenerForm && (
-                    <div className="mt-6 space-y-3">
-                      <p className="font-jakarta text-sm text-navy-light mb-4">
-                        Select questions to filter participants:
-                      </p>
-                      {templateList.map((ps) => (
-                        <button
-                          key={ps.id}
-                          type="button"
-                          onClick={() => togglePreScreener(ps)}
-                          className={`w-full flex items-center gap-4 p-4 border-2 border-navy rounded-2xl transition-all text-left ${selectedPreScreeners.find((p) => p.id === ps.id)
-                            ? 'bg-violet text-white shadow-hard'
-                            : 'bg-white hover:bg-periwinkle'
-                            }`}
-                        >
-                          <div
-                            className={`w-6 h-6 border-2 border-navy rounded flex items-center justify-center ${selectedPreScreeners.find((p) => p.id === ps.id) ? 'bg-white' : 'bg-white'
-                              }`}
-                          >
-                            {selectedPreScreeners.find((p) => p.id === ps.id) && (
-                              <Check className="w-4 h-4 text-violet" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <p
-                              className={`font-jakarta font-medium ${selectedPreScreeners.find((p) => p.id === ps.id) ? 'text-white' : 'text-navy'
-                                }`}
-                            >
-                              {ps.question}
-                            </p>
-                            <p
-                              className={`font-mono text-xs ${selectedPreScreeners.find((p) => p.id === ps.id)
-                                ? 'text-white/70'
-                                : 'text-navy-light'
-                                }`}
-                            >
-                              {ps.condition} {String(ps.value)}
-                            </p>
-                          </div>
-                        </button>
-                      ))}
-
-                      {selectedPreScreeners.length > 0 && (
-                        <div className="mt-4 p-4 bg-yellow/30 border-2 border-navy rounded-2xl">
-                          <p className="font-jakarta text-sm text-navy">
-                            <span className="font-semibold">{selectedPreScreeners.length}</span> pre-screener
-                            question(s) selected
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                    <CustomPreScreenerForm
+                      templateList={templateList}
+                      customPreScreeners={customPreScreeners}
+                      selectedPreScreeners={selectedPreScreeners}
+                      onTogglePreScreener={togglePreScreener}
+                      onAddCustom={addCustomPreScreener}
+                      onRemoveCustom={removeCustomPreScreener}
+                      onUpdateCustom={updateCustomPreScreener}
+                    />
                   )}
                 </PlayfulCard>
 

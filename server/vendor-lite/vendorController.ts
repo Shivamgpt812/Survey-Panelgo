@@ -211,7 +211,7 @@ const validatePreScreenerAnswers = (preScreenerQuestions: any[], responses: any)
     if (typeof userAnswer === 'string' && userAnswer.trim() !== '') {
       // Try to convert numeric strings to numbers for comparison
       const numericValue = Number(userAnswer);
-      if (!isNaN(numericValue) && question.type === 'age') {
+      if (!isNaN(numericValue) && (question.type === 'age' || question.questionType === 'number')) {
         userAnswer = numericValue;
       } else {
         userAnswer = userAnswer.trim();
@@ -220,7 +220,7 @@ const validatePreScreenerAnswers = (preScreenerQuestions: any[], responses: any)
     
     if (typeof requiredValue === 'string' && requiredValue.trim() !== '') {
       const numericValue = Number(requiredValue);
-      if (!isNaN(numericValue) && question.type === 'age') {
+      if (!isNaN(numericValue) && (question.type === 'age' || question.questionType === 'number')) {
         requiredValue = numericValue;
       } else {
         requiredValue = requiredValue.trim();
@@ -229,6 +229,7 @@ const validatePreScreenerAnswers = (preScreenerQuestions: any[], responses: any)
     
     console.log("Validating question:", {
       type: question.type,
+      questionType: question.questionType,
       userAnswer,
       requiredValue,
       operator: question.operator,
@@ -247,44 +248,72 @@ const validatePreScreenerAnswers = (preScreenerQuestions: any[], responses: any)
     
     let passed = false;
     
-    if (question.type === 'age') {
-      const userAge = parseInt(userAnswer);
-      const requiredAge = parseInt(requiredValue);
-      console.log("Age validation:", { userAge, requiredAge, operator: question.operator });
+    // Handle different question types
+    if (question.type === 'age' || question.questionType === 'number') {
+      // Numeric validation with operators
+      const userNum = parseFloat(userAnswer);
+      const requiredNum = parseFloat(requiredValue);
+      console.log("Numeric validation:", { userNum, requiredNum, operator: question.operator });
       
-      if (isNaN(userAge)) {
-        console.log("❌ VALIDATION FAILED: Invalid age value");
+      if (isNaN(userNum)) {
+        console.log("❌ VALIDATION FAILED: Invalid numeric value");
         return { 
           passed: false, 
           failedCriteria: question,
-          debug: { reason: 'invalid_age', userAnswer }
+          debug: { reason: 'invalid_number', userAnswer }
         };
       }
       
       switch (question.operator) {
         case '>=':
-          passed = userAge >= requiredAge;
+          passed = userNum >= requiredNum;
           break;
         case '>':
-          passed = userAge > requiredAge;
+          passed = userNum > requiredNum;
           break;
         case '<=':
-          passed = userAge <= requiredAge;
+          passed = userNum <= requiredNum;
           break;
         case '<':
-          passed = userAge < requiredAge;
+          passed = userNum < requiredNum;
           break;
         case '==':
         case '=':
-          passed = userAge === requiredAge;
+          passed = userNum === requiredNum;
+          break;
+        case '!=':
+          passed = userNum !== requiredNum;
           break;
         default:
-          passed = userAge >= requiredAge;
+          passed = userNum >= requiredNum;
       }
-      console.log("Age validation result:", passed);
-    } else if (question.type === 'gender') {
-      passed = String(userAnswer).toLowerCase() === String(requiredValue).toLowerCase();
-      console.log("Gender validation:", { userAnswer, requiredValue, passed });
+      console.log("Numeric validation result:", passed);
+    } else if (question.type === 'gender' || question.questionType === 'mcq' || question.type === 'mcq') {
+      // MCQ/Select validation (exact match)
+      // For MCQ custom questions, use correctAnswer field if available
+      const expectedAnswer = question.correctAnswer || requiredValue;
+      passed = String(userAnswer).toLowerCase() === String(expectedAnswer).toLowerCase();
+      console.log("MCQ/Select validation:", { userAnswer, expectedAnswer, passed });
+    } else if (question.questionType === 'text') {
+      // Text validation with operators
+      const userText = String(userAnswer).toLowerCase().trim();
+      const requiredText = String(requiredValue).toLowerCase().trim();
+      
+      switch (question.operator) {
+        case '=':
+        case '==':
+          passed = userText === requiredText;
+          break;
+        case '!=':
+          passed = userText !== requiredText;
+          break;
+        case 'contains':
+          passed = userText.includes(requiredText);
+          break;
+        default:
+          passed = userText === requiredText;
+      }
+      console.log("Text validation:", { userText, requiredText, operator: question.operator, passed });
     } else {
       // 🔥 CRITICAL FIX: For custom/other question types, use generic comparison
       console.log(`Custom question type: ${question.type}, using generic comparison`);

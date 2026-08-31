@@ -630,6 +630,35 @@ const PreScreenerPage: React.FC = () => {
                   />
                 )}
 
+                {currentQuestion.type === 'mcq' && Array.isArray(currentQuestion.value) && (
+                  <div className="space-y-3">
+                    {currentQuestion.value.map((option: string) => (
+                      <button
+                        key={option}
+                        onClick={() => handleAnswer(option)}
+                        className={`w-full flex items-center gap-4 p-4 border-2 border-navy rounded-2xl transition-all ${getCurrentAnswer() === option
+                          ? 'bg-violet text-white shadow-hard'
+                          : 'bg-white hover:bg-periwinkle'
+                          }`}
+                      >
+                        <div
+                          className={`w-6 h-6 border-2 border-navy rounded-full flex items-center justify-center ${getCurrentAnswer() === option ? 'bg-white' : 'bg-white'
+                            }`}
+                        >
+                          {getCurrentAnswer() === option && <div className="w-3 h-3 bg-violet rounded-full" />}
+                        </div>
+                        <span
+                          className={`font-jakarta text-left flex-1 ${getCurrentAnswer() === option ? 'text-white' : 'text-navy'
+                            }`}
+                        >
+                          {option}
+                        </span>
+                        {getCurrentAnswer() === option && <Check className="w-5 h-5 text-white" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {currentQuestion.type === 'boolean' && (
                   <div className="space-y-3">
                     {[

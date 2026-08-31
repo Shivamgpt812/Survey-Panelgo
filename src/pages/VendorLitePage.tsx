@@ -99,7 +99,8 @@ export default function VendorLitePage() {
       question: 'What is your age?',
       operator: '>=',
       value: 18,
-      enabled: false
+      enabled: false,
+      isCustom: false
     },
     {
       type: 'gender',
@@ -107,7 +108,8 @@ export default function VendorLitePage() {
       operator: '=',
       value: '',
       options: ['Male', 'Female', 'Other'],
-      enabled: false
+      enabled: false,
+      isCustom: false
     }
   ]);
 
@@ -573,6 +575,30 @@ export default function VendorLitePage() {
     const updated = [...preScreenerQuestions];
     updated[index].enabled = !updated[index].enabled;
     setPreScreenerQuestions(updated);
+  };
+
+  const addCustomPreScreenerQuestion = () => {
+    const newQuestion = {
+      type: `custom_${Date.now()}`,
+      question: '',
+      operator: '=',
+      value: '',
+      options: [],
+      enabled: true,
+      isCustom: true,
+      questionType: 'text' // text, mcq, number
+    };
+    setPreScreenerQuestions([...preScreenerQuestions, newQuestion]);
+  };
+
+  const removePreScreenerQuestion = (index: number) => {
+    const updated = preScreenerQuestions.filter((_, i) => i !== index);
+    setPreScreenerQuestions(updated);
+  };
+
+  const updateCustomQuestionOptions = (index: number, optionsText: string) => {
+    const options = optionsText.split(',').map(opt => opt.trim()).filter(opt => opt.length > 0);
+    updatePreScreenerQuestion(index, 'options', options);
   };
 
   // ---------------------------------------------------------------------------
@@ -1066,7 +1092,7 @@ export default function VendorLitePage() {
               {/* Pre-Screener Questions Section - Only show for internal surveys */}
               {surveyForm.type === 'internal' && (
                 <div>
-                  <div className="flex justify-between items-center mb-6">
+                  <div className="mb-6">
                     <label className="block text-base font-semibold text-gray-700">Pre-Screener Questions</label>
                     <span className="text-sm text-gray-500">Set criteria to qualify users</span>
                   </div>
@@ -1082,24 +1108,56 @@ export default function VendorLitePage() {
                             className="mr-3 w-5 h-5 text-violet focus:ring-violet focus:ring-2"
                           />
                           <label className="text-base font-semibold text-gray-700">
-                            {preScreen.type === 'age' ? 'Age Requirement' : 'Gender Requirement'}
+                            {preScreen.isCustom 
+                              ? 'Custom Question' 
+                              : preScreen.type === 'age' 
+                              ? 'Age Requirement' 
+                              : 'Gender Requirement'}
                           </label>
                         </div>
+                        {preScreen.isCustom && (
+                          <button
+                            type="button"
+                            onClick={() => removePreScreenerQuestion(index)}
+                            className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                          >
+                            Remove
+                          </button>
+                        )}
                       </div>
 
                       {preScreen.enabled && (
                         <div className="space-y-3">
+                          {/* Question Text */}
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">Question</label>
                             <input
                               type="text"
                               value={preScreen.question}
                               onChange={(e) => updatePreScreenerQuestion(index, 'question', e.target.value)}
+                              placeholder="Enter your question"
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
                             />
                           </div>
 
-                          {preScreen.type === 'age' ? (
+                          {/* Question Type Selector (for custom questions only) */}
+                          {preScreen.isCustom && (
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Question Type</label>
+                              <select
+                                value={preScreen.questionType || 'text'}
+                                onChange={(e) => updatePreScreenerQuestion(index, 'questionType', e.target.value)}
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
+                              >
+                                <option value="text">Text Answer</option>
+                                <option value="mcq">Multiple Choice (MCQ)</option>
+                                <option value="number">Number</option>
+                              </select>
+                            </div>
+                          )}
+
+                          {/* Operator and Value based on question type */}
+                          {preScreen.type === 'age' || (!preScreen.isCustom && preScreen.type !== 'gender') ? (
                             <div className="flex items-center space-x-2">
                               <label className="text-xs font-medium text-gray-600">Must be</label>
                               <select
@@ -1111,6 +1169,7 @@ export default function VendorLitePage() {
                                 <option value=">">&gt; (Greater than)</option>
                                 <option value="<=">&lt;= (At most)</option>
                                 <option value="<">&lt; (Less than)</option>
+                                <option value="==">=== (Equal to)</option>
                               </select>
                               <input
                                 type="number"
@@ -1120,7 +1179,7 @@ export default function VendorLitePage() {
                               />
                               <label className="text-xs font-medium text-gray-600">years old</label>
                             </div>
-                          ) : (
+                          ) : preScreen.type === 'gender' && !preScreen.isCustom ? (
                             <div className="flex items-center space-x-2">
                               <label className="text-xs font-medium text-gray-600">Must be</label>
                               <select
@@ -1134,11 +1193,105 @@ export default function VendorLitePage() {
                                 )) || []}
                               </select>
                             </div>
-                          )}
+                          ) : preScreen.isCustom && preScreen.questionType === 'mcq' ? (
+                            /* MCQ Custom Question */
+                            <div className="space-y-2">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  Options (comma-separated)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={preScreen.options?.join(', ') || ''}
+                                  onChange={(e) => updateCustomQuestionOptions(index, e.target.value)}
+                                  placeholder="e.g., Option 1, Option 2, Option 3"
+                                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  Correct Answer
+                                </label>
+                                <select
+                                  value={preScreen.value}
+                                  onChange={(e) => updatePreScreenerQuestion(index, 'value', e.target.value)}
+                                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
+                                >
+                                  <option value="">Select correct answer</option>
+                                  {preScreen.options?.map((option: string) => (
+                                    <option key={option} value={option}>{option}</option>
+                                  )) || []}
+                                </select>
+                              </div>
+                            </div>
+                          ) : preScreen.isCustom && preScreen.questionType === 'number' ? (
+                            /* Number Custom Question */
+                            <div className="flex items-center space-x-2">
+                              <label className="text-xs font-medium text-gray-600">Must be</label>
+                              <select
+                                value={preScreen.operator}
+                                onChange={(e) => updatePreScreenerQuestion(index, 'operator', e.target.value)}
+                                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
+                              >
+                                <option value=">=">&gt;= (Greater than or equal)</option>
+                                <option value=">">&gt; (Greater than)</option>
+                                <option value="<=">&lt;= (Less than or equal)</option>
+                                <option value="<">&lt; (Less than)</option>
+                                <option value="==">=== (Equal to)</option>
+                                <option value="!=">!= (Not equal to)</option>
+                              </select>
+                              <input
+                                type="number"
+                                value={preScreen.value}
+                                onChange={(e) => updatePreScreenerQuestion(index, 'value', parseFloat(e.target.value))}
+                                placeholder="Enter value"
+                                className="w-32 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
+                              />
+                            </div>
+                          ) : preScreen.isCustom && preScreen.questionType === 'text' ? (
+                            /* Text Custom Question */
+                            <div className="space-y-2">
+                              <div className="flex items-center space-x-2">
+                                <label className="text-xs font-medium text-gray-600">Comparison</label>
+                                <select
+                                  value={preScreen.operator}
+                                  onChange={(e) => updatePreScreenerQuestion(index, 'operator', e.target.value)}
+                                  className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
+                                >
+                                  <option value="=">=== (Equals)</option>
+                                  <option value="!=">!= (Not equals)</option>
+                                  <option value="contains">Contains</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  Expected Answer
+                                </label>
+                                <input
+                                  type="text"
+                                  value={preScreen.value}
+                                  onChange={(e) => updatePreScreenerQuestion(index, 'value', e.target.value)}
+                                  placeholder="Enter expected answer"
+                                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-violet"
+                                />
+                              </div>
+                            </div>
+                          ) : null}
                         </div>
                       )}
                     </div>
                   ))}
+
+                  {/* Add Custom Question Button - Below all questions */}
+                  <div className="mb-6">
+                    <button
+                      type="button"
+                      onClick={addCustomPreScreenerQuestion}
+                      className="w-full px-4 py-2 text-sm bg-violet text-white rounded-lg hover:bg-violet/80 transition-colors"
+                    >
+                      + Add Custom Question
+                    </button>
+                  </div>
                 </div>
               )}
 

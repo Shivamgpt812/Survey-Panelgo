@@ -1,5 +1,9 @@
 import mongoose from 'mongoose';
 
 export async function connectDb(uri: string): Promise<void> {
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, {
+    tls: true,
+    tlsAllowInvalidCertificates: true,
+    tlsAllowInvalidHostnames: true,
+  });
 }
