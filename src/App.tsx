@@ -54,6 +54,9 @@ function AppContent() {
         <Route path="/vendor-lite/survey/:token" element={<VendorSurveyPublicPage />} />
         <Route path="/v/:token" element={<VendorSurveyPublicPage />} />
 
+        {/* PreScreener Route - Public (no auth required for external surveys with uid) */}
+        <Route path="/survey/:surveyId/precheck" element={<PreScreenerPage />} />
+
         {/* User Routes */}
         <Route
           path="/dashboard"
@@ -76,14 +79,6 @@ function AppContent() {
           element={
             <UserRoute>
               <SurveyPage />
-            </UserRoute>
-          }
-        />
-        <Route
-          path="/survey/:surveyId/precheck"
-          element={
-            <UserRoute>
-              <PreScreenerPage />
             </UserRoute>
           }
         />
