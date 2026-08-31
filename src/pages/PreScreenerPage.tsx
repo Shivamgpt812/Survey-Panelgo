@@ -48,6 +48,15 @@ const PreScreenerPage: React.FC = () => {
   const [answers, setAnswers] = useState<PreScreenerAnswer[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Helper function to navigate to dashboard or login
+  const navigateToDashboard = () => {
+    if (user) {
+      navigate('/dashboard');
+    } else {
+      navigate('/auth');
+    }
+  };
   const [result, setResult] = useState<'pending' | 'passed' | 'failed'>('pending');
   const [failureMessage, setFailureMessage] = useState('');
   const [showCelebration, setShowCelebration] = useState(false);
@@ -121,7 +130,7 @@ const PreScreenerPage: React.FC = () => {
       if (survey.link) {
         window.open(survey.link, '_blank');
       }
-      navigate('/dashboard');
+      navigateToDashboard();
     };
     void run();
   }, [survey, loadingSurvey, vendorId, vendor, navigate, user?.id]);
@@ -136,7 +145,7 @@ const PreScreenerPage: React.FC = () => {
         } else if (trackingData) {
           // For non-vendor users, use tracking to redirect to result page
           completeTracking('terminated').catch(() => {
-            navigate('/dashboard');
+            navigateToDashboard();
           });
         }
       }, 3000); // Auto-redirect after 3 seconds
@@ -159,7 +168,7 @@ const PreScreenerPage: React.FC = () => {
           <AlertCircle className="w-16 h-16 text-navy-light mx-auto mb-4" />
           <h2 className="font-outfit font-bold text-2xl text-navy mb-2">Survey Not Found</h2>
           <p className="font-jakarta text-navy-light mb-6">The survey you're looking for doesn't exist.</p>
-          <PlayfulButton onClick={() => navigate('/dashboard')}>Back to Dashboard</PlayfulButton>
+          <PlayfulButton onClick={navigateToDashboard}>Back to Dashboard</PlayfulButton>
         </PlayfulCard>
       </div>
     );
@@ -303,7 +312,7 @@ const PreScreenerPage: React.FC = () => {
         } else {
           console.log('Opening external survey link:', survey?.link);
           window.open(survey?.link, '_blank');
-          navigate('/dashboard');
+          navigateToDashboard();
         }
       }, 3000);
     } else {
@@ -323,10 +332,10 @@ const PreScreenerPage: React.FC = () => {
         } else if (survey!.link) {
           console.log('Opening external survey link:', survey!.link);
           window.open(survey!.link, '_blank');
-          navigate('/dashboard');
+          navigateToDashboard();
         } else {
           console.log('No survey link, going to dashboard');
-          navigate('/dashboard');
+          navigateToDashboard();
         }
       }, 3000);
     }
@@ -336,7 +345,7 @@ const PreScreenerPage: React.FC = () => {
     if (vendor) {
       window.location.href = vendor.redirectLinks.terminate;
     } else {
-      navigate('/dashboard');
+      navigateToDashboard();
     }
   };
 
@@ -435,7 +444,7 @@ const PreScreenerPage: React.FC = () => {
               Start Survey Now
             </PlayfulButton>
 
-            <PlayfulButton variant="secondary" className="w-full" onClick={() => navigate('/dashboard')}>
+            <PlayfulButton variant="secondary" className="w-full" onClick={navigateToDashboard}>
               Back to Dashboard
             </PlayfulButton>
           </div>
@@ -511,10 +520,10 @@ const PreScreenerPage: React.FC = () => {
                 <PlayfulButton variant="primary" className="w-full" onClick={() => {
                   if (trackingData) {
                     completeTracking('terminated').catch(() => {
-                      navigate('/dashboard');
+                      navigateToDashboard();
                     });
                   } else {
-                    navigate('/dashboard');
+                    navigateToDashboard();
                   }
                 }}>
                   View Result Page Now
@@ -542,7 +551,7 @@ const PreScreenerPage: React.FC = () => {
       <nav className="relative z-10 w-full px-4 sm:px-6 lg:px-8 py-4 bg-white/80 backdrop-blur-sm border-b-2 border-navy/10">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-2">
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={navigateToDashboard}
             className="flex items-center gap-2 px-3 py-2 bg-white border-2 border-navy rounded-pill hover:bg-periwinkle transition-colors shrink-0"
           >
             <ArrowLeft className="w-4 h-4 text-navy" />

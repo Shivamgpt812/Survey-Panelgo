@@ -1077,36 +1077,75 @@ const AdminPage: React.FC = () => {
                     </div>
 
                     {survey.isExternal ? (
-                      <>
+                      <div className="space-y-2">
                         {/* If survey has prescreener, link to prescreener page, otherwise direct link */}
                         {survey.preScreener && survey.preScreener.length > 0 ? (
-                          <button
-                            onClick={() => navigate(`/survey/${survey.id}/precheck`)}
-                            className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-periwinkle border-2 border-navy rounded-pill font-jakarta font-medium text-sm text-navy hover:bg-violet hover:text-white transition-colors"
-                          >
-                            <FileText className="w-4 h-4" />
-                            View Survey (With Pre-screener)
-                          </button>
+                          <>
+                            <button
+                              onClick={() => navigate(`/survey/${survey.id}/precheck`)}
+                              className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-periwinkle border-2 border-navy rounded-pill font-jakarta font-medium text-sm text-navy hover:bg-violet hover:text-white transition-colors"
+                            >
+                              <FileText className="w-4 h-4" />
+                              View Survey (With Pre-screener)
+                            </button>
+                            <button
+                              onClick={() => {
+                                const link = `${window.location.origin}/survey/${survey.id}/precheck`;
+                                navigator.clipboard.writeText(link);
+                                addToast('✓ Link copied to clipboard!', 'success');
+                              }}
+                              className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-white border-2 border-navy rounded-pill font-jakarta font-medium text-sm text-navy hover:bg-yellow/30 transition-colors"
+                            >
+                              <Copy className="w-4 h-4" />
+                              Copy Survey Link
+                            </button>
+                          </>
                         ) : (
-                          <a
-                            href={survey.link ? (survey.link.startsWith('http') ? survey.link : `https://${survey.link}`) : '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-periwinkle border-2 border-navy rounded-pill font-jakarta font-medium text-sm text-navy hover:bg-violet hover:text-white transition-colors"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                            View External Link
-                          </a>
+                          <>
+                            <a
+                              href={survey.link ? (survey.link.startsWith('http') ? survey.link : `https://${survey.link}`) : '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-periwinkle border-2 border-navy rounded-pill font-jakarta font-medium text-sm text-navy hover:bg-violet hover:text-white transition-colors"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              View External Link
+                            </a>
+                            <button
+                              onClick={() => {
+                                const link = survey.link && survey.link.startsWith('http') ? survey.link : `https://${survey.link}`;
+                                navigator.clipboard.writeText(link);
+                                addToast('✓ External link copied to clipboard!', 'success');
+                              }}
+                              className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-white border-2 border-navy rounded-pill font-jakarta font-medium text-sm text-navy hover:bg-yellow/30 transition-colors"
+                            >
+                              <Copy className="w-4 h-4" />
+                              Copy External Link
+                            </button>
+                          </>
                         )}
-                      </>
+                      </div>
                     ) : (
-                      <button
-                        onClick={() => navigate(`/survey/${survey.id}?preview=true`)}
-                        className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-lavender/30 border-2 border-navy rounded-pill font-jakarta font-medium text-sm text-navy hover:bg-violet hover:text-white transition-colors"
-                      >
-                        <Star className="w-4 h-4" />
-                        Preview Internal Survey
-                      </button>
+                      <div className="space-y-2">
+                        <button
+                          onClick={() => navigate(`/survey/${survey.id}?preview=true`)}
+                          className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-lavender/30 border-2 border-navy rounded-pill font-jakarta font-medium text-sm text-navy hover:bg-violet hover:text-white transition-colors"
+                        >
+                          <Star className="w-4 h-4" />
+                          Preview Internal Survey
+                        </button>
+                        <button
+                          onClick={() => {
+                            const link = `${window.location.origin}/survey/${survey.id}/precheck`;
+                            navigator.clipboard.writeText(link);
+                            addToast('✓ Survey link copied to clipboard!', 'success');
+                          }}
+                          className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-white border-2 border-navy rounded-pill font-jakarta font-medium text-sm text-navy hover:bg-yellow/30 transition-colors"
+                        >
+                          <Copy className="w-4 h-4" />
+                          Copy Survey Link
+                        </button>
+                      </div>
                     )}
                   </PlayfulCard>
                 ))}

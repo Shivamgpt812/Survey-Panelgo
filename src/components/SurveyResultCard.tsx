@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Menu, X } from 'lucide-react';
 import { PlayfulButton } from '@/components/ui/playful';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import { useAuth } from '@/hooks/useAuth';
 
 const statusConfig: Record<string, { label: string; color: string }> = {
   "1": { label: "Completed", color: "#22c55e" },
@@ -15,9 +16,19 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 export default function SurveyResultCard() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const params = new URLSearchParams(location.search);
+
+  // Helper function to navigate to dashboard or login
+  const navigateToDashboard = () => {
+    if (user) {
+      navigate('/dashboard');
+    } else {
+      navigate('/auth');
+    }
+  };
 
   const pid = params.get("pid");
   const uid = params.get("uid");
@@ -246,7 +257,7 @@ export default function SurveyResultCard() {
           {/* Button */}
           <div className="mt-8 flex justify-center">
             <button
-              onClick={() => (window.location.href = "/")}
+              onClick={navigateToDashboard}
               className="px-6 py-3 rounded-full text-white font-medium shadow-lg transition-all duration-300 hover:scale-105"
               style={{
                 background: "linear-gradient(135deg, #7C83FD, #A5B4FC)"
