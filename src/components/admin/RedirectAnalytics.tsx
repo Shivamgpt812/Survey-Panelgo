@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, Users, Activity, Clock, DollarSign, BarChart3 } from 'lucide-react';
+import { TrendingUp, Users, Activity, Clock, DollarSign, BarChart3, RotateCw, AlertCircle } from 'lucide-react';
+import { apiGet, API_BASE_URL } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 
-const BACKEND_URL = "https://survey-panelgo.onrender.com";
+const BACKEND_URL = API_BASE_URL;
 
 const statusMap: Record<string, number> = {
   "Completed": 1,
@@ -27,6 +29,7 @@ interface RedirectAnalyticsProps {
 }
 
 export default function RedirectAnalytics({ className }: RedirectAnalyticsProps) {
+  const { token } = useAuth();
   const [logs, setLogs] = useState<RedirectLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,66 +57,60 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
     4: 'Security Terminated',
   };
 
-  const fetchLogs = async () => {
-    const token = localStorage.getItem('surveypanelgo_token');
-    if (!token) {
-      setError('Not authenticated');
+  const fetchLogs = useCallback(async () => {
+    const activeToken = token || localStorage.getItem('surveypanelgo_token');
+    if (!activeToken) {
+      setError('Not authenticated. Please log in as an administrator.');
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
+      setError(null);
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: '50',
       });
 
-      if (searchTerm) params.append('search', searchTerm);
+      if (searchTerm.trim()) params.append('search', searchTerm.trim());
       if (filterStatus) params.append('status', filterStatus);
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
 
-      const url = `https://survey-panelgo.onrender.com/api/redirect-logs?${params}`;
-      console.log("API CALL (GET):", url);
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const data = await apiGet<{
+        logs: RedirectLog[];
+        statusCounts: Record<number, number>;
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          pages: number;
+        };
+      }>(`/api/redirect-logs?${params.toString()}`, activeToken);
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch redirect logs');
-      }
-
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text();
-        console.error("Invalid API response:", text);
-        throw new Error("API did not return JSON");
-      }
-
-      const data = await response.json();
-      setLogs(data.logs);
-      setStatusCounts(data.statusCounts);
-      setTotalPages(data.pagination.pages);
+      setLogs(data.logs || []);
+      setStatusCounts(data.statusCounts || {});
+      setTotalPages(data.pagination?.pages || 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Error fetching redirect logs:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch redirect logs');
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, currentPage, searchTerm, filterStatus, startDate, endDate]);
 
   useEffect(() => {
     fetchLogs();
-  }, [currentPage, searchTerm, filterStatus, startDate, endDate]);
+  }, [fetchLogs]);
 
-  const chartData = Object.entries(statusCounts).map(([status, count]) => ({
-    status: statusLabels[parseInt(status) as keyof typeof statusLabels],
-    count,
-    fill: statusColors[parseInt(status) as keyof typeof statusColors],
-  }));
+  const chartData = Object.entries(statusCounts)
+    .filter(([status]) => statusLabels[parseInt(status) as keyof typeof statusLabels])
+    .map(([status, count]) => ({
+      status: statusLabels[parseInt(status) as keyof typeof statusLabels],
+      count,
+      fill: statusColors[parseInt(status) as keyof typeof statusColors] || '#6b7280',
+    }));
 
   const pieData = chartData.map(item => ({
     name: item.status,
@@ -147,7 +144,7 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
     setCurrentPage(1);
   };
 
-  if (loading) {
+  if (loading && logs.length === 0) {
     return (
       <div className={`bg-white rounded-lg shadow p-6 ${className}`}>
         <div className="animate-pulse">
@@ -163,10 +160,23 @@ export default function RedirectAnalytics({ className }: RedirectAnalyticsProps)
     );
   }
 
-  if (error) {
+  if (error && logs.length === 0) {
     return (
-      <div className={`bg-white rounded-lg shadow p-6 ${className}`}>
-        <div className="text-red-600">Error: {error}</div>
+      <div className={`bg-white rounded-2xl border-2 border-navy shadow-[4px_4px_0px_0px_#1B2A4A] p-6 ${className}`}>
+        <div className="flex items-start gap-4 text-coral">
+          <AlertCircle className="w-6 h-6 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="font-outfit font-bold text-lg text-navy mb-1">Failed to Load Redirect Logs</h3>
+            <p className="text-sm font-jakarta text-navy-light mb-4">{error}</p>
+            <button
+              onClick={() => fetchLogs()}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-navy text-white font-jakarta font-medium text-sm rounded-xl hover:bg-navy/90 transition-all cursor-pointer shadow-[2px_2px_0px_0px_#FF6B6B]"
+            >
+              <RotateCw className="w-4 h-4" />
+              Try Again
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

@@ -1599,13 +1599,15 @@ app.get("/survey/redirect/:type", async (req, res) => {
 app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
   try {
     const { page = 1, limit = 50, pid, status, search, startDate, endDate } = req.query;
-    const pageNum = parseInt(page as string);
-    const limitNum = parseInt(limit as string);
+    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit as string) || 50));
     const skip = (pageNum - 1) * limitNum;
 
     const filter: any = {};
-    if (pid) filter.pid = String(pid);
-    if (status) filter.status = parseInt(status as string);
+    if (pid) filter.pid = String(pid).trim();
+    if (status && !isNaN(parseInt(status as string))) {
+      filter.status = parseInt(status as string);
+    }
 
     // Add general search functionality
     if (search) {
@@ -1622,14 +1624,22 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
 
     // Add date range filtering
     if (startDate || endDate) {
-      filter.createdAt = {};
+      const dateFilter: any = {};
       if (startDate) {
-        filter.createdAt.$gte = new Date(startDate as string);
+        const start = new Date(startDate as string);
+        if (!isNaN(start.getTime())) {
+          dateFilter.$gte = start;
+        }
       }
       if (endDate) {
-        const endDateTime = new Date(endDate as string);
-        endDateTime.setHours(23, 59, 59, 999); // End of day
-        filter.createdAt.$lte = endDateTime;
+        const end = new Date(endDate as string);
+        if (!isNaN(end.getTime())) {
+          end.setHours(23, 59, 59, 999);
+          dateFilter.$lte = end;
+        }
+      }
+      if (Object.keys(dateFilter).length > 0) {
+        filter.createdAt = dateFilter;
       }
     }
 
@@ -1682,12 +1692,14 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
     ];
     const statusCountResult = await SurveyRedirectLogs.aggregate(statusCountPipeline);
     const uniqueStatusCounts = statusCountResult.reduce((acc, item) => {
-      acc[item._id] = item.count;
+      if (item && item._id !== undefined) {
+        acc[item._id] = item.count;
+      }
       return acc;
     }, {} as Record<number, number>);
 
     res.json({
-      logs: paginatedLogs.map(log => ({
+      logs: (paginatedLogs || []).map(log => ({
         ...log,
         id: log._id,
         _id: undefined
@@ -1696,12 +1708,12 @@ app.get('/api/redirect-logs', requireAdmin, async (req, res) => {
         page: pageNum,
         limit: limitNum,
         total: totalUnique,
-        pages: Math.ceil(totalUnique / limitNum)
+        pages: Math.max(1, Math.ceil(totalUnique / limitNum))
       },
       statusCounts: uniqueStatusCounts
     });
   } catch (e) {
-    console.error(e);
+    console.error('Failed to load redirect logs:', e);
     res.status(500).json({ error: 'Failed to load redirect logs' });
   }
 });

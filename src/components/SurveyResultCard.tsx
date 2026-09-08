@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { PlayfulButton } from '@/components/ui/playful';
 import { Navbar } from '@/components/layout/Navbar';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { useAuth } from '@/hooks/useAuth';
 
 const statusConfig: Record<string, { label: string; color: string }> = {
@@ -176,8 +177,12 @@ export default function SurveyResultCard() {
               <span className="font-semibold">End IP:</span> {endIp}
             </div>
             <div className="bg-[#F8FAFF] px-4 py-2 rounded-xl shadow-sm">
-              <span className="font-semibold">Time:</span>
-              {time ? new Date(time).toLocaleString() : "N/A"}
+              <span className="font-semibold">Time:</span>{' '}
+              {(() => {
+                if (!time) return "N/A";
+                const d = new Date(time);
+                return isNaN(d.getTime()) ? time : d.toLocaleString();
+              })()}
             </div>
           </div>
 
