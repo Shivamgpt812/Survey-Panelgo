@@ -308,31 +308,29 @@ app.post('/api/panel-auth/login', async (req, res) => {
       return;
     }
 
-    // STRICT PANEL MATCHING (Non-admin accounts must match the specific panel portal)
+    // STRICT PANEL MATCHING (Accounts must match the specific panel portal)
     const validPanels = ['b2b', 'b2c', 'patients-carers', 'healthcare-professionals'];
     const requestedPanel = panelType?.toLowerCase().trim();
     const userPanel = user.panelType?.toLowerCase().trim();
 
-    if (user.role !== 'admin') {
-      if (userPanel && validPanels.includes(userPanel)) {
-        if (requestedPanel && userPanel !== requestedPanel) {
-          const userPanelName = panelDisplayNames[userPanel] || userPanel.toUpperCase();
-          const requestedPanelName = panelDisplayNames[requestedPanel] || requestedPanel.toUpperCase();
-          res.status(403).json({
-            error: `Access Denied: This account is registered exclusively under the ${userPanelName}. You cannot log in through the ${requestedPanelName} portal. Please sign in at /panels/${userPanel}/login.`,
-            correctPanel: userPanel,
-          });
-          return;
-        }
-      } else {
-        // User has no specific panel or is a general portal user
-        if (requestedPanel && validPanels.includes(requestedPanel)) {
-          const requestedPanelName = panelDisplayNames[requestedPanel] || requestedPanel.toUpperCase();
-          res.status(403).json({
-            error: `This account is not registered for the ${requestedPanelName}. Please sign up for this panel or log in through the main portal.`,
-          });
-          return;
-        }
+    if (userPanel && validPanels.includes(userPanel)) {
+      if (requestedPanel && userPanel !== requestedPanel) {
+        const userPanelName = panelDisplayNames[userPanel] || userPanel.toUpperCase();
+        const requestedPanelName = panelDisplayNames[requestedPanel] || requestedPanel.toUpperCase();
+        res.status(403).json({
+          error: `Access Denied: This account is registered exclusively under the ${userPanelName}. You cannot log in through the ${requestedPanelName} portal. Please sign in at /panels/${userPanel}/login.`,
+          correctPanel: userPanel,
+        });
+        return;
+      }
+    } else {
+      // User has no specific panel or is a general/admin portal user
+      if (requestedPanel && validPanels.includes(requestedPanel)) {
+        const requestedPanelName = panelDisplayNames[requestedPanel] || requestedPanel.toUpperCase();
+        res.status(403).json({
+          error: `This account was not created for the ${requestedPanelName}. Please sign up for this panel or log in through the main portal.`,
+        });
+        return;
       }
     }
 
