@@ -172,7 +172,7 @@ const ServicesPage: React.FC = () => {
               <PlayfulButton
                 variant="primary"
                 size="lg"
-                onClick={() => navigate('/auth')}
+                onClick={() => navigate('/panels/b2b')}
               >
                 Get Started
               </PlayfulButton>
@@ -268,7 +268,7 @@ const ServicesPage: React.FC = () => {
                 <PlayfulButton
                   variant="primary"
                   size="lg"
-                  onClick={() => navigate('/auth')}
+                  onClick={() => navigate('/panels/b2b')}
                 >
                   Start Your Journey
                 </PlayfulButton>

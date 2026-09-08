@@ -68,7 +68,7 @@ const DashboardPage: React.FC = () => {
     if (pType && ['b2b', 'b2c', 'patients-carers', 'healthcare-professionals'].includes(pType)) {
       navigate(`/panels/${pType}/login`);
     } else {
-      navigate('/auth');
+      navigate('/');
     }
   };
 
@@ -207,7 +207,7 @@ const DashboardPage: React.FC = () => {
                 <PlayfulButton variant="secondary" size="sm" onClick={() => { navigate('/rewards'); setIsMobileMenuOpen(false); }}>
                   View Rewards
                 </PlayfulButton>
-                <PlayfulButton variant="primary" size="sm" onClick={() => { navigate('/auth'); setIsMobileMenuOpen(false); }}>
+                <PlayfulButton variant="primary" size="sm" onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}>
                   Sign Out
                 </PlayfulButton>
               </div>

@@ -63,7 +63,7 @@ const VendorEntryPage: React.FC = () => {
           } else {
             sessionStorage.setItem('surveypanelgo_redirect', `/survey/${surveyId}/precheck`);
             addToast('Please login to continue', 'info');
-            navigate('/auth');
+            navigate('/panels/b2b/login');
             return;
           }
         }

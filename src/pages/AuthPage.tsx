@@ -1,11 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import {
+  Mail,
+  Lock,
+  User,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  KeyRound,
+  ShieldCheck,
+  CheckCircle2,
+  ArrowLeft,
+  RefreshCw,
+} from 'lucide-react';
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
+import { apiPost } from '@/lib/api';
 
 const AuthPage: React.FC = () => {
   const navigate = useNavigate();
@@ -13,8 +26,14 @@ const AuthPage: React.FC = () => {
   const { login, register, googleLogin } = useAuth();
   const { addToast } = useToast();
   const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'signup');
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [forgotStep, setForgotStep] = useState<'email' | 'otp-password'>('email');
   const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [forgotResendCooldown, setForgotResendCooldown] = useState(0);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [formData, setFormData] = useState({
@@ -22,6 +41,20 @@ const AuthPage: React.FC = () => {
     email: '',
     password: '',
   });
+  const [forgotData, setForgotData] = useState({
+    email: '',
+    otp: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+
+  // Forgot Resend Timer Countdown
+  useEffect(() => {
+    if (forgotResendCooldown > 0) {
+      const timer = setTimeout(() => setForgotResendCooldown(forgotResendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [forgotResendCooldown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +100,104 @@ const AuthPage: React.FC = () => {
       ...prev,
       [e.target.name]: e.target.value,
     }));
+  };
+
+  const handleSendForgotOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotData.email.trim()) {
+      addToast('Please enter your email address', 'error');
+      return;
+    }
+
+    setIsSendingOtp(true);
+    try {
+      const res = await apiPost<{ success: boolean; message: string }>(
+        '/api/auth/forgot-password/send-otp',
+        { email: forgotData.email }
+      );
+
+      if (res.success) {
+        addToast(`Verification code sent to ${forgotData.email}! Check your inbox.`, 'success');
+        setForgotStep('otp-password');
+        setForgotResendCooldown(60);
+      }
+    } catch (err: any) {
+      addToast(err?.message || 'Failed to send reset code. Please check your email and try again.', 'error');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleResendForgotOtp = async () => {
+    if (forgotResendCooldown > 0 || isSendingOtp) return;
+    setIsSendingOtp(true);
+    try {
+      const res = await apiPost<{ success: boolean; message: string }>(
+        '/api/auth/forgot-password/send-otp',
+        { email: forgotData.email }
+      );
+
+      if (res.success) {
+        addToast('New verification code sent to your email!', 'success');
+        setForgotResendCooldown(60);
+      }
+    } catch (err: any) {
+      addToast(err?.message || 'Failed to resend reset code', 'error');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotData.otp.trim()) {
+      addToast('Please enter the 6-digit verification code', 'error');
+      return;
+    }
+
+    if (!forgotData.newPassword) {
+      addToast('Please enter your new password', 'error');
+      return;
+    }
+
+    if (forgotData.newPassword.length < 6) {
+      addToast('New password must be at least 6 characters long', 'error');
+      return;
+    }
+
+    if (forgotData.newPassword !== forgotData.confirmPassword) {
+      addToast('New passwords do not match. Please verify and re-enter.', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await apiPost<{ success: boolean; message: string }>(
+        '/api/auth/forgot-password/verify-and-reset',
+        {
+          email: forgotData.email,
+          otp: forgotData.otp,
+          newPassword: forgotData.newPassword,
+        }
+      );
+
+      if (res.success) {
+        addToast('Password updated successfully! You can now sign in with your new password.', 'success');
+        setFormData((prev) => ({
+          ...prev,
+          email: forgotData.email,
+          password: '',
+        }));
+        setIsForgotPassword(false);
+        setIsLogin(true);
+        setForgotStep('email');
+        setForgotData({ email: '', otp: '', newPassword: '', confirmPassword: '' });
+      }
+    } catch (err: any) {
+      addToast(err?.message || 'Failed to reset password. Please check the code and try again.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const initializeGoogleSignIn = async () => {
@@ -211,152 +342,336 @@ const AuthPage: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-6">
           <div className="flex justify-center mb-4">
-            <IconCircle variant={isLogin ? 'violet' : 'pink'} size="xl">
-              {isLogin ? <Lock className="w-8 h-8" /> : <User className="w-8 h-8" />}
+            <IconCircle variant={isForgotPassword ? 'yellow' : isLogin ? 'violet' : 'pink'} size="xl">
+              {isForgotPassword ? (
+                <KeyRound className="w-8 h-8 text-navy" />
+              ) : isLogin ? (
+                <Lock className="w-8 h-8" />
+              ) : (
+                <User className="w-8 h-8" />
+              )}
             </IconCircle>
           </div>
           <h1 className="font-outfit font-bold text-2xl md:text-3xl text-navy mb-2">
-            {isLogin ? 'Welcome Back!' : 'Create Account'}
+            {isForgotPassword
+              ? 'Reset Password'
+              : isLogin
+              ? 'Welcome Back!'
+              : 'Create Account'}
           </h1>
           <p className="font-jakarta text-navy-light">
-            {isLogin
+            {isForgotPassword
+              ? 'Verify your email to create a new password'
+              : isLogin
               ? 'Sign in to continue earning rewards'
               : 'Join thousands earning rewards daily'}
           </p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <div className="space-y-2">
-              <label className="font-outfit font-semibold text-sm text-navy">
-                Full Name
-              </label>
-              <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy/60">
-                  <User className="w-5 h-5" />
+        {/* FORGOT PASSWORD FORM */}
+        {isForgotPassword ? (
+          forgotStep === 'email' ? (
+            <form onSubmit={handleSendForgotOtp} className="space-y-4">
+              <div className="space-y-2">
+                <label className="font-outfit font-semibold text-sm text-navy">
+                  Registered Email Address
+                </label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy/60">
+                    <Mail className="w-5 h-5" />
+                  </div>
+                  <input
+                    type="email"
+                    value={forgotData.email}
+                    onChange={(e) => setForgotData((prev) => ({ ...prev, email: e.target.value }))}
+                    placeholder="Enter your email"
+                    className="w-full pl-12 pr-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta text-base text-navy placeholder:text-navy/50 focus:outline-none focus:shadow-[4px_4px_0_#7B61FF] transition-all"
+                    required
+                  />
+                </div>
+              </div>
+
+              <PlayfulButton
+                type="submit"
+                variant="primary"
+                size="lg"
+                className="w-full"
+                isLoading={isSendingOtp}
+                rightIcon={<ArrowRight className="w-5 h-5" />}
+              >
+                Send Verification Code
+              </PlayfulButton>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotPassword(false);
+                    setForgotStep('email');
+                  }}
+                  className="inline-flex items-center gap-1.5 text-sm font-jakarta font-semibold text-navy/70 hover:text-violet transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back to Sign In</span>
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-outfit font-semibold text-sm text-navy">
+                    Verification Code
+                  </label>
+                  <button
+                    type="button"
+                    disabled={forgotResendCooldown > 0 || isSendingOtp}
+                    onClick={handleResendForgotOtp}
+                    className="text-xs font-jakarta font-semibold text-violet hover:underline disabled:opacity-50"
+                  >
+                    {forgotResendCooldown > 0 ? `Resend in ${forgotResendCooldown}s` : 'Resend code'}
+                  </button>
                 </div>
                 <input
                   type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="Enter your name"
-                  className="w-full pl-12 pr-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta text-base text-navy placeholder:text-navy/50 focus:outline-none focus:shadow-[4px_4px_0_#7B61FF] transition-all"
-                  required={!isLogin}
+                  maxLength={6}
+                  value={forgotData.otp}
+                  onChange={(e) => setForgotData((prev) => ({ ...prev, otp: e.target.value.replace(/\D/g, '') }))}
+                  placeholder="Enter 6-digit code"
+                  required
+                  className="w-full py-3 bg-white border-2 border-navy rounded-2xl font-mono font-bold text-center text-lg tracking-widest text-navy placeholder:text-navy/30 placeholder:tracking-normal placeholder:font-sans placeholder:text-sm focus:outline-none focus:shadow-[4px_4px_0_#7B61FF]"
                 />
               </div>
-            </div>
-          )}
 
-          <div className="space-y-2">
-            <label className="font-outfit font-semibold text-sm text-navy">
-              Email Address
-            </label>
-            <div className="relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy/60">
-                <Mail className="w-5 h-5" />
+              <div className="space-y-2">
+                <label className="font-outfit font-semibold text-sm text-navy">
+                  New Password
+                </label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy/60">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={forgotData.newPassword}
+                    onChange={(e) => setForgotData((prev) => ({ ...prev, newPassword: e.target.value }))}
+                    placeholder="Minimum 6 characters"
+                    className="w-full pl-12 pr-12 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta text-base text-navy placeholder:text-navy/50 focus:outline-none focus:shadow-[4px_4px_0_#7B61FF] transition-all"
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-navy/60 hover:text-navy transition-colors"
+                  >
+                    {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="Enter your email"
-                className="w-full pl-12 pr-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta text-base text-navy placeholder:text-navy/50 focus:outline-none focus:shadow-[4px_4px_0_#7B61FF] transition-all"
-                required
-              />
-            </div>
-          </div>
 
-          <div className="space-y-2">
-            <label className="font-outfit font-semibold text-sm text-navy">
-              Password
-            </label>
-            <div className="relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy/60">
-                <Lock className="w-5 h-5" />
+              <div className="space-y-2">
+                <label className="font-outfit font-semibold text-sm text-navy">
+                  Confirm New Password
+                </label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy/60">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={forgotData.confirmPassword}
+                    onChange={(e) => setForgotData((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                    placeholder="Repeat new password"
+                    className="w-full pl-12 pr-12 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta text-base text-navy placeholder:text-navy/50 focus:outline-none focus:shadow-[4px_4px_0_#7B61FF] transition-all"
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-navy/60 hover:text-navy transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Enter your password"
-                className="w-full pl-12 pr-12 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta text-base text-navy placeholder:text-navy/50 focus:outline-none focus:shadow-[4px_4px_0_#7B61FF] transition-all"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-navy/60 hover:text-navy transition-colors"
+
+              <PlayfulButton
+                type="submit"
+                variant="primary"
+                size="lg"
+                className="w-full"
+                isLoading={isLoading}
+                rightIcon={<ArrowRight className="w-5 h-5" />}
               >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
+                Save New Password
+              </PlayfulButton>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotPassword(false);
+                    setForgotStep('email');
+                  }}
+                  className="inline-flex items-center gap-1.5 text-sm font-jakarta font-semibold text-navy/70 hover:text-violet transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back to Sign In</span>
+                </button>
+              </div>
+            </form>
+          )
+        ) : (
+          <>
+            {/* Standard Login / Signup Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {!isLogin && (
+                <div className="space-y-2">
+                  <label className="font-outfit font-semibold text-sm text-navy">
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy/60">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      placeholder="Enter your name"
+                      className="w-full pl-12 pr-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta text-base text-navy placeholder:text-navy/50 focus:outline-none focus:shadow-[4px_4px_0_#7B61FF] transition-all"
+                      required={!isLogin}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="font-outfit font-semibold text-sm text-navy">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy/60">
+                    <Mail className="w-5 h-5" />
+                  </div>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="Enter your email"
+                    className="w-full pl-12 pr-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta text-base text-navy placeholder:text-navy/50 focus:outline-none focus:shadow-[4px_4px_0_#7B61FF] transition-all"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="font-outfit font-semibold text-sm text-navy">
+                  Password
+                </label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy/60">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Enter your password"
+                    className="w-full pl-12 pr-12 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta text-base text-navy placeholder:text-navy/50 focus:outline-none focus:shadow-[4px_4px_0_#7B61FF] transition-all"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-navy/60 hover:text-navy transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {isLogin && (
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 border-2 border-navy rounded accent-violet"
+                    />
+                    <span className="font-jakarta text-sm text-navy-light">Remember me</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForgotData({
+                        email: formData.email,
+                        otp: '',
+                        newPassword: '',
+                        confirmPassword: '',
+                      });
+                      setIsForgotPassword(true);
+                      setForgotStep('email');
+                    }}
+                    className="font-jakarta text-sm text-violet hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
+
+              <PlayfulButton
+                type="submit"
+                variant="primary"
+                size="lg"
+                className="w-full"
+                isLoading={isLoading}
+                rightIcon={<ArrowRight className="w-5 h-5" />}
+              >
+                {isLogin ? 'Sign In' : 'Create Account'}
+              </PlayfulButton>
+            </form>
+
+            {/* Divider */}
+            <div className="flex items-center gap-4 my-6">
+              <div className="flex-1 h-px bg-navy/20" />
+              <span className="font-jakarta text-sm text-navy-light">or continue with</span>
+              <div className="flex-1 h-px bg-navy/20" />
             </div>
-          </div>
 
-          {isLogin && (
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 border-2 border-navy rounded accent-violet"
-                />
-                <span className="font-jakarta text-sm text-navy-light">Remember me</span>
-              </label>
-              <button type="button" className="font-jakarta text-sm text-violet hover:underline">
-                Forgot password?
-              </button>
+            {/* Social Buttons */}
+            <div className="space-y-3">
+              {/* Google Sign-In Button - Always Visible */}
+              <div id="google-signin-button" className="w-full flex justify-center" />
+              
+              {/* Loading indicator while Google button loads or authenticating */}
+              {(isGoogleLoading || isAuthenticating) && (
+                <div className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta font-medium text-sm text-navy">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-navy"></div>
+                  {isAuthenticating ? 'Authenticating with Google...' : 'Loading Google Sign-In...'}
+                </div>
+              )}
             </div>
-          )}
 
-          <PlayfulButton
-            type="submit"
-            variant="primary"
-            size="lg"
-            className="w-full"
-            isLoading={isLoading}
-            rightIcon={<ArrowRight className="w-5 h-5" />}
-          >
-            {isLogin ? 'Sign In' : 'Create Account'}
-          </PlayfulButton>
-        </form>
-
-        {/* Divider */}
-        <div className="flex items-center gap-4 my-6">
-          <div className="flex-1 h-px bg-navy/20" />
-          <span className="font-jakarta text-sm text-navy-light">or continue with</span>
-          <div className="flex-1 h-px bg-navy/20" />
-        </div>
-
-        {/* Social Buttons */}
-        <div className="space-y-3">
-          {/* Google Sign-In Button - Always Visible */}
-          <div id="google-signin-button" className="w-full flex justify-center" />
-          
-          {/* Loading indicator while Google button loads or authenticating */}
-          {(isGoogleLoading || isAuthenticating) && (
-            <div className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta font-medium text-sm text-navy">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-navy"></div>
-              {isAuthenticating ? 'Authenticating with Google...' : 'Loading Google Sign-In...'}
+            {/* Toggle */}
+            <div className="text-center mt-6">
+              <p className="font-jakarta text-navy-light">
+                {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
+                <button
+                  type="button"
+                  onClick={() => setIsLogin(!isLogin)}
+                  className="font-semibold text-violet hover:underline"
+                >
+                  {isLogin ? 'Sign up' : 'Sign in'}
+                </button>
+              </p>
             </div>
-          )}
-        </div>
-
-        {/* Toggle */}
-        <div className="text-center mt-6">
-          <p className="font-jakarta text-navy-light">
-            {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="font-semibold text-violet hover:underline"
-            >
-              {isLogin ? 'Sign up' : 'Sign in'}
-            </button>
-          </p>
-        </div>
+          </>
+        )}
 
         {/* Decorative Elements */}
         <div className="absolute -top-3 -left-3 w-6 h-6 bg-yellow border-2 border-navy rounded-full animate-float" />

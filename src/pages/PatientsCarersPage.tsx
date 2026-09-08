@@ -490,10 +490,10 @@ const PatientsCarersPage: React.FC = () => {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
-                <PlayfulButton variant="white" size="lg" onClick={() => navigate('/auth')}>
+                <PlayfulButton variant="white" size="lg" onClick={() => navigate('/panels/patients-carers/login')}>
                   Login to Patient Portal
                 </PlayfulButton>
-                <PlayfulButton variant="yellow" size="lg" onClick={() => navigate('/auth?mode=signup')}>
+                <PlayfulButton variant="yellow" size="lg" onClick={() => navigate('/panels/patients-carers/register')}>
                   Join Patient Panel
                 </PlayfulButton>
               </div>

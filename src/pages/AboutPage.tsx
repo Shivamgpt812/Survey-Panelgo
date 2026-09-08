@@ -327,7 +327,7 @@ const AboutPage: React.FC = () => {
                 <PlayfulButton
                   variant="primary"
                   size="lg"
-                  onClick={() => navigate('/auth')}
+                  onClick={() => navigate('/panels/b2b')}
                 >
                   Get Started
                 </PlayfulButton>

@@ -21,7 +21,7 @@ const AuthCallbackPage: React.FC = () => {
         if (error) {
           console.error('OAuth error:', error);
           addToast('Google login was cancelled or failed', 'error');
-          navigate('/auth');
+          navigate('/');
           return;
         }
 
@@ -30,7 +30,7 @@ const AuthCallbackPage: React.FC = () => {
         if (!state || !storedState || state !== storedState) {
           console.error('Invalid state parameter');
           addToast('Invalid authentication state', 'error');
-          navigate('/auth');
+          navigate('/');
           return;
         }
 
@@ -40,7 +40,7 @@ const AuthCallbackPage: React.FC = () => {
         if (!code) {
           console.error('No authorization code received');
           addToast('No authorization code received', 'error');
-          navigate('/auth');
+          navigate('/');
           return;
         }
 
@@ -61,17 +61,19 @@ const AuthCallbackPage: React.FC = () => {
           // Redirect based on role
           if (result.user.role === 'admin') {
             navigate('/admin');
+          } else if (result.user.panelType && result.user.panelType !== 'general') {
+            navigate('/panels/dashboard');
           } else {
             navigate('/dashboard');
           }
         } else {
           addToast(result.error || 'Google login failed', 'error');
-          navigate('/auth');
+          navigate('/');
         }
       } catch (error) {
         console.error('Callback error:', error);
         addToast('Authentication failed', 'error');
-        navigate('/auth');
+        navigate('/');
       } finally {
         setIsLoading(false);
       }

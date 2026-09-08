@@ -91,12 +91,12 @@ const Footer: React.FC = () => {
                             <p className="font-outfit font-bold text-navy mb-4 text-base">Account</p>
                             <ul className="space-y-3 font-jakarta text-navy-light">
                                 <li>
-                                    <button type="button" onClick={() => navigate('/auth')} className="hover:text-violet transition-colors text-left">
+                                    <button type="button" onClick={() => navigate('/panels/b2b/login')} className="hover:text-violet transition-colors text-left">
                                         Sign in
                                     </button>
                                 </li>
                                 <li>
-                                    <button type="button" onClick={() => navigate('/auth')} className="hover:text-violet transition-colors text-left">
+                                    <button type="button" onClick={() => navigate('/panels/b2b/register')} className="hover:text-violet transition-colors text-left">
                                         Join Our Panel
                                     </button>
                                 </li>

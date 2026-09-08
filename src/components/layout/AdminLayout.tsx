@@ -6,12 +6,12 @@ import {
   FileText,
   Plus,
   Store,
+  Users,
   ClipboardList,
   Activity,
   BarChart3,
   Menu,
   X,
-  Zap,
 } from 'lucide-react';
 import { PlayfulButton } from '@/components/ui/playful';
 import { BrandLogo } from '@/components/brand/BrandLogo';
@@ -38,7 +38,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   const handleLogout = () => {
     logout();
     addToast('Logged out successfully!', 'info');
-    navigate('/auth');
+    navigate('/');
   };
 
   const handleNavigation = (path: string, tab?: string) => {
@@ -56,7 +56,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
     { id: 'surveys', label: 'All Surveys', icon: FileText, path: '/admin', tab: 'surveys' },
     { id: 'create', label: 'Create Survey', icon: Plus, path: '/admin', tab: 'create' },
     { id: 'vendors', label: 'Vendors', icon: Store, path: '/admin', tab: 'vendors' },
-    { id: 'vendor-lite', label: 'Vendor Lite', icon: Zap, path: '/vendor-lite' },
+    { id: 'users', label: 'Registered Users', icon: Users, path: '/admin', tab: 'users' },
     { id: 'logs', label: 'Activity Logs', icon: ClipboardList, path: '/admin', tab: 'logs' },
     { id: 'survey-logs', label: 'Survey Logs', icon: Activity, path: '/admin', tab: 'survey-logs' },
     { id: 'redirect-analytics', label: 'Redirect Analytics', icon: BarChart3, path: '/admin', tab: 'redirect-analytics' },
@@ -81,50 +81,50 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       {/* Desktop Sidebar + Main Content */}
       <div className="hidden lg:flex min-h-screen">
         {/* Desktop Sidebar */}
-        <aside className="flex flex-col w-72 shrink-0 bg-white border-r-2 border-navy/10 px-5 py-6">
+        <aside className="flex flex-col w-72 shrink-0 bg-white border-r-2 border-navy/10 px-5 py-5 sticky top-0 h-screen overflow-hidden">
           {/* Logo */}
-          <div className="mb-10 text-center">
+          <div className="mb-4 text-center shrink-0">
             <button
               type="button"
               onClick={() => navigate('/')}
-              className="inline-flex justify-center mb-3 w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-violet rounded-xl px-1"
+              className="inline-flex justify-center mb-1 w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-violet rounded-xl px-1"
               aria-label="Survey Panel Go home"
             >
               <BrandLogo
                 size="nav"
-                className="mx-auto object-center max-h-[5.25rem] w-full max-w-[248px]"
+                className="mx-auto object-center max-h-[4.25rem] w-full max-w-[220px]"
               />
             </button>
-            <span className="font-outfit font-bold text-lg text-navy block">Admin</span>
+            <span className="font-outfit font-bold text-base text-navy block">Admin</span>
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="flex-1 space-y-2">
+          <nav className="flex-1 space-y-1.5 overflow-y-auto pr-1">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleNavigation(item.path, item.tab)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-jakarta font-medium transition-all ${
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-jakarta text-sm font-medium transition-all ${
                   item.id === 'admin-panel' 
                     ? 'bg-violet text-white shadow-hard'
                     : 'text-navy hover:bg-periwinkle'
                 }`}
               >
-                <item.icon className="w-5 h-5" />
+                <item.icon className="w-4 h-4" />
                 {item.label}
               </button>
             ))}
           </nav>
 
           {/* Desktop User Info */}
-          <div className="pt-6 border-t-2 border-navy/10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-violet border-2 border-navy rounded-full flex items-center justify-center">
-                <span className="font-outfit font-bold text-white">{user?.name?.[0]}</span>
+          <div className="pt-4 border-t-2 border-navy/10 shrink-0 mt-auto">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-violet border-2 border-navy rounded-full flex items-center justify-center shrink-0">
+                <span className="font-outfit font-bold text-white">{user?.name?.[0]?.toUpperCase() || 'A'}</span>
               </div>
-              <div>
-                <p className="font-jakarta font-medium text-sm text-navy">{user?.name}</p>
-                <p className="font-mono text-xs text-navy-light">Administrator</p>
+              <div className="min-w-0 flex-1">
+                <p className="font-jakarta font-medium text-sm text-navy truncate">{user?.name || 'Administrator'}</p>
+                <p className="font-mono text-xs text-navy-light truncate">Administrator</p>
               </div>
             </div>
             <PlayfulButton variant="secondary" size="sm" className="w-full" onClick={handleLogout}>

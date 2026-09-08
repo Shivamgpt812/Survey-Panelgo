@@ -58,9 +58,13 @@ const PreScreenerPage: React.FC = () => {
   // Helper function to navigate to dashboard or login
   const navigateToDashboard = () => {
     if (user) {
-      navigate('/dashboard');
+      if (user.panelType && user.panelType !== 'general') {
+        navigate('/panels/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } else {
-      navigate('/auth');
+      navigate('/');
     }
   };
   const [result, setResult] = useState<'pending' | 'passed' | 'failed'>('pending');

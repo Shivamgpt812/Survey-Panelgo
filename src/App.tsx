@@ -134,7 +134,7 @@ function AppContent() {
           path="/admin/users"
           element={
             <AdminRoute>
-              <AdminUsersPage />
+              <Navigate to="/admin?tab=users" replace />
             </AdminRoute>
           }
         />

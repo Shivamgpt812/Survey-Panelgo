@@ -381,7 +381,19 @@ export const PanelDashboardPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Rewards Shortcut Button */}
+            <button
+              onClick={() => navigate('/rewards')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow border-2 border-navy rounded-full shadow-hard-sm hover:shadow-hard hover:-translate-y-0.5 transition-all cursor-pointer"
+              title="View & Redeem Rewards"
+            >
+              <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-navy" />
+              <span className="font-outfit font-bold text-xs sm:text-sm text-navy">
+                {(user?.points || 0).toLocaleString()} pts
+              </span>
+            </button>
+
             {/* User Profile Summary */}
             <button
               type="button"
@@ -434,17 +446,34 @@ export const PanelDashboardPage: React.FC = () => {
               </p>
             </div>
 
-            {/* Points & Stats Widget */}
-            <div className="flex items-center gap-4 shrink-0 bg-periwinkle/50 p-4 rounded-2xl border-2 border-navy">
-              <div className="w-12 h-12 rounded-2xl bg-yellow text-navy border-2 border-navy flex items-center justify-center shadow-hard-sm">
-                <Coins className="w-6 h-6 text-navy" />
-              </div>
-              <div>
-                <div className="font-jakarta text-xs font-bold text-navy/70">Your Reward Balance</div>
-                <div className="font-outfit font-black text-2xl text-violet">
-                  {user?.points || 0} Points
+            {/* Points & Stats Widget with Redeem Button */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+              <div
+                onClick={() => navigate('/rewards')}
+                className="flex items-center gap-3.5 bg-periwinkle/50 hover:bg-periwinkle/80 p-3.5 sm:p-4 rounded-2xl border-2 border-navy transition-all cursor-pointer group hover:shadow-hard-sm"
+                title="Click to redeem rewards"
+              >
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-yellow text-navy border-2 border-navy flex items-center justify-center shadow-hard-sm shrink-0">
+                  <Coins className="w-5 h-5 sm:w-6 sm:h-6 text-navy" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-jakarta text-xs font-bold text-navy/70">Your Reward Balance</div>
+                  <div className="font-outfit font-black text-xl sm:text-2xl text-violet group-hover:text-navy transition-colors">
+                    {(user?.points || 0).toLocaleString()} Points
+                  </div>
                 </div>
               </div>
+
+              <PlayfulButton
+                variant="primary"
+                size="md"
+                onClick={() => navigate('/rewards')}
+                leftIcon={<Gift className="w-4 h-4" />}
+                rightIcon={<ChevronRight className="w-4 h-4" />}
+                className="shadow-hard hover:shadow-hard-lg"
+              >
+                Redeem Rewards
+              </PlayfulButton>
             </div>
           </div>
 
@@ -465,9 +494,18 @@ export const PanelDashboardPage: React.FC = () => {
                 <span className="font-semibold text-navy/60 block">Location</span>
                 <span className="font-bold text-navy">{user.city ? `${user.city}, ${user.country}` : user.country || 'N/A'}</span>
               </div>
-              <div className="bg-navy/5 p-3 rounded-xl border border-navy/10">
-                <span className="font-semibold text-navy/60 block">Surveys Done</span>
-                <span className="font-bold text-violet">{responses.length} Completed</span>
+              <div
+                onClick={() => navigate('/rewards')}
+                className="bg-navy/5 hover:bg-violet/10 p-3 rounded-xl border border-navy/10 hover:border-violet transition-all cursor-pointer group"
+                title="View redemption threshold and reward options"
+              >
+                <span className="font-semibold text-navy/60 block flex items-center justify-between">
+                  Rewards Status
+                  <ChevronRight className="w-3 h-3 text-violet group-hover:translate-x-0.5 transition-transform" />
+                </span>
+                <span className="font-bold text-violet block mt-0.5">
+                  {(user?.points || 0) >= 5000 ? '🎉 Ready to Redeem' : `${(5000 - (user?.points || 0)).toLocaleString()} pts to unlock`}
+                </span>
               </div>
             </div>
           )}

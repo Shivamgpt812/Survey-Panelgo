@@ -453,10 +453,10 @@ const B2BPanelPage: React.FC = () => {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
-                <PlayfulButton variant="white" size="lg" onClick={() => navigate('/auth')}>
+                <PlayfulButton variant="white" size="lg" onClick={() => navigate('/panels/b2b/login')}>
                   Login to B2B Panel
                 </PlayfulButton>
-                <PlayfulButton variant="yellow" size="lg" onClick={() => navigate('/auth?mode=signup')}>
+                <PlayfulButton variant="yellow" size="lg" onClick={() => navigate('/panels/b2b/register')}>
                   Join B2B Panel
                 </PlayfulButton>
               </div>

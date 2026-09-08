@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { useLocation, useNavigate, Link } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Menu, X } from 'lucide-react';
 import { PlayfulButton } from '@/components/ui/playful';
-import { BrandLogo } from '@/components/brand/BrandLogo';
+import { Navbar } from '@/components/layout/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 
 const statusConfig: Record<string, { label: string; color: string }> = {
@@ -17,16 +16,19 @@ export default function SurveyResultCard() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const params = new URLSearchParams(location.search);
 
   // Helper function to navigate to dashboard or login
   const navigateToDashboard = () => {
     if (user) {
-      navigate('/dashboard');
+      if (user.panelType && user.panelType !== 'general') {
+        navigate('/panels/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } else {
-      navigate('/auth');
+      navigate('/');
     }
   };
 
@@ -108,82 +110,7 @@ export default function SurveyResultCard() {
 
   return (
     <>
-      {/* Navigation */}
-      <nav className="relative z-20 w-full px-4 sm:px-6 lg:px-8 py-3 sm:py-4 bg-white/70 backdrop-blur-md border-b-2 border-navy/10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="flex items-center gap-3 min-w-0 text-left -ml-1 sm:-ml-0"
-            aria-label="Survey Panel Go home"
-          >
-            <BrandLogo size="nav" className="shrink-0 drop-shadow-sm" />
-          </button>
-
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-8">
-            <Link to="/about" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              About
-            </Link>
-            <Link to="/services" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              Services
-            </Link>
-            <Link to="/blog" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              Blog
-            </Link>
-            <a href="/#contact" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              Contact
-            </a>
-          </div>
-
-          {/* Desktop Buttons */}
-          <div className="hidden lg:flex items-center gap-3 shrink-0">
-            <PlayfulButton variant="secondary" size="sm" onClick={() => navigate('/auth')}>
-              Sign In
-            </PlayfulButton>
-            <PlayfulButton variant="primary" size="sm" onClick={() => navigate('/auth?mode=signup')}>
-              Join Our Panel
-            </PlayfulButton>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2 bg-white border-2 border-navy rounded-full hover:bg-periwinkle transition-colors"
-            aria-label="Toggle menu"
-          >
-            {isMobileMenuOpen ? <X className="w-5 h-5 text-navy" /> : <Menu className="w-5 h-5 text-navy" />}
-          </button>
-        </div>
-
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="lg:hidden absolute top-full left-0 right-0 bg-white border-b-2 border-navy/10 shadow-lg">
-            <div className="flex flex-col p-4 space-y-4">
-              <Link to="/about" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                About
-              </Link>
-              <Link to="/services" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Services
-              </Link>
-              <Link to="/blog" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Blog
-              </Link>
-              <a href="/#contact" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Contact
-              </a>
-              <div className="flex flex-col gap-3 pt-4 border-t border-navy/10">
-                <PlayfulButton variant="secondary" size="sm" onClick={() => { navigate('/auth'); setIsMobileMenuOpen(false); }}>
-                  Sign In
-                </PlayfulButton>
-                <PlayfulButton variant="primary" size="sm" onClick={() => { navigate('/auth?mode=signup'); setIsMobileMenuOpen(false); }}>
-                  Join Our Panel
-                </PlayfulButton>
-              </div>
-            </div>
-          </div>
-        )}
-      </nav>
+      <Navbar />
 
       {/* Main Content */}
       <main className="min-h-screen bg-[#EEF2FF] flex items-center justify-center px-4 py-10 relative overflow-hidden">

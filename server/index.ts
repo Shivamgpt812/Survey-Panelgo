@@ -16,7 +16,7 @@ import { SurveyTracking } from './models/SurveyTracking.js';
 import { SurveyRedirectLogs } from './models/SurveyRedirectLogs.js';
 import { SurveySession } from './models/SurveySession.js';
 import { OtpVerification } from './models/OtpVerification.js';
-import { sendOtpEmail } from './lib/mailer.js';
+import { sendOtpEmail, sendPasswordResetEmail } from './lib/mailer.js';
 import { preScreenerTemplates } from './preScreenerTemplates.js';
 import { REDIRECT_URLS, getStatusText, isValidStatus } from './config/redirectConfig.js';
 import vendorLiteRoutes from './vendor-lite/routes.js';
@@ -308,12 +308,14 @@ app.post('/api/panel-auth/login', async (req, res) => {
       return;
     }
 
-    // STRICT PANEL MATCHING (Accounts must match the specific panel portal)
+    // STRICT PANEL MATCHING (Accounts must match the specific panel portal, unless Admin)
     const validPanels = ['b2b', 'b2c', 'patients-carers', 'healthcare-professionals'];
     const requestedPanel = panelType?.toLowerCase().trim();
     const userPanel = user.panelType?.toLowerCase().trim();
 
-    if (userPanel && validPanels.includes(userPanel)) {
+    if (user.role === 'admin') {
+      // Admins are unrestricted and can log in from ANY panel login or portal!
+    } else if (userPanel && validPanels.includes(userPanel)) {
       if (requestedPanel && userPanel !== requestedPanel) {
         const userPanelName = panelDisplayNames[userPanel] || userPanel.toUpperCase();
         const requestedPanelName = panelDisplayNames[requestedPanel] || requestedPanel.toUpperCase();
@@ -324,7 +326,7 @@ app.post('/api/panel-auth/login', async (req, res) => {
         return;
       }
     } else {
-      // User has no specific panel or is a general/admin portal user
+      // User has no specific panel or is a general portal user
       if (requestedPanel && validPanels.includes(requestedPanel)) {
         const requestedPanelName = panelDisplayNames[requestedPanel] || requestedPanel.toUpperCase();
         res.status(403).json({
@@ -354,6 +356,110 @@ app.post('/api/panel-auth/login', async (req, res) => {
   } catch (e) {
     console.error('Error in panel login:', e);
     res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// 4. Send Password Reset OTP via Gmail SMTP
+app.post(['/api/auth/forgot-password/send-otp', '/api/panel-auth/forgot-password/send-otp'], async (req, res) => {
+  try {
+    const { email, panelType } = req.body as { email?: string; panelType?: string };
+    if (!email?.trim()) {
+      res.status(400).json({ error: 'Email is required' });
+      return;
+    }
+
+    const em = email.toLowerCase().trim();
+    const existingUser = await User.findOne({ email: em });
+    if (!existingUser) {
+      res.status(404).json({ error: 'No registered account found with this email address. Please check your email or sign up.' });
+      return;
+    }
+
+    // Generate 6-digit numeric OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Upsert OTP record
+    await OtpVerification.deleteMany({ email: em });
+    await OtpVerification.create({ email: em, otp, expiresAt });
+
+    const panelName = panelDisplayNames[panelType || existingUser.panelType || ''] || 'Survey Panel Go';
+    const sent = await sendPasswordResetEmail(em, otp, panelName);
+
+    if (!sent) {
+      res.status(500).json({ error: 'Failed to send password reset code. Please verify your email and try again.' });
+      return;
+    }
+
+    await ActivityLog.create({
+      message: `Password reset code requested for ${em}`,
+      type: 'info',
+    });
+
+    res.json({ success: true, message: `Password reset verification code sent to ${em}` });
+  } catch (e) {
+    console.error('Error in forgot-password/send-otp:', e);
+    res.status(500).json({ error: 'Server error sending verification code' });
+  }
+});
+
+// 5. Verify Reset OTP and Update Password in Database
+app.post(['/api/auth/forgot-password/verify-and-reset', '/api/panel-auth/forgot-password/verify-and-reset'], async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body as {
+      email?: string;
+      otp?: string;
+      newPassword?: string;
+    };
+
+    if (!email?.trim() || !otp?.trim() || !newPassword) {
+      res.status(400).json({ error: 'Email, verification code, and new password are required' });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      res.status(400).json({ error: 'Password must be at least 6 characters long' });
+      return;
+    }
+
+    const em = email.toLowerCase().trim();
+
+    // Verify OTP record
+    const otpRecord = await OtpVerification.findOne({ email: em, otp: otp.trim() });
+    if (!otpRecord) {
+      res.status(400).json({ error: 'Invalid or incorrect verification code. Please check and try again.' });
+      return;
+    }
+
+    if (new Date() > otpRecord.expiresAt) {
+      await OtpVerification.deleteOne({ _id: otpRecord._id });
+      res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
+      return;
+    }
+
+    const user = await User.findOne({ email: em });
+    if (!user) {
+      res.status(404).json({ error: 'User account not found' });
+      return;
+    }
+
+    // Hash new password and save to database
+    const passwordHash = bcrypt.hashSync(newPassword, 12);
+    user.passwordHash = passwordHash;
+    await user.save();
+
+    // Clean up used OTP
+    await OtpVerification.deleteOne({ _id: otpRecord._id });
+
+    await ActivityLog.create({
+      message: `${user.name} successfully reset their password`,
+      type: 'info',
+    });
+
+    res.json({ success: true, message: 'Password reset successfully! You can now sign in with your new password.' });
+  } catch (e) {
+    console.error('Error in forgot-password/verify-and-reset:', e);
+    res.status(500).json({ error: 'Server error resetting password' });
   }
 });
 
@@ -513,15 +619,33 @@ app.post('/api/auth/google', async (req, res) => {
   }
 });
 
-// ---------- Users (admin: panel accounts only, matches "Total Users" analytics) ----------
+// ---------- Users (admin: all accounts with full details) ----------
 app.get('/api/users', requireAdmin, async (_req, res) => {
   try {
-    const list = await User.find({ role: 'user' }).sort({ name: 1 }).lean();
+    const list = await User.find().sort({ createdAt: -1 }).lean();
     res.json({
       users: list.map((u) => ({
         id: String(u._id),
         name: u.name,
         email: u.email,
+        role: u.role || 'user',
+        panelType: u.panelType || 'general',
+        points: u.points || 0,
+        surveysCompleted: u.surveysCompleted || 0,
+        memberSince: u.memberSince || '',
+        onboardingCompleted: Boolean(u.onboardingCompleted),
+        employmentStatus: u.employmentStatus || '',
+        industry: u.industry || '',
+        roleTitle: u.roleTitle || '',
+        department: u.department || '',
+        country: u.country || '',
+        revenue: u.revenue || '',
+        area: u.area || '',
+        city: u.city || '',
+        pincode: u.pincode || '',
+        rewardsRedeemed: u.rewardsRedeemed || 0,
+        lastRedemption: u.lastRedemption || '',
+        createdAt: u.createdAt,
       })),
     });
   } catch (e) {

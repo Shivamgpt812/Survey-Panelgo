@@ -31,9 +31,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (!isAuthenticated) {
-    const destination = redirectTo || (localStorage.getItem('surveypanelgo_last_panel')
-      ? `/panels/${localStorage.getItem('surveypanelgo_last_panel')}/login`
-      : '/auth');
+    const lastPanel = localStorage.getItem('surveypanelgo_last_panel');
+    const destination = redirectTo || (lastPanel
+      ? `/panels/${lastPanel}/login`
+      : '/');
     return <Navigate to={destination} replace />;
   }
 
@@ -46,7 +47,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
 export const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
+    <ProtectedRoute allowedRoles={['admin']} redirectTo="/">
       {children}
     </ProtectedRoute>
   );
@@ -54,7 +55,7 @@ export const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }
 
 export const UserRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <ProtectedRoute allowedRoles={['user', 'admin']} redirectTo="/auth">
+    <ProtectedRoute allowedRoles={['user', 'admin']} redirectTo="/">
       {children}
     </ProtectedRoute>
   );

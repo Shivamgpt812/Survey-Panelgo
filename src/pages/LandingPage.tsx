@@ -1133,7 +1133,7 @@ const LandingPage: React.FC = () => {
               variant="primary"
               size="lg"
               rightIcon={<ArrowRight className="w-5 h-5" />}
-              onClick={() => navigate('/auth')}
+              onClick={() => navigate('/panels/b2b')}
             >
               Get started free
             </PlayfulButton>

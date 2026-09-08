@@ -927,7 +927,7 @@ const CountryDetailPage: React.FC = () => {
                 <PlayfulButton
                   variant="primary"
                   size="lg"
-                  onClick={() => navigate('/auth')}
+                  onClick={() => navigate('/panels/b2b/register')}
                 >
                   Join Now
                 </PlayfulButton>

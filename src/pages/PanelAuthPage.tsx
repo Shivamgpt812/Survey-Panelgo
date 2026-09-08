@@ -17,6 +17,7 @@ import {
 import { PlayfulButton, PlayfulCard, PlayfulBadge } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid } from '@/components/decorations';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import { Navbar } from '@/components/layout/Navbar';
 import { PanelOnboardingModal } from '@/components/panel/PanelOnboardingModal';
 import { apiPost } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
@@ -74,13 +75,16 @@ export const PanelAuthPage: React.FC = () => {
     paramPanelType || searchParams.get('panel') || 'b2b';
   const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'login';
 
-  const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot-password'>(initialMode);
   const [step, setStep] = useState<'form' | 'otp'>('form');
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [forgotResendCooldown, setForgotResendCooldown] = useState(0);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -88,6 +92,15 @@ export const PanelAuthPage: React.FC = () => {
     email: '',
     password: '',
     otp: '',
+  });
+
+  // Forgot Password State
+  const [forgotStep, setForgotStep] = useState<'email' | 'otp-password'>('email');
+  const [forgotData, setForgotData] = useState({
+    email: '',
+    otp: '',
+    newPassword: '',
+    confirmPassword: '',
   });
 
   // Modal State
@@ -108,6 +121,14 @@ export const PanelAuthPage: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
+
+  // Forgot Resend Timer Countdown
+  useEffect(() => {
+    if (forgotResendCooldown > 0) {
+      const timer = setTimeout(() => setForgotResendCooldown(forgotResendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [forgotResendCooldown]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
@@ -138,6 +159,12 @@ export const PanelAuthPage: React.FC = () => {
         setAuthToken(res.token);
         setRegisteredUser(res.user);
         if (setAuthUser) setAuthUser(res.user, res.token);
+
+        if (res.user.role === 'admin') {
+          addToast(`Welcome back, Administrator ${res.user.name}! 🎉`, 'success');
+          navigate('/admin');
+          return;
+        }
 
         if (res.needsOnboarding) {
           addToast('Welcome! Please complete your panelist profile.', 'info');
@@ -258,6 +285,112 @@ export const PanelAuthPage: React.FC = () => {
     }
   };
 
+  // 5. Handle Forgot Password - Send OTP via SMTP
+  const handleSendForgotOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotData.email.trim()) {
+      addToast('Please enter your registered email address', 'error');
+      return;
+    }
+
+    setIsSendingOtp(true);
+    try {
+      const res = await apiPost<{ success: boolean; message: string }>(
+        '/api/panel-auth/forgot-password/send-otp',
+        {
+          email: forgotData.email,
+          panelType,
+        }
+      );
+
+      if (res.success) {
+        addToast(`Password reset verification code sent to ${forgotData.email}! Check your inbox.`, 'success');
+        setForgotStep('otp-password');
+        setForgotResendCooldown(60);
+      }
+    } catch (err: any) {
+      addToast(err?.message || 'Failed to send reset code. Please check your email and try again.', 'error');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  // 6. Handle Forgot Password - Resend OTP
+  const handleResendForgotOtp = async () => {
+    if (forgotResendCooldown > 0 || isSendingOtp) return;
+    setIsSendingOtp(true);
+    try {
+      const res = await apiPost<{ success: boolean; message: string }>(
+        '/api/panel-auth/forgot-password/send-otp',
+        {
+          email: forgotData.email,
+          panelType,
+        }
+      );
+
+      if (res.success) {
+        addToast('New password reset code sent to your email!', 'success');
+        setForgotResendCooldown(60);
+      }
+    } catch (err: any) {
+      addToast(err?.message || 'Failed to resend reset code', 'error');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  // 7. Handle Forgot Password - Verify OTP & Update Password in Database
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotData.otp.trim()) {
+      addToast('Please enter the 6-digit verification code', 'error');
+      return;
+    }
+
+    if (!forgotData.newPassword) {
+      addToast('Please enter your new password', 'error');
+      return;
+    }
+
+    if (forgotData.newPassword.length < 6) {
+      addToast('New password must be at least 6 characters long', 'error');
+      return;
+    }
+
+    if (forgotData.newPassword !== forgotData.confirmPassword) {
+      addToast('New passwords do not match. Please verify and re-enter.', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await apiPost<{ success: boolean; message: string }>(
+        '/api/panel-auth/forgot-password/verify-and-reset',
+        {
+          email: forgotData.email,
+          otp: forgotData.otp,
+          newPassword: forgotData.newPassword,
+        }
+      );
+
+      if (res.success) {
+        addToast('Password updated successfully! You can now sign in with your new password.', 'success');
+        setFormData((prev) => ({
+          ...prev,
+          email: forgotData.email,
+          password: '',
+        }));
+        setMode('login');
+        setForgotStep('email');
+        setForgotData({ email: '', otp: '', newPassword: '', confirmPassword: '' });
+      }
+    } catch (err: any) {
+      addToast(err?.message || 'Failed to reset password. Please check the code and try again.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleOnboardingComplete = (updatedUser: User) => {
     localStorage.setItem('user', JSON.stringify(updatedUser));
     if (setAuthUser) setAuthUser(updatedUser, authToken);
@@ -274,24 +407,8 @@ export const PanelAuthPage: React.FC = () => {
       <DecorativeBlob variant="pink" size="md" className="right-[10%] top-[18%] opacity-60" />
       <DecorativeBlob variant="green" size="lg" className="right-[12%] bottom-[20%] opacity-60" />
 
-      {/* Top Bar */}
-      <header className="relative z-20 w-full px-4 sm:px-6 lg:px-8 py-4 bg-white/70 backdrop-blur-md border-b-2 border-navy/10">
-        <div className="w-full mx-auto flex items-center justify-between">
-          <button
-            onClick={() => navigate(config.backUrl)}
-            className="flex items-center gap-3 text-left cursor-pointer"
-          >
-            <BrandLogo size="nav" className="shrink-0 drop-shadow-sm" />
-          </button>
-          <button
-            onClick={() => navigate(config.backUrl)}
-            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-jakarta font-bold text-navy hover:text-violet transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Return to {config.badge}</span>
-          </button>
-        </div>
-      </header>
+      {/* Website Navbar */}
+      <Navbar />
 
       {/* Main Content */}
       <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-10 sm:py-16">
@@ -304,45 +421,63 @@ export const PanelAuthPage: React.FC = () => {
               </PlayfulBadge>
             </div>
             <h1 className="font-outfit font-black text-2xl sm:text-3xl text-navy tracking-tight">
-              {mode === 'login' ? 'Sign In to Your Panel' : 'Join the Research Panel'}
+              {mode === 'login'
+                ? 'Sign In to Your Panel'
+                : mode === 'signup'
+                ? 'Join the Research Panel'
+                : 'Reset Your Password'}
             </h1>
             <p className="font-jakarta text-xs sm:text-sm text-navy/70 mt-1.5 max-w-sm mx-auto">
-              {config.desc}
+              {mode === 'forgot-password'
+                ? 'Verify your email address to securely reset your account password.'
+                : config.desc}
             </p>
+            <div className="mt-2.5">
+              <button
+                type="button"
+                onClick={() => navigate(config.backUrl)}
+                className="inline-flex items-center gap-1.5 text-xs font-jakarta font-semibold text-navy/70 hover:text-violet transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Return to {config.badge} Overview</span>
+              </button>
+            </div>
           </div>
 
           <PlayfulCard variant="static" className="p-6 sm:p-8 bg-white/95 backdrop-blur-md">
-            {/* Mode Switcher Tabs */}
-            <div className="flex bg-navy/5 p-1 rounded-2xl border-2 border-navy/10 mb-6">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('login');
-                  setStep('form');
-                }}
-                className={`flex-1 py-2.5 rounded-xl font-jakarta font-bold text-sm transition-all ${
-                  mode === 'login'
-                    ? 'bg-white text-navy shadow-hard-sm border-2 border-navy'
-                    : 'text-navy/60 hover:text-navy'
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('signup');
-                  setStep('form');
-                }}
-                className={`flex-1 py-2.5 rounded-xl font-jakarta font-bold text-sm transition-all ${
-                  mode === 'signup'
-                    ? 'bg-white text-navy shadow-hard-sm border-2 border-navy'
-                    : 'text-navy/60 hover:text-navy'
-                }`}
-              >
-                Create Account
-              </button>
-            </div>
+            {/* Mode Switcher Tabs (Sign In / Create Account) */}
+            {mode !== 'forgot-password' && (
+              <div className="flex bg-navy/5 p-1 rounded-2xl border-2 border-navy/10 mb-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('login');
+                    setStep('form');
+                  }}
+                  className={`flex-1 py-2.5 rounded-xl font-jakarta font-bold text-sm transition-all ${
+                    mode === 'login'
+                      ? 'bg-white text-navy shadow-hard-sm border-2 border-navy'
+                      : 'text-navy/60 hover:text-navy'
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('signup');
+                    setStep('form');
+                  }}
+                  className={`flex-1 py-2.5 rounded-xl font-jakarta font-bold text-sm transition-all ${
+                    mode === 'signup'
+                      ? 'bg-white text-navy shadow-hard-sm border-2 border-navy'
+                      : 'text-navy/60 hover:text-navy'
+                  }`}
+                >
+                  Create Account
+                </button>
+              </div>
+            )}
 
             {/* LOGIN FORM */}
             {mode === 'login' && (
@@ -364,10 +499,28 @@ export const PanelAuthPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-jakarta font-bold text-xs text-navy flex items-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5 text-violet" />
-                    Password
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="font-jakarta font-bold text-xs text-navy flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-violet" />
+                      Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotData({
+                          email: formData.email,
+                          otp: '',
+                          newPassword: '',
+                          confirmPassword: '',
+                        });
+                        setMode('forgot-password');
+                        setForgotStep('email');
+                      }}
+                      className="font-jakarta text-xs font-semibold text-violet hover:text-navy transition-colors"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
@@ -398,6 +551,184 @@ export const PanelAuthPage: React.FC = () => {
                   {isLoading ? 'Signing in...' : 'Sign In to Panel'}
                   <ArrowRight className="w-4 h-4 ml-1.5" />
                 </PlayfulButton>
+              </form>
+            )}
+
+            {/* FORGOT PASSWORD - STEP 1: ENTER EMAIL */}
+            {mode === 'forgot-password' && forgotStep === 'email' && (
+              <form onSubmit={handleSendForgotOtp} className="space-y-4">
+                <div className="text-center mb-5">
+                  <div className="w-12 h-12 bg-violet/10 rounded-2xl border-2 border-navy flex items-center justify-center mx-auto mb-3 shadow-hard-sm">
+                    <KeyRound className="w-6 h-6 text-violet" />
+                  </div>
+                  <h3 className="font-outfit font-black text-xl text-navy">
+                    Forgot Password?
+                  </h3>
+                  <p className="font-jakarta text-xs text-navy/70 mt-1 max-w-xs mx-auto">
+                    Enter your registered email address and we will send a 6-digit verification code to reset your password.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-jakarta font-bold text-xs text-navy flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-violet" />
+                    Account Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={forgotData.email}
+                    onChange={(e) => setForgotData((prev) => ({ ...prev, email: e.target.value }))}
+                    placeholder="name@company.com"
+                    required
+                    className="w-full px-4 py-3 bg-white border-2 border-navy rounded-xl font-jakarta text-sm text-navy placeholder:text-navy/40 focus:outline-none focus:border-violet focus:ring-2 focus:ring-violet/20"
+                  />
+                </div>
+
+                <PlayfulButton
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  className="w-full justify-center mt-2"
+                  disabled={isSendingOtp}
+                >
+                  {isSendingOtp ? 'Sending Code...' : 'Send Verification Code'}
+                  <ArrowRight className="w-4 h-4 ml-1.5" />
+                </PlayfulButton>
+
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('login');
+                      setForgotStep('email');
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs font-jakarta font-bold text-navy/70 hover:text-violet transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back to Sign In</span>
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* FORGOT PASSWORD - STEP 2: ENTER OTP & NEW PASSWORD */}
+            {mode === 'forgot-password' && forgotStep === 'otp-password' && (
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+                <div className="text-center mb-4">
+                  <div className="w-12 h-12 bg-green/20 rounded-2xl border-2 border-navy flex items-center justify-center mx-auto mb-3 shadow-hard-sm">
+                    <ShieldCheck className="w-6 h-6 text-navy" />
+                  </div>
+                  <h3 className="font-outfit font-black text-xl text-navy">
+                    Set New Password
+                  </h3>
+                  <p className="font-jakarta text-xs text-navy/70 mt-1 max-w-xs mx-auto">
+                    We sent a 6-digit code to <span className="font-bold text-navy">{forgotData.email}</span>. Enter the code and your new password below.
+                  </p>
+                </div>
+
+                {/* 6-Digit OTP code input */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="font-jakarta font-bold text-xs text-navy flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-violet" />
+                      Verification Code
+                    </label>
+                    <button
+                      type="button"
+                      disabled={forgotResendCooldown > 0 || isSendingOtp}
+                      onClick={handleResendForgotOtp}
+                      className="text-xs font-jakarta font-semibold text-violet hover:underline disabled:opacity-50 disabled:no-underline"
+                    >
+                      {forgotResendCooldown > 0 ? `Resend code in ${forgotResendCooldown}s` : 'Resend code'}
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={forgotData.otp}
+                    onChange={(e) => setForgotData((prev) => ({ ...prev, otp: e.target.value.replace(/\D/g, '') }))}
+                    placeholder="Enter 6-digit code"
+                    required
+                    className="w-full px-4 py-3 bg-white border-2 border-navy rounded-xl font-mono font-bold text-center text-lg tracking-widest text-navy placeholder:text-navy/30 placeholder:tracking-normal placeholder:font-sans placeholder:text-sm focus:outline-none focus:border-violet focus:ring-2 focus:ring-violet/20"
+                  />
+                </div>
+
+                {/* New Password */}
+                <div className="space-y-1.5">
+                  <label className="font-jakarta font-bold text-xs text-navy flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-violet" />
+                    New Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={forgotData.newPassword}
+                      onChange={(e) => setForgotData((prev) => ({ ...prev, newPassword: e.target.value }))}
+                      placeholder="Minimum 6 characters"
+                      required
+                      minLength={6}
+                      className="w-full px-4 py-3 bg-white border-2 border-navy rounded-xl font-jakarta text-sm text-navy placeholder:text-navy/40 focus:outline-none focus:border-violet focus:ring-2 focus:ring-violet/20 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-navy/50 hover:text-navy"
+                    >
+                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm New Password */}
+                <div className="space-y-1.5">
+                  <label className="font-jakarta font-bold text-xs text-navy flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-violet" />
+                    Confirm New Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={forgotData.confirmPassword}
+                      onChange={(e) => setForgotData((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                      placeholder="Repeat new password"
+                      required
+                      minLength={6}
+                      className="w-full px-4 py-3 bg-white border-2 border-navy rounded-xl font-jakarta text-sm text-navy placeholder:text-navy/40 focus:outline-none focus:border-violet focus:ring-2 focus:ring-violet/20 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-navy/50 hover:text-navy"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <PlayfulButton
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  className="w-full justify-center mt-2"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Updating Password...' : 'Save New Password & Sign In'}
+                  <ArrowRight className="w-4 h-4 ml-1.5" />
+                </PlayfulButton>
+
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('login');
+                      setForgotStep('email');
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs font-jakarta font-bold text-navy/70 hover:text-violet transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back to Sign In</span>
+                  </button>
+                </div>
               </form>
             )}
 
@@ -469,42 +800,46 @@ export const PanelAuthPage: React.FC = () => {
                   className="w-full justify-center mt-2"
                   disabled={isSendingOtp}
                 >
-                  {isSendingOtp ? 'Sending Verification Code...' : 'Continue & Get OTP'}
+                  {isSendingOtp ? 'Sending Verification Code...' : 'Continue to Verification'}
                   <ArrowRight className="w-4 h-4 ml-1.5" />
                 </PlayfulButton>
               </form>
             )}
 
-            {/* SIGNUP STEP 2: Enter 6-digit OTP */}
+            {/* SIGNUP STEP 2: Verify OTP code */}
             {mode === 'signup' && step === 'otp' && (
-              <form onSubmit={handleVerifyOtpSubmit} className="space-y-5">
-                <div className="bg-violet/10 border-2 border-violet/30 rounded-2xl p-4 text-center">
-                  <div className="w-10 h-10 mx-auto rounded-full bg-violet text-white flex items-center justify-center mb-2 shadow-hard-sm">
-                    <KeyRound className="w-5 h-5" />
+              <form onSubmit={handleVerifyOtpSubmit} className="space-y-4">
+                <div className="text-center mb-4">
+                  <div className="w-12 h-12 bg-yellow/20 rounded-2xl border-2 border-navy flex items-center justify-center mx-auto mb-3 shadow-hard-sm">
+                    <Sparkles className="w-6 h-6 text-navy" />
                   </div>
-                  <h3 className="font-outfit font-bold text-base text-navy">
-                    Enter 6-Digit OTP
+                  <h3 className="font-outfit font-black text-xl text-navy">
+                    Enter Verification Code
                   </h3>
-                  <p className="font-jakarta text-xs text-navy/70 mt-1">
-                    We sent a one-time verification code to{' '}
-                    <strong className="text-navy">{formData.email}</strong>
+                  <p className="font-jakarta text-xs text-navy/70 mt-1 max-w-xs mx-auto">
+                    We sent a 6-digit code to <span className="font-bold text-navy">{formData.email}</span>. Enter it below to complete registration.
                   </p>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <input
                     type="text"
+                    maxLength={6}
                     name="otp"
                     value={formData.otp}
-                    onChange={handleChange}
-                    placeholder="123456"
-                    maxLength={6}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        otp: e.target.value.replace(/\D/g, ''),
+                      }))
+                    }
+                    placeholder="••••••"
                     required
                     autoFocus
                     className="w-full py-3.5 bg-white border-3 border-navy rounded-2xl font-mono font-extrabold text-2xl text-center tracking-[8px] text-violet focus:outline-none focus:border-violet shadow-hard-sm"
                   />
                 </div>
-
+                
                 <PlayfulButton
                   type="submit"
                   variant="primary"

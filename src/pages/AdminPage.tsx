@@ -50,6 +50,7 @@ import type {
 import { downloadExcel } from '@/lib/excel';
 import SurveyLogs from '@/components/admin/SurveyLogs';
 import RedirectAnalytics from '@/components/admin/RedirectAnalytics';
+import RegisteredUsersTab from '@/components/admin/RegisteredUsersTab';
 import { CustomPreScreenerForm } from '@/components/CustomPreScreenerForm';
 import {
   LineChart,
@@ -93,7 +94,7 @@ const AdminPage: React.FC = () => {
   
   // Get initial tab from URL parameter, default to 'dashboard'
   const initialTab = (searchParams.get('tab') as any) || 'dashboard';
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'surveys' | 'create' | 'vendors' | 'edit' | 'logs' | 'survey-logs' | 'redirect-analytics'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'surveys' | 'create' | 'vendors' | 'edit' | 'logs' | 'survey-logs' | 'redirect-analytics' | 'users'>(initialTab);
   const [editingSurveyId, setEditingSurveyId] = useState<string | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
@@ -165,7 +166,7 @@ const AdminPage: React.FC = () => {
   const handleLogout = () => {
     logout();
     addToast('Logged out successfully!', 'info');
-    navigate('/auth');
+    navigate('/');
   };
 
   const handleCreateSurvey = async (e: React.FormEvent) => {
@@ -470,7 +471,7 @@ const AdminPage: React.FC = () => {
       value: analytics.totalUsers,
       icon: Users,
       variant: 'yellow' as const,
-      href: '/admin/users' as const,
+      tab: 'users' as const,
     },
   ];
 
@@ -518,113 +519,123 @@ const AdminPage: React.FC = () => {
       {/* Sidebar + Main Content */}
       <div className="flex min-h-screen">
         {/* Sidebar */}
-        <aside className="hidden lg:flex flex-col w-72 shrink-0 bg-white border-r-2 border-navy/10 px-5 py-6">
-          {/* Logo — centered, larger */}
-          <div className="mb-10 text-center">
+        <aside className="hidden lg:flex flex-col w-72 shrink-0 bg-white border-r-2 border-navy/10 px-5 py-5 sticky top-0 h-screen overflow-hidden">
+          {/* Logo — centered, compact */}
+          <div className="mb-4 text-center shrink-0">
             <button
               type="button"
               onClick={() => navigate('/')}
-              className="inline-flex justify-center mb-3 w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-violet rounded-xl px-1"
+              className="inline-flex justify-center mb-1 w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-violet rounded-xl px-1"
               aria-label="Survey Panel Go home"
             >
               <BrandLogo
                 size="nav"
-                className="mx-auto object-center max-h-[5.25rem] sm:max-h-24 w-full max-w-[248px]"
+                className="mx-auto object-center max-h-[4.25rem] w-full max-w-[220px]"
               />
             </button>
-            <span className="font-outfit font-bold text-lg text-navy block">Admin</span>
+            <span className="font-outfit font-bold text-base text-navy block">Admin</span>
           </div>
 
           {/* Nav Links */}
-          <nav className="flex-1 space-y-2">
+          <nav className="flex-1 space-y-1.5 overflow-y-auto pr-1">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-jakarta font-medium transition-all ${activeTab === 'dashboard'
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-jakarta text-sm font-medium transition-all ${activeTab === 'dashboard'
                 ? 'bg-violet text-white shadow-hard'
                 : 'text-navy hover:bg-periwinkle'
                 }`}
             >
-              <LayoutDashboard className="w-5 h-5" />
+              <LayoutDashboard className="w-4 h-4" />
               Dashboard
             </button>
             <button
               onClick={() => setActiveTab('surveys')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-jakarta font-medium transition-all ${activeTab === 'surveys'
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-jakarta text-sm font-medium transition-all ${activeTab === 'surveys'
                 ? 'bg-violet text-white shadow-hard'
                 : 'text-navy hover:bg-periwinkle'
                 }`}
             >
-              <FileText className="w-5 h-5" />
+              <FileText className="w-4 h-4" />
               All Surveys
             </button>
             <button
               onClick={() => setActiveTab('create')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-jakarta font-medium transition-all ${activeTab === 'create'
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-jakarta text-sm font-medium transition-all ${activeTab === 'create'
                 ? 'bg-violet text-white shadow-hard'
                 : 'text-navy hover:bg-periwinkle'
                 }`}
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               Create Survey
             </button>
             <button
               onClick={() => setActiveTab('vendors')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-jakarta font-medium transition-all ${activeTab === 'vendors'
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-jakarta text-sm font-medium transition-all ${activeTab === 'vendors'
                 ? 'bg-violet text-white shadow-hard'
                 : 'text-navy hover:bg-periwinkle'
                 }`}
             >
-              <Store className="w-5 h-5" />
+              <Store className="w-4 h-4" />
               Vendors
             </button>
             <button
-              onClick={() => setActiveTab('logs')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-jakarta font-medium transition-all ${activeTab === 'logs'
+              onClick={() => setActiveTab('users')}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-jakarta text-sm font-medium transition-all ${activeTab === 'users'
                 ? 'bg-violet text-white shadow-hard'
                 : 'text-navy hover:bg-periwinkle'
                 }`}
             >
-              <ClipboardList className="w-5 h-5" />
+              <Users className="w-4 h-4" />
+              Registered Users
+            </button>
+            <button
+              onClick={() => setActiveTab('logs')}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-jakarta text-sm font-medium transition-all ${activeTab === 'logs'
+                ? 'bg-violet text-white shadow-hard'
+                : 'text-navy hover:bg-periwinkle'
+                }`}
+            >
+              <ClipboardList className="w-4 h-4" />
               Activity Logs
             </button>
             <button
               onClick={() => setActiveTab('survey-logs')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-jakarta font-medium transition-all ${activeTab === 'survey-logs'
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-jakarta text-sm font-medium transition-all ${activeTab === 'survey-logs'
                 ? 'bg-violet text-white shadow-hard'
                 : 'text-navy hover:bg-periwinkle'
                 }`}
             >
-              <Activity className="w-5 h-5" />
+              <Activity className="w-4 h-4" />
               Survey Logs
             </button>
             <button
               onClick={() => setActiveTab('redirect-analytics')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-jakarta font-medium transition-all ${activeTab === 'redirect-analytics'
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-jakarta text-sm font-medium transition-all ${activeTab === 'redirect-analytics'
                 ? 'bg-violet text-white shadow-hard'
                 : 'text-navy hover:bg-periwinkle'
                 }`}
             >
-              <BarChart3 className="w-5 h-5" />
+              <BarChart3 className="w-4 h-4" />
               Redirect Analytics
             </button>
             <button
               onClick={() => navigate('/admin-panel')}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-jakarta font-medium transition-all text-navy hover:bg-periwinkle"
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-jakarta text-sm font-medium transition-all text-navy hover:bg-periwinkle"
             >
-              <LayoutDashboard className="w-5 h-5" />
+              <LayoutDashboard className="w-4 h-4" />
               Admin Panel
             </button>
           </nav>
 
-          {/* User Info */}
-          <div className="pt-6 border-t-2 border-navy/10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-violet border-2 border-navy rounded-full flex items-center justify-center">
-                <span className="font-outfit font-bold text-white">{user?.name?.[0]}</span>
+          {/* User Info & Logout (Always visible pinned at bottom) */}
+          <div className="pt-4 border-t-2 border-navy/10 shrink-0 mt-auto">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-violet border-2 border-navy rounded-full flex items-center justify-center shrink-0">
+                <span className="font-outfit font-bold text-white">{user?.name?.[0]?.toUpperCase() || 'A'}</span>
               </div>
-              <div>
-                <p className="font-jakarta font-medium text-sm text-navy">{user?.name}</p>
-                <p className="font-mono text-xs text-navy-light">Administrator</p>
+              <div className="min-w-0 flex-1">
+                <p className="font-jakarta font-medium text-sm text-navy truncate">{user?.name || 'Administrator'}</p>
+                <p className="font-mono text-xs text-navy-light truncate">Administrator</p>
               </div>
             </div>
             <PlayfulButton variant="secondary" size="sm" className="w-full" onClick={handleLogout}>
@@ -670,6 +681,7 @@ const AdminPage: React.FC = () => {
                   { id: 'surveys', label: 'All Surveys', icon: FileText },
                   { id: 'create', label: 'Create Survey', icon: Plus },
                   { id: 'vendors', label: 'Vendors', icon: Store },
+                  { id: 'users', label: 'Registered Users', icon: Users },
                   { id: 'logs', label: 'Activity Logs', icon: ClipboardList },
                   { id: 'survey-logs', label: 'Survey Logs', icon: Activity },
                   { id: 'redirect-analytics', label: 'Redirect Analytics', icon: BarChart3 },
@@ -678,7 +690,9 @@ const AdminPage: React.FC = () => {
                   <button
                     key={tab.id}
                     onClick={() => {
-                      if (tab.isExternal) {
+                      if (tab.path) {
+                        navigate(tab.path);
+                      } else if (tab.isExternal) {
                         navigate('/admin-panel');
                       } else {
                         setActiveTab(tab.id as any);
@@ -786,40 +800,49 @@ const AdminPage: React.FC = () => {
 
               {/* Stats Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
-                {statCards.map((stat, index) => (
-                  <PlayfulCard
-                    key={index}
-                    variant={stat.href ? 'static' : 'default'}
-                    className={`p-2.5 sm:p-3 md:p-4 lg:p-5 ${stat.href ? 'cursor-pointer hover:shadow-hard-lg hover:-translate-y-0.5 transition-all' : ''}`}
-                    onClick={stat.href ? () => navigate(stat.href) : undefined}
-                    role={stat.href ? 'button' : undefined}
-                    tabIndex={stat.href ? 0 : undefined}
-                    onKeyDown={
-                      stat.href
-                        ? (e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            navigate(stat.href);
+                {statCards.map((stat, index) => {
+                  const hasTab = 'tab' in stat && Boolean((stat as any).tab);
+                  const isClickable = Boolean(stat.href || hasTab);
+                  const handleClick = () => {
+                    if (stat.href) navigate(stat.href);
+                    else if (hasTab) setActiveTab((stat as any).tab);
+                  };
+
+                  return (
+                    <PlayfulCard
+                      key={index}
+                      variant={isClickable ? 'static' : 'default'}
+                      className={`p-2.5 sm:p-3 md:p-4 lg:p-5 ${isClickable ? 'cursor-pointer hover:shadow-hard-lg hover:-translate-y-0.5 transition-all' : ''}`}
+                      onClick={isClickable ? handleClick : undefined}
+                      role={isClickable ? 'button' : undefined}
+                      tabIndex={isClickable ? 0 : undefined}
+                      onKeyDown={
+                        isClickable
+                          ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleClick();
+                            }
                           }
-                        }
-                        : undefined
-                    }
-                    aria-label={stat.href ? `${stat.label}: open user list` : undefined}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-jakarta text-xs text-navy-light mb-1 truncate leading-tight">{stat.label}</p>
-                        <p className="font-outfit font-bold text-xl sm:text-2xl md:text-3xl text-navy leading-tight">{stat.value}</p>
-                        {stat.href && (
-                          <p className="font-jakarta text-xs text-violet mt-1 font-medium">View →</p>
-                        )}
+                          : undefined
+                      }
+                      aria-label={isClickable ? `${stat.label}: view details` : undefined}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-jakarta text-xs text-navy-light mb-1 truncate leading-tight">{stat.label}</p>
+                          <p className="font-outfit font-bold text-xl sm:text-2xl md:text-3xl text-navy leading-tight">{stat.value}</p>
+                          {isClickable && (
+                            <p className="font-jakarta text-xs text-violet mt-1 font-medium">View →</p>
+                          )}
+                        </div>
+                        <IconCircle variant={stat.variant} size="sm" className="shrink-0 ml-0.5 sm:ml-1 md:ml-2">
+                          <stat.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
+                        </IconCircle>
                       </div>
-                      <IconCircle variant={stat.variant} size="sm" className="shrink-0 ml-0.5 sm:ml-1 md:ml-2">
-                        <stat.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
-                      </IconCircle>
-                    </div>
-                  </PlayfulCard>
-                ))}
+                    </PlayfulCard>
+                  );
+                })}
               </div>
 
               {/* Analytics Chart Section */}
@@ -2144,6 +2167,11 @@ const AdminPage: React.FC = () => {
           {/* REDIRECT ANALYTICS TAB */}
           {activeTab === 'redirect-analytics' && (
             <RedirectAnalytics />
+          )}
+
+          {/* REGISTERED USERS TAB */}
+          {activeTab === 'users' && (
+            <RegisteredUsersTab />
           )}
         </main>
       </div>

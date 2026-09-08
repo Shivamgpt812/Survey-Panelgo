@@ -24,6 +24,14 @@ import { BrandLogo } from '@/components/brand/BrandLogo';
 
 const MINIMUM_REDEEM_POINTS = 5000;
 
+const panelLabels: Record<string, { label: string; badgeVariant: 'violet' | 'pink' | 'yellow' | 'green' }> = {
+  b2b: { label: 'B2B Decision Makers Panel', badgeVariant: 'violet' },
+  b2c: { label: 'B2C Consumer & Lifestyle Panel', badgeVariant: 'pink' },
+  'patients-carers': { label: 'Patients & Caregivers Panel', badgeVariant: 'yellow' },
+  'healthcare-professionals': { label: 'Healthcare Professionals (HCP) Panel', badgeVariant: 'green' },
+  general: { label: 'General Research Panel', badgeVariant: 'violet' },
+};
+
 const RewardsPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout, refreshUser } = useAuth();
@@ -38,17 +46,26 @@ const RewardsPage: React.FC = () => {
       .catch(() => setRewards([]));
   }, []);
 
+  const isPanelist = user?.panelType && ['b2b', 'b2c', 'patients-carers', 'healthcare-professionals'].includes(user.panelType);
+  const dashboardPath = isPanelist ? '/panels/dashboard' : '/dashboard';
+  const panelInfo = panelLabels[user?.panelType || 'general'] || panelLabels.general;
+
   const handleLogout = () => {
+    const pType = user?.panelType;
     logout();
     addToast('Logged out successfully!', 'info');
-    navigate('/auth');
+    if (pType && ['b2b', 'b2c', 'patients-carers', 'healthcare-professionals'].includes(pType)) {
+      navigate(`/panels/${pType}/login`);
+    } else {
+      navigate('/');
+    }
   };
 
   const handleRedeem = async (reward: Reward) => {
     const token = getStoredToken();
     if (!token) {
       addToast('Please sign in to redeem rewards', 'error');
-      navigate('/auth');
+      navigate('/');
       return;
     }
 
@@ -117,7 +134,7 @@ const RewardsPage: React.FC = () => {
   const isRedemptionEligible = userPoints >= MINIMUM_REDEEM_POINTS;
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-periwinkle">
+    <div className="relative min-h-screen w-full overflow-hidden bg-periwinkle flex flex-col justify-between">
       {/* Background Pattern */}
       <DotGrid className="fixed inset-0" />
 
@@ -125,42 +142,65 @@ const RewardsPage: React.FC = () => {
       <DecorativeBlob variant="yellow" size="md" className="right-[5%] top-[15%] opacity-40" />
       <DecorativeBlob variant="pink" size="md" className="left-[5%] bottom-[15%] opacity-40" />
 
-      {/* Navigation */}
-      <nav className="relative z-10 w-full px-4 sm:px-6 lg:px-8 py-4 bg-white/80 backdrop-blur-sm border-b-2 border-navy/10">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2 px-3 py-2 bg-white border-2 border-navy rounded-pill hover:bg-periwinkle transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 text-navy" />
-            <span className="font-jakarta font-medium text-sm text-navy hidden sm:block">Back</span>
-          </button>
-
-          <div className="flex items-center justify-center flex-1 min-w-0 px-2">
+      {/* Header matching Panel Navbar layout */}
+      <header className="relative z-20 w-full px-4 sm:px-6 lg:px-8 py-4 bg-white/80 backdrop-blur-md border-b-2 border-navy/10">
+        <div className="w-full mx-auto flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
             <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="min-w-0"
-              aria-label="Survey Panel Go home"
+              onClick={() => navigate(dashboardPath)}
+              className="flex items-center gap-3 text-left cursor-pointer shrink-0"
+              aria-label="Back to dashboard"
             >
-              <BrandLogo size="sm" className="max-h-8 sm:max-h-9 mx-auto" />
+              <BrandLogo size="nav" className="shrink-0 drop-shadow-sm" />
             </button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 px-3 py-2 bg-yellow border-2 border-navy rounded-pill">
-              <Coins className="w-4 h-4 text-navy" />
-              <span className="font-outfit font-bold text-sm text-navy">{userPoints.toLocaleString()}</span>
+            <span className="hidden sm:inline-block text-navy/30">•</span>
+            <div className="hidden sm:flex items-center gap-2">
+              <PlayfulBadge variant={panelInfo.badgeVariant} size="sm">
+                {panelInfo.label}
+              </PlayfulBadge>
             </div>
             <button
-              onClick={handleLogout}
-              className="p-2 bg-white border-2 border-navy rounded-full hover:bg-periwinkle transition-colors"
+              onClick={() => navigate(dashboardPath)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border-2 border-navy rounded-full shadow-hard-sm hover:bg-periwinkle transition-colors cursor-pointer text-navy font-jakarta text-xs sm:text-sm font-semibold"
             >
-              <LogOut className="w-4 h-4 text-navy" />
+              <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-navy" />
+              <span className="hidden sm:inline">Back to Surveys</span>
+              <span className="sm:hidden">Back</span>
             </button>
           </div>
+
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Points pill */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow border-2 border-navy rounded-full shadow-hard-sm">
+              <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-navy" />
+              <span className="font-outfit font-bold text-xs sm:text-sm text-navy">
+                {userPoints.toLocaleString()} pts
+              </span>
+            </div>
+
+            {/* User Avatar & Name */}
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border-2 border-navy rounded-full shadow-hard-sm">
+              <div className="w-7 h-7 rounded-full bg-violet text-white flex items-center justify-center font-bold text-xs">
+                {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+              </div>
+              <span className="font-jakarta font-bold text-xs text-navy hidden md:inline">
+                {user?.name || 'Panelist'}
+              </span>
+            </div>
+
+            {/* Logout Button */}
+            <PlayfulButton
+              variant="secondary"
+              size="sm"
+              onClick={handleLogout}
+              className="gap-1.5"
+            >
+              <LogOut className="w-4 h-4 text-navy" />
+              <span className="hidden sm:inline">Logout</span>
+            </PlayfulButton>
+          </div>
         </div>
-      </nav>
+      </header>
 
       {/* Main Content */}
       <main className="relative z-10 px-4 sm:px-6 lg:px-8 py-8">

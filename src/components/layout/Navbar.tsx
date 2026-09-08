@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import { BrandLogo } from '@/components/brand/BrandLogo';
-import { PlayfulButton } from '@/components/ui/playful';
 
 interface NavbarProps {
   className?: string;
@@ -40,8 +39,6 @@ export function Navbar({ className = '' }: NavbarProps) {
     { label: 'Patients and Carers', path: '/panels/patients-carers' },
     { label: 'Healthcare professionals', path: '/panels/healthcare-professionals' },
   ];
-
-  const authUrls = { login: '/auth', signup: '/auth?mode=signup' };
 
   return (
     <nav className={`relative z-50 w-full px-4 sm:px-6 lg:px-8 py-3 sm:py-4 bg-white/70 backdrop-blur-md border-b-2 border-navy/10 ${className}`}>
@@ -143,16 +140,6 @@ export function Navbar({ className = '' }: NavbarProps) {
           >
             Contact
           </a>
-        </div>
-
-        {/* Desktop Buttons */}
-        <div className="hidden lg:flex items-center gap-3 shrink-0">
-          <PlayfulButton variant="secondary" size="sm" onClick={() => navigate(authUrls.login)}>
-            Sign In
-          </PlayfulButton>
-          <PlayfulButton variant="primary" size="sm" onClick={() => navigate(authUrls.signup)}>
-            Join Our Panel
-          </PlayfulButton>
         </div>
 
         {/* Mobile Menu Button */}
@@ -258,28 +245,6 @@ export function Navbar({ className = '' }: NavbarProps) {
             >
               Contact
             </a>
-            <div className="flex flex-col gap-3 pt-4 border-t border-navy/10">
-              <PlayfulButton
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  navigate(authUrls.login);
-                  setIsMobileMenuOpen(false);
-                }}
-              >
-                Sign In
-              </PlayfulButton>
-              <PlayfulButton
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  navigate(authUrls.signup);
-                  setIsMobileMenuOpen(false);
-                }}
-              >
-                Join Our Panel
-              </PlayfulButton>
-            </div>
           </div>
         </div>
       )}

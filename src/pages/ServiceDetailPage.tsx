@@ -653,7 +653,7 @@ const ServiceDetailPage: React.FC = () => {
               <PlayfulButton
                 variant="primary"
                 size="lg"
-                onClick={() => navigate('/auth')}
+                onClick={() => navigate('/contact')}
               >
                 Start Your Project
               </PlayfulButton>
