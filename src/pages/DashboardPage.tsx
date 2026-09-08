@@ -78,21 +78,21 @@ const DashboardPage: React.FC = () => {
       label: 'Total Points',
       value: user?.points?.toLocaleString() || '0',
       variant: 'yellow' as const,
-      trend: '+250 this week',
+      trend: `${user?.points || 0} available pts`,
     },
     {
       icon: ClipboardList,
       label: 'Surveys Completed',
       value: user?.surveysCompleted?.toString() || '0',
       variant: 'green' as const,
-      trend: '+3 today',
+      trend: `${user?.surveysCompleted || 0} total finished`,
     },
     {
       icon: Gift,
       label: 'Rewards Redeemed',
-      value: '3',
+      value: (user?.rewardsRedeemed || 0).toString(),
       variant: 'pink' as const,
-      trend: 'Last: ₹500 Amazon',
+      trend: user?.lastRedemption ? `Last: ${user.lastRedemption}` : '5,000 pts to unlock',
     },
   ];
 
@@ -276,24 +276,25 @@ const DashboardPage: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-outfit font-bold text-lg text-navy">Next Reward</h3>
+                    <h3 className="font-outfit font-bold text-lg text-navy">Next Reward Milestone</h3>
                     <span className="font-mono text-sm text-navy-light">
-                      {user?.points || 0} / 1000 points
+                      {(user?.points || 0).toLocaleString()} / 5,000 points
                     </span>
                   </div>
                   <PlayfulProgress
-                    value={user?.points || 0}
-                    max={1000}
+                    value={Math.min(user?.points || 0, 5000)}
+                    max={5000}
                     variant="violet"
                     size="md"
                   />
                   <p className="font-jakarta text-sm text-navy-light mt-2">
-                    You're {Math.max(0, 1000 - (user?.points || 0)).toLocaleString()} points away from a ₹500 Amazon
-                    Gift Card!
+                    {(user?.points || 0) >= 5000
+                      ? '🎉 You have unlocked reward redemptions! Choose your gift cards or cash transfers below.'
+                      : `You're ${Math.max(0, 5000 - (user?.points || 0)).toLocaleString()} points away from unlocking ₹2,500 Amazon Gift Cards & Cash Payouts!`}
                   </p>
                 </div>
                 <PlayfulButton variant="secondary" size="sm" onClick={() => navigate('/rewards')}>
-                  View All
+                  View All Rewards
                 </PlayfulButton>
               </div>
             </PlayfulCard>

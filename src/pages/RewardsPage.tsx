@@ -10,22 +10,27 @@ import {
   ShoppingBag,
   CreditCard,
   Wallet,
-  LogOut
+  LogOut,
+  AlertCircle,
+  Sparkles,
 } from 'lucide-react';
 import { PlayfulButton, PlayfulCard, PlayfulBadge } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, getStoredToken } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import type { Reward } from '@/types';
-import { apiGet } from '@/lib/api';
+import { apiGet, apiPost } from '@/lib/api';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+
+const MINIMUM_REDEEM_POINTS = 5000;
 
 const RewardsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const { addToast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [rewards, setRewards] = useState<Reward[]>([]);
+  const [redeemingId, setRedeemingId] = useState<string | null>(null);
 
   useEffect(() => {
     void apiGet<{ rewards: Reward[] }>('/api/rewards')
@@ -37,6 +42,46 @@ const RewardsPage: React.FC = () => {
     logout();
     addToast('Logged out successfully!', 'info');
     navigate('/auth');
+  };
+
+  const handleRedeem = async (reward: Reward) => {
+    const token = getStoredToken();
+    if (!token) {
+      addToast('Please sign in to redeem rewards', 'error');
+      navigate('/auth');
+      return;
+    }
+
+    if (userPoints < MINIMUM_REDEEM_POINTS) {
+      addToast(
+        `Minimum ${MINIMUM_REDEEM_POINTS.toLocaleString()} points required to redeem rewards. You need ${(MINIMUM_REDEEM_POINTS - userPoints).toLocaleString()} more points.`,
+        'error'
+      );
+      return;
+    }
+
+    if (userPoints < reward.pointsCost) {
+      addToast(
+        `You need ${(reward.pointsCost - userPoints).toLocaleString()} more points to redeem ${reward.name}.`,
+        'error'
+      );
+      return;
+    }
+
+    setRedeemingId(reward.id);
+    try {
+      const res = await apiPost<{ success: boolean; message: string }>(
+        '/api/rewards/redeem',
+        { rewardId: reward.id },
+        token
+      );
+      addToast(res.message || '🎉 Reward redeemed successfully!', 'success');
+      await refreshUser();
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to redeem reward', 'error');
+    } finally {
+      setRedeemingId(null);
+    }
   };
 
   const categories = [
@@ -69,6 +114,7 @@ const RewardsPage: React.FC = () => {
   };
 
   const userPoints = user?.points || 0;
+  const isRedemptionEligible = userPoints >= MINIMUM_REDEEM_POINTS;
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-periwinkle">
@@ -131,11 +177,11 @@ const RewardsPage: React.FC = () => {
               Redeem Your Rewards
             </h1>
             <p className="font-jakarta text-navy-light">
-              Turn your hard-earned points into amazing rewards. Choose from gift cards, cash, and more!
+              Turn your hard-earned points into amazing rewards. Minimum 5,000 points required to cash out!
             </p>
           </section>
 
-          {/* Points Balance Card */}
+          {/* Points Balance & Minimum Threshold Alert Card */}
           <section>
             <PlayfulCard className="p-6 md:p-8 bg-gradient-to-r from-violet/10 via-pink/10 to-yellow/10">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
@@ -152,13 +198,49 @@ const RewardsPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="text-right">
+                  <div className="text-left md:text-right">
                     <p className="font-jakarta text-sm text-navy-light">Estimated Value</p>
                     <p className="font-outfit font-bold text-2xl text-violet">
                       ₹{(userPoints / 2).toFixed(2)}
                     </p>
+                    <p className="font-mono text-xs text-navy-light">1 pt = ₹0.50</p>
                   </div>
                 </div>
+              </div>
+
+              {/* Threshold Status Bar */}
+              <div className="mt-6 pt-6 border-t-2 border-navy/10">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-jakarta font-semibold text-sm text-navy flex items-center gap-2">
+                    {isRedemptionEligible ? (
+                      <>
+                        <Sparkles className="w-4 h-4 text-green-600" />
+                        <span className="text-green-700">Redemption Unlocked! (Eligible for all 5,000+ pt rewards)</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-4 h-4 text-orange-500" />
+                        <span>Redemption Threshold: 5,000 Points</span>
+                      </>
+                    )}
+                  </span>
+                  <span className="font-mono text-xs font-bold text-navy">
+                    {userPoints.toLocaleString()} / 5,000 pts
+                  </span>
+                </div>
+                <div className="w-full bg-white border-2 border-navy rounded-full h-4 overflow-hidden p-0.5">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      isRedemptionEligible ? 'bg-green-500' : 'bg-violet'
+                    }`}
+                    style={{ width: `${Math.min(100, (userPoints / MINIMUM_REDEEM_POINTS) * 100)}%` }}
+                  />
+                </div>
+                {!isRedemptionEligible && (
+                  <p className="font-jakarta text-xs text-navy-light mt-2">
+                    🔒 You need <span className="font-bold text-violet">{(MINIMUM_REDEEM_POINTS - userPoints).toLocaleString()} more points</span> to make your first redemption. Complete available surveys on your dashboard to reach 5,000 points!
+                  </p>
+                )}
               </div>
             </PlayfulCard>
           </section>
@@ -186,9 +268,10 @@ const RewardsPage: React.FC = () => {
           <section>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filteredRewards.map((reward) => {
-                const canAfford = userPoints >= reward.pointsCost;
+                const canAfford = userPoints >= reward.pointsCost && userPoints >= MINIMUM_REDEEM_POINTS;
                 const Icon = getCategoryIcon(reward.category);
                 const colorVariant = getCategoryColor(reward.category);
+                const isRedeeming = redeemingId === reward.id;
 
                 return (
                   <PlayfulCard
@@ -227,7 +310,7 @@ const RewardsPage: React.FC = () => {
                         </span>
                         <span className="font-mono text-xs text-navy-light">pts</span>
                       </div>
-                      <span className="font-mono text-xs text-navy-light">
+                      <span className="font-mono text-xs text-navy-light font-bold">
                         ₹{(reward.pointsCost / 2).toFixed(0)} value
                       </span>
                     </div>
@@ -236,12 +319,16 @@ const RewardsPage: React.FC = () => {
                       variant={canAfford && reward.inStock ? 'primary' : 'secondary'}
                       size="sm"
                       className="w-full"
-                      disabled={!canAfford || !reward.inStock}
+                      disabled={!canAfford || !reward.inStock || isRedeeming}
+                      onClick={() => handleRedeem(reward)}
                       leftIcon={canAfford && reward.inStock ? <Check className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                     >
-                      {!reward.inStock ? 'Out of Stock' :
+                      {isRedeeming ? 'Processing...' :
+                        !reward.inStock ? 'Out of Stock' :
                         canAfford ? 'Redeem Now' :
-                          `${(reward.pointsCost - userPoints).toLocaleString()} more pts needed`}
+                        userPoints < MINIMUM_REDEEM_POINTS
+                          ? `${(MINIMUM_REDEEM_POINTS - userPoints).toLocaleString()} pts to unlock`
+                          : `${(reward.pointsCost - userPoints).toLocaleString()} more pts needed`}
                     </PlayfulButton>
                   </PlayfulCard>
                 );
@@ -260,17 +347,17 @@ const RewardsPage: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-outfit font-bold text-xl text-navy mb-2">
-                    Want to earn more points?
+                    Want to reach 5,000 points faster?
                   </h3>
                   <p className="font-jakarta text-navy-light mb-4">
-                    Complete more surveys to earn points faster. New surveys are added daily!
+                    Complete available surveys on your dashboard to stack points rapidly. Once you reach 5,000 points, all rewards unlock instantly!
                   </p>
                   <PlayfulButton
                     variant="primary"
                     size="sm"
                     onClick={() => navigate('/dashboard')}
                   >
-                    Browse Surveys
+                    Browse Available Surveys
                   </PlayfulButton>
                 </div>
               </div>
@@ -278,18 +365,6 @@ const RewardsPage: React.FC = () => {
           </section>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="relative z-10 px-4 sm:px-6 lg:px-8 py-8 border-t-2 border-navy/10 mt-12">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center">
-            <BrandLogo size="sm" className="max-h-8" />
-          </div>
-          <p className="font-jakarta text-sm text-navy-light">
-            © 2024 Survey Panel Go. All rights reserved.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 };

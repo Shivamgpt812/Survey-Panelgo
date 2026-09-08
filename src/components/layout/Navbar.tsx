@@ -41,29 +41,7 @@ export function Navbar({ className = '' }: NavbarProps) {
     { label: 'Healthcare professionals', path: '/panels/healthcare-professionals' },
   ];
 
-  const getAuthUrls = () => {
-    if (location.pathname.startsWith('/panels/b2b')) {
-      return { login: '/panels/b2b/login', signup: '/panels/b2b/signup' };
-    }
-    if (location.pathname.startsWith('/panels/b2c')) {
-      return { login: '/panels/b2c/login', signup: '/panels/b2c/signup' };
-    }
-    if (location.pathname.startsWith('/panels/patients-carers')) {
-      return { login: '/panels/patients-carers/login', signup: '/panels/patients-carers/signup' };
-    }
-    if (
-      location.pathname.startsWith('/panels/healthcare-professionals') ||
-      location.pathname.startsWith('/healthcare-professionals')
-    ) {
-      return {
-        login: '/panels/healthcare-professionals/login',
-        signup: '/panels/healthcare-professionals/signup',
-      };
-    }
-    return { login: '/auth', signup: '/auth?mode=signup' };
-  };
-
-  const authUrls = getAuthUrls();
+  const authUrls = { login: '/auth', signup: '/auth?mode=signup' };
 
   return (
     <nav className={`relative z-50 w-full px-4 sm:px-6 lg:px-8 py-3 sm:py-4 bg-white/70 backdrop-blur-md border-b-2 border-navy/10 ${className}`}>

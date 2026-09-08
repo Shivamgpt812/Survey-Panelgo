@@ -20,6 +20,8 @@ export interface User {
   area?: string;
   city?: string;
   pincode?: string;
+  rewardsRedeemed?: number;
+  lastRedemption?: string;
 }
 
 export interface PreScreenerQuestion {

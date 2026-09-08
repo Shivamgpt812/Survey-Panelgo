@@ -22,6 +22,8 @@ const userSchema = new mongoose.Schema(
     area: { type: String, default: '' },
     city: { type: String, default: '' },
     pincode: { type: String, default: '' },
+    rewardsRedeemed: { type: Number, default: 0 },
+    lastRedemption: { type: String, default: '' },
   },
   {
     timestamps: true,

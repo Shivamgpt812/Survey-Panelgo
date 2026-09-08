@@ -698,11 +698,74 @@ app.delete('/api/vendors/:id', requireAdmin, async (req, res) => {
 // ---------- Rewards ----------
 app.get('/api/rewards', async (_req, res) => {
   try {
-    const rewards = await Reward.find().sort({ createdAt: -1 });
+    const rewards = await Reward.find().sort({ pointsCost: 1 });
     res.json({ rewards: rewards.map((r) => r.toJSON()) });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to load rewards' });
+  }
+});
+
+app.post('/api/rewards/redeem', requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    const { rewardId } = req.body as { rewardId?: string };
+    if (!rewardId) {
+      res.status(400).json({ error: 'Reward ID is required' });
+      return;
+    }
+
+    const user = await User.findById(req.user!._id);
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    const reward = await Reward.findById(rewardId);
+    if (!reward) {
+      res.status(404).json({ error: 'Reward not found' });
+      return;
+    }
+
+    if (!reward.inStock) {
+      res.status(400).json({ error: 'This reward is currently out of stock' });
+      return;
+    }
+
+    // Minimum 5,000 points threshold to redeem
+    if (user.points < 5000) {
+      res.status(400).json({
+        error: `Minimum 5,000 points required to redeem rewards. You currently have ${user.points.toLocaleString()} points (${(5000 - user.points).toLocaleString()} more points needed).`,
+      });
+      return;
+    }
+
+    if (user.points < reward.pointsCost) {
+      res.status(400).json({
+        error: `Insufficient points for this reward. Cost is ${reward.pointsCost.toLocaleString()} points, but you have ${user.points.toLocaleString()} points.`,
+      });
+      return;
+    }
+
+    // Deduct points and track redemption
+    user.points -= reward.pointsCost;
+    user.rewardsRedeemed = (user.rewardsRedeemed || 0) + 1;
+    user.lastRedemption = reward.name;
+    await user.save();
+
+    await ActivityLog.create({
+      message: `${user.name} redeemed reward: ${reward.name} for ${reward.pointsCost} points`,
+      type: 'info',
+    });
+
+    res.json({
+      success: true,
+      message: `🎉 Successfully redeemed ${reward.name}! Your reward voucher details have been dispatched.`,
+      user: userJson(user),
+      reward: reward.toJSON(),
+    });
+  } catch (e) {
+    console.error('Error redeeming reward:', e);
+    res.status(500).json({ error: 'Failed to redeem reward' });
   }
 });
 
