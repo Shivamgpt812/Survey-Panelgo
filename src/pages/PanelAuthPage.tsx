@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   RefreshCw,
+  Phone,
 } from 'lucide-react';
 import { PlayfulButton, PlayfulCard, PlayfulBadge } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid } from '@/components/decorations';
@@ -90,6 +91,7 @@ export const PanelAuthPage: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     password: '',
     otp: '',
   });
@@ -185,8 +187,8 @@ export const PanelAuthPage: React.FC = () => {
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim() || !formData.email.trim() || !formData.password) {
-      addToast('Please fill all fields', 'error');
+    if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim() || !formData.password) {
+      addToast('Please fill all fields including your mobile number', 'error');
       return;
     }
 
@@ -263,6 +265,7 @@ export const PanelAuthPage: React.FC = () => {
       }>('/api/panel-auth/verify-and-register', {
         name: formData.name,
         email: formData.email,
+        phone: formData.phone,
         password: formData.password,
         panelType,
         otp: formData.otp,
@@ -762,6 +765,22 @@ export const PanelAuthPage: React.FC = () => {
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="jane@example.com"
+                    required
+                    className="w-full px-4 py-3 bg-white border-2 border-navy rounded-xl font-jakarta text-sm text-navy placeholder:text-navy/40 focus:outline-none focus:border-violet focus:ring-2 focus:ring-violet/20"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-jakarta font-bold text-xs text-navy flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-violet" />
+                    Mobile / Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    placeholder="+91 98765 43210"
                     required
                     className="w-full px-4 py-3 bg-white border-2 border-navy rounded-xl font-jakarta text-sm text-navy placeholder:text-navy/40 focus:outline-none focus:border-violet focus:ring-2 focus:ring-violet/20"
                   />

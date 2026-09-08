@@ -65,9 +65,10 @@ function userJson(u: InstanceType<typeof User>) {
 // ---------- Auth ----------
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body as {
+    const { name, email, phone, password } = req.body as {
       name?: string;
       email?: string;
+      phone?: string;
       password?: string;
     };
     if (!name?.trim() || !email?.trim() || !password) {
@@ -84,6 +85,7 @@ app.post('/api/auth/register', async (req, res) => {
     const user = await User.create({
       name: name.trim(),
       email: em,
+      phone: (phone || '').trim(),
       passwordHash,
       role: 'user',
       points: 0,
@@ -217,9 +219,10 @@ app.post('/api/panel-auth/send-otp', async (req, res) => {
 // 2. Verify OTP and Register Panel User
 app.post('/api/panel-auth/verify-and-register', async (req, res) => {
   try {
-    const { name, email, password, panelType, otp } = req.body as {
+    const { name, email, phone, password, panelType, otp } = req.body as {
       name?: string;
       email?: string;
+      phone?: string;
       password?: string;
       panelType?: string;
       otp?: string;
@@ -259,6 +262,7 @@ app.post('/api/panel-auth/verify-and-register', async (req, res) => {
     const user = await User.create({
       name: name.trim(),
       email: em,
+      phone: (phone || '').trim(),
       passwordHash,
       role: 'user',
       points: 0,

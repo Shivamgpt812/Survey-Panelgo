@@ -13,6 +13,7 @@ export interface LoginCredentials {
 export interface RegisterPayload {
   name: string;
   email: string;
+  phone?: string;
   password: string;
 }
 

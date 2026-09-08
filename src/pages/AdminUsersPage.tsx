@@ -20,6 +20,7 @@ import {
   Eye,
   X,
   Sparkles,
+  Phone,
 } from 'lucide-react';
 import { PlayfulButton, PlayfulCard, PlayfulBadge } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
@@ -32,6 +33,7 @@ interface FullUser {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   role: 'user' | 'admin';
   panelType?: string;
   points?: number;
@@ -95,6 +97,7 @@ const AdminUsersPage: React.FC = () => {
         !q ||
         u.name.toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
+        (u.phone && u.phone.toLowerCase().includes(q)) ||
         (u.roleTitle && u.roleTitle.toLowerCase().includes(q)) ||
         (u.industry && u.industry.toLowerCase().includes(q)) ||
         (u.country && u.country.toLowerCase().includes(q)) ||
@@ -301,6 +304,12 @@ const AdminUsersPage: React.FC = () => {
                               <Mail className="w-3.5 h-3.5 shrink-0 text-navy/50" />
                               <span className="truncate">{u.email}</span>
                             </p>
+                            {u.phone && (
+                              <p className="font-jakarta text-xs text-navy/70 flex items-center gap-1.5 truncate mt-0.5">
+                                <Phone className="w-3.5 h-3.5 shrink-0 text-violet" />
+                                <span className="truncate font-mono">{u.phone}</span>
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -400,9 +409,16 @@ const AdminUsersPage: React.FC = () => {
                   </div>
                   <div>
                     <h2 className="font-outfit font-bold text-2xl text-navy">{selectedUser.name}</h2>
-                    <p className="font-jakarta text-xs text-navy-light flex items-center gap-1.5">
-                      <Mail className="w-3.5 h-3.5" /> {selectedUser.email}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-0.5">
+                      <p className="font-jakarta text-xs text-navy-light flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5" /> {selectedUser.email}
+                      </p>
+                      {selectedUser.phone && (
+                        <p className="font-jakarta text-xs text-navy font-semibold flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-violet" /> <span className="font-mono">{selectedUser.phone}</span>
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <button

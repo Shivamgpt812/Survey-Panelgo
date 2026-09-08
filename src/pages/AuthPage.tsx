@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   ArrowLeft,
   RefreshCw,
+  Phone,
 } from 'lucide-react';
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
@@ -39,6 +40,7 @@ const AuthPage: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     password: '',
   });
   const [forgotData, setForgotData] = useState({
@@ -68,6 +70,7 @@ const AuthPage: React.FC = () => {
       : await register({
           name: formData.name,
           email: formData.email,
+          phone: formData.phone,
           password: formData.password,
         });
 
@@ -568,6 +571,28 @@ const AuthPage: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {!isLogin && (
+                <div className="space-y-2">
+                  <label className="font-outfit font-semibold text-sm text-navy">
+                    Mobile Number
+                  </label>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy/60">
+                      <Phone className="w-5 h-5" />
+                    </div>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      placeholder="Enter your mobile number"
+                      className="w-full pl-12 pr-4 py-3 bg-white border-2 border-navy rounded-2xl font-jakarta text-base text-navy placeholder:text-navy/50 focus:outline-none focus:shadow-[4px_4px_0_#7B61FF] transition-all"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label className="font-outfit font-semibold text-sm text-navy">
