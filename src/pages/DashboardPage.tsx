@@ -34,6 +34,11 @@ const DashboardPage: React.FC = () => {
   const [responses, setResponses] = useState<SurveyResponseRecord[]>([]);
 
   useEffect(() => {
+    if (user?.panelType && ['b2b', 'b2c', 'patients-carers', 'healthcare-professionals'].includes(user.panelType) && user.role !== 'admin') {
+      navigate('/panels/dashboard', { replace: true });
+      return;
+    }
+
     setSurveysLoading(true);
     const token = getStoredToken();
 
@@ -50,16 +55,21 @@ const DashboardPage: React.FC = () => {
         setResponses([]);
       })
       .finally(() => setSurveysLoading(false));
-  }, []);
+  }, [user]);
 
   const completedSurveyIds = new Set(
     responses.filter(r => r.status === 'complete').map(r => r.surveyId)
   );
 
   const handleLogout = () => {
+    const pType = user?.panelType;
     logout();
     addToast('Logged out successfully!', 'info');
-    navigate('/auth');
+    if (pType && ['b2b', 'b2c', 'patients-carers', 'healthcare-professionals'].includes(pType)) {
+      navigate(`/panels/${pType}/login`);
+    } else {
+      navigate('/auth');
+    }
   };
 
   const stats = [

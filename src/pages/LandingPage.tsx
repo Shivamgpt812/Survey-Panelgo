@@ -29,10 +29,12 @@ import {
   FileText,
   Menu,
   X,
+  ChevronDown,
 } from 'lucide-react';
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, FloatingIcons, IconCircle } from '@/components/decorations';
 import { BrandLogo } from '@/components/brand/BrandLogo';
+import { Navbar } from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { useToast } from '@/hooks/useToast';
 
@@ -353,6 +355,7 @@ const LandingPage: React.FC = () => {
   const { position, isHovering } = useCustomCursor();
   const [isAutoSliding, setIsAutoSliding] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
 
   // Stats section visibility state for scroll-triggered animation
   const [statsVisible, setStatsVisible] = useState(false);
@@ -479,105 +482,7 @@ const LandingPage: React.FC = () => {
       <FloatingIcons count={8} />
 
       {/* Navigation */}
-      <nav className="relative z-20 w-full px-4 sm:px-6 lg:px-8 py-3 sm:py-4 bg-white/70 backdrop-blur-md border-b-2 border-navy/10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <button
-            type="button"
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center gap-3 min-w-0 text-left -ml-1 sm:-ml-0"
-            aria-label="Survey Panel Go home"
-          >
-            <BrandLogo size="nav" className="shrink-0 drop-shadow-sm" />
-          </button>
-
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-8">
-            <a href="#features" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              How it works
-            </a>
-            <a href="#services" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              Services
-            </a>
-            <a href="#industries" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              Industries
-            </a>
-            <a href="#gallery" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              Insights
-            </a>
-            <a href="#topics" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              Topics
-            </a>
-            <a href="#partners" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              Associations
-            </a>
-            <a href="#global" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              Throughout Global
-            </a>
-            <a href="#contact" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              Contact
-            </a>
-          </div>
-
-          {/* Desktop Buttons */}
-          <div className="hidden lg:flex items-center gap-3 shrink-0">
-            <PlayfulButton variant="secondary" size="sm" onClick={() => navigate('/auth')}>
-              Sign In
-            </PlayfulButton>
-            <PlayfulButton variant="primary" size="sm" onClick={() => navigate('/auth?mode=signup')}>
-              Join Our Panel
-            </PlayfulButton>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2 bg-white border-2 border-navy rounded-full hover:bg-periwinkle transition-colors"
-            aria-label="Toggle menu"
-          >
-            {isMobileMenuOpen ? <X className="w-5 h-5 text-navy" /> : <Menu className="w-5 h-5 text-navy" />}
-          </button>
-        </div>
-
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="lg:hidden absolute top-full left-0 right-0 bg-white border-b-2 border-navy/10 shadow-lg">
-            <div className="flex flex-col p-4 space-y-4">
-              <a href="#features" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                How it works
-              </a>
-              <a href="#services" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Services
-              </a>
-              <a href="#industries" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Industries
-              </a>
-              <a href="#gallery" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Insights
-              </a>
-              <a href="#topics" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Topics
-              </a>
-              <a href="#partners" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Associations
-              </a>
-              <a href="#global" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Throughout Global
-              </a>
-              <a href="#contact" className="font-jakarta font-medium text-navy hover:text-violet transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Contact
-              </a>
-              <div className="flex flex-col gap-3 pt-4 border-t border-navy/10">
-                <PlayfulButton variant="secondary" size="sm" onClick={() => { navigate('/auth'); setIsMobileMenuOpen(false); }}>
-                  Sign In
-                </PlayfulButton>
-                <PlayfulButton variant="primary" size="sm" onClick={() => { navigate('/auth?mode=signup'); setIsMobileMenuOpen(false); }}>
-                  Join Our Panel
-                </PlayfulButton>
-              </div>
-            </div>
-          </div>
-        )}
-      </nav>
+      <Navbar />
 
       {/* Hero with Multi-tab Content */}
       <section className="relative z-10 px-4 sm:px-6 lg:px-8 pt-10 pb-16 md:pb-24">

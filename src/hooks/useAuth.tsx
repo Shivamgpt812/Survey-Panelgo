@@ -33,6 +33,7 @@ interface AuthContextType extends AuthState {
   googleLogin: (payload: GoogleLoginPayload) => Promise<LoginResult>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  setAuthUser: (user: User, token?: string | null) => void;
   isAdmin: () => boolean;
   isUser: () => boolean;
 }
@@ -62,6 +63,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     void apiGet<{ user: User }>('/api/auth/me', t)
       .then(({ user }) => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+        if (user?.panelType && ['b2b', 'b2c', 'patients-carers', 'healthcare-professionals'].includes(user.panelType)) {
+          localStorage.setItem('surveypanelgo_last_panel', user.panelType);
+        }
         setState({ user, isAuthenticated: true, isLoading: false });
       })
       .catch(() => {
@@ -154,6 +158,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setState((prev) => ({ ...prev, user }));
   };
 
+  const setAuthUser = (user: User, customToken?: string | null) => {
+    const t = customToken || localStorage.getItem(TOKEN_KEY) || localStorage.getItem('token');
+    if (t) {
+      localStorage.setItem(TOKEN_KEY, t);
+      localStorage.setItem('token', t);
+      setToken(t);
+    }
+    if (user?.panelType && ['b2b', 'b2c', 'patients-carers', 'healthcare-professionals'].includes(user.panelType)) {
+      localStorage.setItem('surveypanelgo_last_panel', user.panelType);
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    localStorage.setItem('user', JSON.stringify(user));
+    setState({
+      user,
+      isAuthenticated: true,
+      isLoading: false,
+    });
+  };
+
   const isAdmin = () => state.user?.role === 'admin';
   const isUser = () => state.user?.role === 'user';
 
@@ -167,6 +190,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         googleLogin,
         logout,
         refreshUser,
+        setAuthUser,
         isAdmin,
         isUser,
       }}

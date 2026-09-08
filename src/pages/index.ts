@@ -15,3 +15,10 @@ export { default as SuccessPage } from './SuccessPage';
 export { default as TerminatedPage } from './TerminatedPage';
 export { default as QuotaFullPage } from './QuotaFullPage';
 export { default as SecurityBlockPage } from './SecurityBlockPage';
+export { default as B2BPanelPage } from './B2BPanelPage';
+export { default as B2CPanelPage } from './B2CPanelPage';
+export { default as PatientsCarersPage } from './PatientsCarersPage';
+export { default as HealthcareProfessionalsPage } from './HealthcareProfessionalsPage';
+export { PanelAuthPage } from './PanelAuthPage';
+export { PanelDashboardPage } from './PanelDashboardPage';
+

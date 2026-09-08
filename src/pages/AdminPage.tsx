@@ -140,6 +140,9 @@ const AdminPage: React.FC = () => {
     status: 'active' as 'active' | 'inactive',
     category: 'Technology',
     difficulty: 'easy' as 'easy' | 'medium' | 'hard',
+    targetPanel: 'all' as string,
+    targetRole: '',
+    targetIndustry: '',
   });
 
   const [internalQuestions, setInternalQuestions] = useState<any[]>([]);
@@ -293,6 +296,9 @@ const AdminPage: React.FC = () => {
       status: survey.status,
       category: survey.category || 'Technology',
       difficulty: survey.difficulty || 'easy',
+      targetPanel: survey.targetPanel || 'all',
+      targetRole: survey.targetRole || '',
+      targetIndustry: survey.targetIndustry || '',
     });
     setSelectedPreScreeners(survey.preScreener || []);
     setInternalQuestions(survey.questions || []);
@@ -1319,6 +1325,63 @@ const AdminPage: React.FC = () => {
                           <option value="medium">Medium</option>
                           <option value="hard">Hard</option>
                         </select>
+                      </div>
+                    </div>
+
+                    {/* Target Panel & Audience Targeting */}
+                    <div className="pt-4 border-t-2 border-navy/10 space-y-3">
+                      <div>
+                        <h4 className="font-outfit font-bold text-base text-navy">
+                          🎯 Target Panel & Audience Role
+                        </h4>
+                        <p className="font-jakarta text-xs text-navy/60">
+                          Match this survey directly to panelists by their panel portal, job title/role, and industry.
+                        </p>
+                      </div>
+
+                      <div className="grid sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="font-outfit font-semibold text-xs text-navy mb-1.5 block">
+                            Target Panel
+                          </label>
+                          <select
+                            value={formData.targetPanel}
+                            onChange={(e) => setFormData({ ...formData, targetPanel: e.target.value })}
+                            className="w-full px-3.5 py-2.5 bg-white border-2 border-navy rounded-xl font-jakarta text-sm text-navy focus:outline-none focus:shadow-[3px_3px_0_#7B61FF] transition-all"
+                          >
+                            <option value="all">All Panels & General Users</option>
+                            <option value="b2b">B2B Decision Makers Panel</option>
+                            <option value="b2c">B2C Consumer & Lifestyle Panel</option>
+                            <option value="patients-carers">Patients & Caregivers Panel</option>
+                            <option value="healthcare-professionals">Healthcare Professionals Panel</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="font-outfit font-semibold text-xs text-navy mb-1.5 block">
+                            Target Role(s) (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.targetRole}
+                            onChange={(e) => setFormData({ ...formData, targetRole: e.target.value })}
+                            placeholder="e.g. CEO, Founder, Director, Doctor"
+                            className="w-full px-3.5 py-2.5 bg-white border-2 border-navy rounded-xl font-jakarta text-sm text-navy placeholder:text-navy/40 focus:outline-none focus:shadow-[3px_3px_0_#7B61FF] transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="font-outfit font-semibold text-xs text-navy mb-1.5 block">
+                            Target Industry (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.targetIndustry}
+                            onChange={(e) => setFormData({ ...formData, targetIndustry: e.target.value })}
+                            placeholder="e.g. Technology, Healthcare, Finance"
+                            className="w-full px-3.5 py-2.5 bg-white border-2 border-navy rounded-xl font-jakarta text-sm text-navy placeholder:text-navy/40 focus:outline-none focus:shadow-[3px_3px_0_#7B61FF] transition-all"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>

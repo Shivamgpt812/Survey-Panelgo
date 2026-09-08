@@ -9,11 +9,13 @@ import { BrandLogo } from '@/components/brand/BrandLogo';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: ('user' | 'admin')[];
+  redirectTo?: string;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   allowedRoles = ['user', 'admin'],
+  redirectTo,
 }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
 
@@ -29,7 +31,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />;
+    const destination = redirectTo || (localStorage.getItem('surveypanelgo_last_panel')
+      ? `/panels/${localStorage.getItem('surveypanelgo_last_panel')}/login`
+      : '/auth');
+    return <Navigate to={destination} replace />;
   }
 
   if (user && !allowedRoles.includes(user.role)) {
@@ -41,7 +46,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
 export const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <ProtectedRoute allowedRoles={['admin']}>
+    <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
       {children}
     </ProtectedRoute>
   );
@@ -49,7 +54,16 @@ export const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }
 
 export const UserRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <ProtectedRoute allowedRoles={['user', 'admin']}>
+    <ProtectedRoute allowedRoles={['user', 'admin']} redirectTo="/auth">
+      {children}
+    </ProtectedRoute>
+  );
+};
+
+export const PanelRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const lastPanel = localStorage.getItem('surveypanelgo_last_panel') || 'b2b';
+  return (
+    <ProtectedRoute allowedRoles={['user', 'admin']} redirectTo={`/panels/${lastPanel}/login`}>
       {children}
     </ProtectedRoute>
   );

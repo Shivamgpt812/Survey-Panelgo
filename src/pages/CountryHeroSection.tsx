@@ -129,7 +129,7 @@ const CountryHeroSection: React.FC = () => {
 
       {/* Navigation */}
       <nav className="relative z-20 w-full px-4 sm:px-6 lg:px-8 py-3 sm:py-4 bg-white/70 backdrop-blur-md border-b-2 border-navy/10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        <div className="w-full mx-auto flex items-center justify-between gap-4">
           <button
             type="button"
             onClick={() => navigate('/')}

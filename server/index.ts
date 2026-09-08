@@ -15,6 +15,8 @@ import { ActivityLog } from './models/ActivityLog.js';
 import { SurveyTracking } from './models/SurveyTracking.js';
 import { SurveyRedirectLogs } from './models/SurveyRedirectLogs.js';
 import { SurveySession } from './models/SurveySession.js';
+import { OtpVerification } from './models/OtpVerification.js';
+import { sendOtpEmail } from './lib/mailer.js';
 import { preScreenerTemplates } from './preScreenerTemplates.js';
 import { REDIRECT_URLS, getStatusText, isValidStatus } from './config/redirectConfig.js';
 import vendorLiteRoutes from './vendor-lite/routes.js';
@@ -108,6 +110,21 @@ app.post('/api/auth/login', async (req, res) => {
       res.status(401).json({ error: 'Invalid email or password' });
       return;
     }
+
+    // STRICT ISOLATION: Panelists cannot log in via the normal /auth portal
+    if (
+      user.role !== 'admin' &&
+      user.panelType &&
+      ['b2b', 'b2c', 'patients-carers', 'healthcare-professionals'].includes(user.panelType)
+    ) {
+      const panelName = panelDisplayNames[user.panelType] || `${user.panelType.toUpperCase()} Panel`;
+      res.status(403).json({
+        error: `This account is registered under the ${panelName}. You cannot log in through the main portal. Please log in at /panels/${user.panelType}/login`,
+        panelType: user.panelType,
+      });
+      return;
+    }
+
     const token = signToken(user._id.toString(), String(user.role));
     await ActivityLog.create({
       message: `${user.name} logged in`,
@@ -127,12 +144,311 @@ app.get('/api/auth/me', requireAuth, async (req: AuthedRequest, res) => {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
+    if (u.surveysCompleted === 0 && u.points > 0) {
+      u.points = 0;
+      await u.save();
+    }
     res.json({ user: userJson(u) });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to load user' });
   }
 });
+
+// ---------- Panel Authentication & OTP ----------
+const panelDisplayNames: Record<string, string> = {
+  b2b: 'B2B Panel',
+  b2c: 'B2C Panel',
+  'patients-carers': 'Patients & Carers Panel',
+  'healthcare-professionals': 'Healthcare Professionals Panel',
+};
+
+// 1. Send OTP via Gmail SMTP
+app.post('/api/panel-auth/send-otp', async (req, res) => {
+  try {
+    const { email, panelType } = req.body as { email?: string; panelType?: string };
+    if (!email?.trim()) {
+      res.status(400).json({ error: 'Email is required' });
+      return;
+    }
+
+    const em = email.toLowerCase().trim();
+    const existingUser = await User.findOne({ email: em });
+    if (existingUser) {
+      if (
+        existingUser.panelType &&
+        ['b2b', 'b2c', 'patients-carers', 'healthcare-professionals'].includes(existingUser.panelType)
+      ) {
+        const existingPanelName = panelDisplayNames[existingUser.panelType] || existingUser.panelType;
+        if (existingUser.panelType !== panelType) {
+          res.status(409).json({
+            error: `An account with this email is already registered under the ${existingPanelName}. Please sign in at /panels/${existingUser.panelType}/login.`,
+          });
+          return;
+        }
+      }
+      res.status(409).json({ error: 'An account with this email already exists. Please sign in instead.' });
+      return;
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Upsert OTP record
+    await OtpVerification.deleteMany({ email: em });
+    await OtpVerification.create({ email: em, otp, expiresAt });
+
+    const panelName = panelDisplayNames[panelType || ''] || 'Survey Panel Go';
+    const sent = await sendOtpEmail(em, otp, panelName);
+
+    if (!sent) {
+      res.status(500).json({ error: 'Failed to send OTP email. Please verify your email address and try again.' });
+      return;
+    }
+
+    res.json({ success: true, message: `Verification code sent to ${em}` });
+  } catch (e) {
+    console.error('Error in send-otp:', e);
+    res.status(500).json({ error: 'Server error sending verification code' });
+  }
+});
+
+// 2. Verify OTP and Register Panel User
+app.post('/api/panel-auth/verify-and-register', async (req, res) => {
+  try {
+    const { name, email, password, panelType, otp } = req.body as {
+      name?: string;
+      email?: string;
+      password?: string;
+      panelType?: string;
+      otp?: string;
+    };
+
+    if (!name?.trim() || !email?.trim() || !password || !otp?.trim()) {
+      res.status(400).json({ error: 'Name, email, password, and OTP are required' });
+      return;
+    }
+
+    const em = email.toLowerCase().trim();
+
+    // Verify OTP record
+    const otpRecord = await OtpVerification.findOne({ email: em, otp: otp.trim() });
+    if (!otpRecord) {
+      res.status(400).json({ error: 'Invalid or expired verification code' });
+      return;
+    }
+
+    if (new Date() > otpRecord.expiresAt) {
+      await OtpVerification.deleteOne({ _id: otpRecord._id });
+      res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
+      return;
+    }
+
+    // Clean up used OTP
+    await OtpVerification.deleteOne({ _id: otpRecord._id });
+
+    // Check if user already exists
+    const existing = await User.findOne({ email: em });
+    if (existing) {
+      res.status(409).json({ error: 'Email already registered' });
+      return;
+    }
+
+    const passwordHash = bcrypt.hashSync(password, 12);
+    const user = await User.create({
+      name: name.trim(),
+      email: em,
+      passwordHash,
+      role: 'user',
+      points: 0,
+      surveysCompleted: 0,
+      memberSince: new Date().toISOString().slice(0, 10),
+      panelType: panelType || 'general',
+      isVerified: true,
+      onboardingCompleted: false,
+    });
+
+    const token = signToken(user._id.toString(), String(user.role));
+
+    await ActivityLog.create({
+      message: `New panelist ${user.name} registered for ${panelDisplayNames[panelType || ''] || 'Panel'}`,
+      type: 'info',
+    });
+
+    res.status(201).json({
+      token,
+      user: userJson(user),
+      needsOnboarding: true,
+      message: 'Account created successfully. Please complete your profile.'
+    });
+  } catch (e) {
+    console.error('Error in verify-and-register:', e);
+    res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+// 3. Panel Login
+app.post('/api/panel-auth/login', async (req, res) => {
+  try {
+    const { email, password, panelType } = req.body as {
+      email?: string;
+      password?: string;
+      panelType?: string;
+    };
+
+    if (!email?.trim() || !password) {
+      res.status(400).json({ error: 'Email and password are required' });
+      return;
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
+      res.status(401).json({ error: 'Invalid email or password' });
+      return;
+    }
+
+    // STRICT PANEL MATCHING (Non-admin accounts must match the specific panel portal)
+    const validPanels = ['b2b', 'b2c', 'patients-carers', 'healthcare-professionals'];
+    const requestedPanel = panelType?.toLowerCase().trim();
+    const userPanel = user.panelType?.toLowerCase().trim();
+
+    if (user.role !== 'admin') {
+      if (userPanel && validPanels.includes(userPanel)) {
+        if (requestedPanel && userPanel !== requestedPanel) {
+          const userPanelName = panelDisplayNames[userPanel] || userPanel.toUpperCase();
+          const requestedPanelName = panelDisplayNames[requestedPanel] || requestedPanel.toUpperCase();
+          res.status(403).json({
+            error: `Access Denied: This account is registered exclusively under the ${userPanelName}. You cannot log in through the ${requestedPanelName} portal. Please sign in at /panels/${userPanel}/login.`,
+            correctPanel: userPanel,
+          });
+          return;
+        }
+      } else {
+        // User has no specific panel or is a general portal user
+        if (requestedPanel && validPanels.includes(requestedPanel)) {
+          const requestedPanelName = panelDisplayNames[requestedPanel] || requestedPanel.toUpperCase();
+          res.status(403).json({
+            error: `This account is not registered for the ${requestedPanelName}. Please sign up for this panel or log in through the main portal.`,
+          });
+          return;
+        }
+      }
+    }
+
+    if (user.surveysCompleted === 0 && user.points > 0) {
+      user.points = 0;
+      await user.save();
+    }
+
+    const token = signToken(user._id.toString(), String(user.role));
+
+    await ActivityLog.create({
+      message: `${user.name} logged into ${panelDisplayNames[panelType || user.panelType || ''] || 'Panel'}`,
+      type: 'info',
+    });
+
+    res.json({
+      token,
+      user: userJson(user),
+      needsOnboarding: !user.onboardingCompleted,
+    });
+  } catch (e) {
+    console.error('Error in panel login:', e);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// 4. Complete Onboarding Profile Form
+app.post('/api/panel-auth/complete-profile', requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    const {
+      employmentStatus,
+      industry,
+      roleTitle,
+      department,
+      country,
+      revenue,
+      area,
+      city,
+      pincode,
+    } = req.body as {
+      employmentStatus?: string;
+      industry?: string;
+      roleTitle?: string;
+      department?: string;
+      country?: string;
+      revenue?: string;
+      area?: string;
+      city?: string;
+      pincode?: string;
+    };
+
+    if (!country?.trim() || !employmentStatus?.trim()) {
+      res.status(400).json({ error: 'Country and employment status are required' });
+      return;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user!._id,
+      {
+        $set: {
+          employmentStatus: employmentStatus?.trim() || '',
+          industry: industry?.trim() || '',
+          roleTitle: roleTitle?.trim() || '',
+          department: department?.trim() || '',
+          country: country?.trim() || '',
+          revenue: revenue?.trim() || '',
+          area: area?.trim() || '',
+          city: city?.trim() || '',
+          pincode: pincode?.trim() || '',
+          onboardingCompleted: true,
+          isVerified: true,
+        },
+      },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    await ActivityLog.create({
+      message: `${updatedUser.name} completed their panel onboarding profile`,
+      type: 'info',
+    });
+
+    res.json({
+      success: true,
+      user: userJson(updatedUser),
+      message: 'Profile completed successfully!',
+    });
+  } catch (e) {
+    console.error('Error in complete-profile:', e);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// 5. Get current panel user profile
+app.get('/api/panel-auth/me', requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    const u = await User.findById(req.user!._id);
+    if (!u) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    if (u.surveysCompleted === 0 && u.points > 0) {
+      u.points = 0;
+      await u.save();
+    }
+    res.json({ user: userJson(u) });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to load panel profile' });
+  }
+});
+
 
 // ---------- Google OAuth ----------
 const googleClient = new OAuth2Client(

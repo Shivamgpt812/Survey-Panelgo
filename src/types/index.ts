@@ -8,6 +8,18 @@ export interface User {
   surveysCompleted: number;
   memberSince: string;
   avatar?: string;
+  panelType?: 'b2b' | 'b2c' | 'patients-carers' | 'healthcare-professionals' | 'general' | string;
+  isVerified?: boolean;
+  onboardingCompleted?: boolean;
+  employmentStatus?: string;
+  industry?: string;
+  roleTitle?: string;
+  department?: string;
+  country?: string;
+  revenue?: string;
+  area?: string;
+  city?: string;
+  pincode?: string;
 }
 
 export interface PreScreenerQuestion {
@@ -30,6 +42,11 @@ export interface Survey {
   status: "active" | "inactive";
   category: string;
   difficulty: "easy" | "medium" | "hard";
+  targetPanel?: 'all' | 'b2b' | 'b2c' | 'patients-carers' | 'healthcare-professionals' | string;
+  targetRole?: string;
+  targetIndustry?: string;
+  targetEmploymentStatus?: string;
+  targetCountry?: string;
   isNew?: boolean;
   isPopular?: boolean;
   preScreener: PreScreenerQuestion[];

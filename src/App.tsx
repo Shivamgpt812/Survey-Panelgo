@@ -1,8 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ToastProvider } from '@/hooks/useToast';
-import { AdminRoute, UserRoute } from '@/components/auth/ProtectedRoute';
-import { LandingPage, AuthPage, DashboardPage, SurveyPage, RewardsPage, InternalSurveyPage, ServicesPage, ServiceDetailPage, BlogPage, AboutPage, BlogDetailPage, CountryDetailPage, CountryHeroSection, SuccessPage, TerminatedPage, QuotaFullPage, SecurityBlockPage } from '@/pages';
+import { AdminRoute, UserRoute, PanelRoute } from '@/components/auth/ProtectedRoute';
+import { LandingPage, AuthPage, DashboardPage, SurveyPage, RewardsPage, InternalSurveyPage, ServicesPage, ServiceDetailPage, BlogPage, AboutPage, BlogDetailPage, CountryDetailPage, CountryHeroSection, SuccessPage, TerminatedPage, QuotaFullPage, SecurityBlockPage, B2BPanelPage, B2CPanelPage, PatientsCarersPage, HealthcareProfessionalsPage, PanelAuthPage, PanelDashboardPage } from '@/pages';
 import SurveySuccess from '@/pages/SurveySuccess';
 import SurveyTerminated from '@/pages/SurveyTerminated';
 import SurveyQuota from '@/pages/SurveyQuota';
@@ -48,6 +48,36 @@ function AppContent() {
         <Route path="/terminated" element={<TerminatedPage />} />
         <Route path="/quota-full" element={<QuotaFullPage />} />
         <Route path="/security-block" element={<SecurityBlockPage />} />
+
+        {/* Panel Pages & Aliases */}
+        <Route path="/panels/b2b" element={<B2BPanelPage />} />
+        <Route path="/panels/b2b-panel" element={<B2BPanelPage />} />
+        <Route path="/panel/b2b" element={<B2BPanelPage />} />
+
+        <Route path="/panels/b2c" element={<B2CPanelPage />} />
+        <Route path="/panels/b2c-panel" element={<B2CPanelPage />} />
+        <Route path="/panel/b2c" element={<B2CPanelPage />} />
+
+        <Route path="/panels/patients-carers" element={<PatientsCarersPage />} />
+        <Route path="/panel/patients-carers" element={<PatientsCarersPage />} />
+
+        <Route path="/panels/healthcare-professionals" element={<HealthcareProfessionalsPage />} />
+        <Route path="/healthcare-professionals" element={<HealthcareProfessionalsPage />} />
+        <Route path="/panel/healthcare-professionals" element={<HealthcareProfessionalsPage />} />
+
+        {/* Panel Authentication & Onboarding Routes */}
+        <Route path="/panels/:panelType/auth" element={<PanelAuthPage />} />
+        <Route path="/panels/:panelType/login" element={<PanelAuthPage />} />
+        <Route path="/panels/:panelType/signup" element={<PanelAuthPage />} />
+        <Route path="/panels/auth" element={<PanelAuthPage />} />
+        <Route
+          path="/panels/dashboard"
+          element={
+            <PanelRoute>
+              <PanelDashboardPage />
+            </PanelRoute>
+          }
+        />
 
         {/* Vendor Lite Routes */}
         <Route path="/vendor-lite" element={<VendorLitePage />} />

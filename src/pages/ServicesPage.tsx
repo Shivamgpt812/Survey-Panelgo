@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { PlayfulButton, PlayfulCard } from '@/components/ui/playful';
 import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
-import { BrandLogo } from '@/components/brand/BrandLogo';
+import { Navbar } from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 
 interface ServiceItem {
@@ -141,42 +141,7 @@ const ServicesPage: React.FC = () => {
       <DecorativeBlob variant="lavender" size="md" className="left-[15%] bottom-[15%] opacity-60" />
 
       {/* Navigation */}
-      <nav className="relative z-20 w-full px-4 sm:px-6 lg:px-8 py-3 sm:py-4 bg-white/70 backdrop-blur-md border-b-2 border-navy/10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="flex items-center gap-3 min-w-0 text-left -ml-1 sm:-ml-0"
-            aria-label="Back to home"
-          >
-            <BrandLogo size="nav" className="shrink-0 drop-shadow-sm" />
-          </button>
-
-          <div className="hidden lg:flex items-center gap-8">
-            <a href="/" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              Home
-            </a>
-            <a href="/services" className="font-jakarta font-medium text-violet">
-              Services
-            </a>
-            <a href="/blog" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              Blog
-            </a>
-            <a href="/about" className="font-jakarta font-medium text-navy hover:text-violet transition-colors">
-              About
-            </a>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <PlayfulButton variant="secondary" size="sm" onClick={() => navigate('/auth')}>
-              Sign In
-            </PlayfulButton>
-            <PlayfulButton variant="primary" size="sm" onClick={() => navigate('/auth')}>
-              Join Our Panel
-            </PlayfulButton>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Hero Section */}
       <section className="relative z-10 px-4 sm:px-6 lg:px-8 pt-16 pb-20">

@@ -38,6 +38,31 @@ const Footer: React.FC = () => {
                     </div>
                     <div className="lg:col-span-7 flex flex-wrap gap-8 lg:gap-16 text-sm">
                         <div>
+                            <p className="font-outfit font-bold text-navy mb-4 text-base">Panels</p>
+                            <ul className="space-y-3 font-jakarta text-navy-light">
+                                <li>
+                                    <a href="/panels/b2b" className="hover:text-violet transition-colors">
+                                        B2B Panel
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="/panels/b2c" className="hover:text-violet transition-colors">
+                                        B2C Panel
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="/panels/patients-carers" className="hover:text-violet transition-colors">
+                                        Patients & Carers
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="/panels/healthcare-professionals" className="hover:text-violet transition-colors">
+                                        Healthcare Professionals
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div>
                             <p className="font-outfit font-bold text-navy mb-4 text-base">Explore</p>
                             <ul className="space-y-3 font-jakarta text-navy-light">
                                 <li>
