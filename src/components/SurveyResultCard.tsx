@@ -172,22 +172,7 @@ export default function SurveyResultCard() {
             </h1>
           </div>
 
-          {/* Redirect Countdown Alert */}
-          {countdown !== null && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mb-8 p-4 bg-violet/5 border-2 border-violet/20 rounded-2xl flex items-center gap-4"
-            >
-              <div className="w-12 h-12 bg-violet text-white rounded-full flex items-center justify-center font-bold text-xl animate-pulse">
-                {countdown}
-              </div>
-              <div>
-                <p className="font-bold text-navy">Redirecting to partner vendor...</p>
-                <p className="text-sm text-navy-light italic">Your results are recorded. Please wait a moment.</p>
-              </div>
-            </motion.div>
-          )}
+
 
           {/* Data Grid */}
           <div className="flex flex-col md:flex-row md:flex-wrap gap-4 text-sm md:text-base">
