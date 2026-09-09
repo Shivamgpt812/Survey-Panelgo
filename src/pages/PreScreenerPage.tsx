@@ -20,6 +20,7 @@ import { BrandLogo } from '@/components/brand/BrandLogo';
 import { useToast } from '@/hooks/useToast';
 import { getStoredToken, useAuth } from '@/hooks/useAuth';
 import { useSurveyTracker } from '@/components/SurveyTracker';
+import { resolveExternalSurveyLink } from '@/lib/urlUtils';
 import confetti from 'canvas-confetti';
 
 /**
@@ -47,8 +48,12 @@ const PreScreenerPage: React.FC = () => {
   
   console.log('PreScreenerPage loaded - UID:', uid);
 
-  // Check for vendor session
-  const [vendorId, setVendorId] = useState<string | null>(null);
+  // Check for vendor from URL or session
+  const paramVendorId = searchParams.get('vendor') || searchParams.get('vendorId');
+  const storedVendorId = getVendorSession();
+  const effectiveVendorId = paramVendorId || storedVendorId;
+
+  const [vendorId, setVendorId] = useState<string | null>(effectiveVendorId || null);
   const [vendor, setVendor] = useState<Vendor | undefined>(undefined);
 
   const [answers, setAnswers] = useState<PreScreenerAnswer[]>([]);
@@ -85,18 +90,25 @@ const PreScreenerPage: React.FC = () => {
       .finally(() => setLoadingSurvey(false));
   }, [surveyId]);
 
-  // Load vendor session on mount
+  // Load vendor session on mount and register UID session with backend
   useEffect(() => {
-    const storedVendorId = getVendorSession();
-
-    if (storedVendorId) {
-      setVendorId(storedVendorId);
+    if (effectiveVendorId) {
+      setVendorId(effectiveVendorId);
+      storeVendorSession(effectiveVendorId);
       void apiGet<{ vendors: Vendor[] }>('/api/vendors').then(({ vendors }) => {
-        const vendorData = vendors.find((v) => v.id === storedVendorId);
+        const vendorData = vendors.find((v) => v.id === effectiveVendorId);
         setVendor(vendorData);
       });
+
+      if (uid && surveyId) {
+        void apiPost('/api/survey-session/register', {
+          surveyId,
+          vendorId: effectiveVendorId,
+          uid
+        }).catch((e) => console.warn('Survey session registration error:', e));
+      }
     }
-  }, []);
+  }, [effectiveVendorId, uid, surveyId]);
 
   // Start tracking for non-vendor users when survey loads
   useEffect(() => {
@@ -115,6 +127,7 @@ const PreScreenerPage: React.FC = () => {
     if ((survey.preScreener?.length ?? 0) > 0) return;
 
     const run = async () => {
+      const effectiveUid = uid || (user?.id ? String(user.id) : '');
       if (vendorId && vendor) {
         try {
           await apiPost(
@@ -122,7 +135,7 @@ const PreScreenerPage: React.FC = () => {
             {
               surveyId: survey.id,
               vendorId,
-              userId: user?.id,
+              userId: effectiveUid || undefined,
               status: 'complete',
             },
             getStoredToken()
@@ -130,28 +143,32 @@ const PreScreenerPage: React.FC = () => {
         } catch {
           /* ignore */
         }
-        window.location.href = vendor.redirectLinks.complete;
-        return;
+        if (!survey.isExternal) {
+          navigate(`/survey/${survey.id}/take${vendorId ? `?vendorId=${vendorId}` : ''}`);
+          return;
+        }
       }
       if (!survey.isExternal) {
         navigate(`/survey/${survey.id}/take`, { replace: true });
         return;
       }
       if (survey.link) {
-        window.open(survey.link, '_blank');
+        const targetLink = resolveExternalSurveyLink(survey.link, effectiveUid);
+        window.open(targetLink, '_blank');
       }
       navigateToDashboard();
     };
     void run();
-  }, [survey, loadingSurvey, vendorId, vendor, navigate, user?.id]);
+  }, [survey, loadingSurvey, vendorId, vendor, navigate, user?.id, uid]);
 
   // Auto-redirect for failed attempts
   useEffect(() => {
     if (result === 'failed') {
+      const effectiveUid = uid || (user?.id ? String(user.id) : '');
       const timer = setTimeout(() => {
         if (vendor) {
-          // Redirect to vendor terminate URL
-          window.location.href = vendor.redirectLinks.terminate;
+          // Redirect to vendor terminate URL with UID resolved
+          window.location.href = resolveExternalSurveyLink(vendor.redirectLinks.terminate, effectiveUid);
         } else if (trackingData) {
           // For non-vendor users, use tracking to redirect to result page
           completeTracking('terminated').catch(() => {
@@ -161,7 +178,7 @@ const PreScreenerPage: React.FC = () => {
       }, 3000); // Auto-redirect after 3 seconds
       return () => clearTimeout(timer);
     }
-  }, [result, vendor, trackingData, completeTracking, navigate]);
+  }, [result, vendor, trackingData, completeTracking, navigate, uid, user?.id]);
 
   if (loadingSurvey) {
     return (
@@ -338,23 +355,7 @@ const PreScreenerPage: React.FC = () => {
       }
     };
 
-    // Helper function to append uid to external link
-    const appendUidToLink = (link: string): string => {
-      console.log('=== APPEND UID DEBUG ===');
-      console.log('uid value:', uid);
-      console.log('original link:', link);
-      
-      if (!uid) {
-        console.log('No uid found, returning original link');
-        return link;
-      }
-      
-      const separator = link.includes('?') ? '&' : '?';
-      const finalLink = `${link}${separator}uid=${uid}`;
-      console.log('final link with uid:', finalLink);
-      console.log('=======================');
-      return finalLink;
-    };
+    const effectiveUid = uid || (user?.id ? String(user.id) : '');
 
     if (vendorId) {
       console.log('Vendor flow detected');
@@ -372,12 +373,12 @@ const PreScreenerPage: React.FC = () => {
           navigate(`/survey/${survey!.id}/take${vendorId ? `?vendorId=${vendorId}` : ''}`);
         } else if (vendor) {
           console.log('Vendor external survey - redirecting to vendor complete URL:', vendor.redirectLinks.complete);
-          const completeUrl = appendUidToLink(vendor.redirectLinks.complete);
+          const completeUrl = resolveExternalSurveyLink(vendor.redirectLinks.complete, effectiveUid);
           console.log('Complete URL with uid:', completeUrl);
           window.location.href = completeUrl;
         } else {
           console.log('Opening external survey link:', survey?.link);
-          const externalLink = appendUidToLink(survey?.link || '');
+          const externalLink = resolveExternalSurveyLink(survey?.link || '', effectiveUid);
           console.log('External link with uid:', externalLink);
           window.open(externalLink, '_blank');
           navigateToDashboard();
@@ -399,7 +400,7 @@ const PreScreenerPage: React.FC = () => {
           navigate(`/survey/${survey!.id}/take${vendorId ? `?vendorId=${vendorId}` : ''}`);
         } else if (survey!.link) {
           console.log('Opening external survey link:', survey!.link);
-          const externalLink = appendUidToLink(survey!.link);
+          const externalLink = resolveExternalSurveyLink(survey!.link, effectiveUid);
           console.log('External link with uid:', externalLink);
           window.open(externalLink, '_blank');
           navigateToDashboard();

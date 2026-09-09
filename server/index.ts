@@ -1280,17 +1280,70 @@ app.get('/api/survey-tracking', requireAdmin, async (_req: any, res) => {
   }
 });
 
+// ---------- Survey Session Register (Vendor Flow) ----------
+app.post('/api/survey-session/register', async (req, res) => {
+  try {
+    const { surveyId, vendorId, uid } = req.body;
+    if (!uid || !vendorId) {
+      return res.status(400).json({ error: 'uid and vendorId are required' });
+    }
+
+    const cleanUid = String(uid).trim();
+    const cleanVendorId = String(vendorId).trim();
+
+    // Verify vendor
+    let vendor: any = null;
+    if (mongoose.Types.ObjectId.isValid(cleanVendorId)) {
+      vendor = await Vendor.findById(cleanVendorId);
+    }
+    if (!vendor) {
+      try {
+        const { default: VendorLite } = await import('./vendor-lite/vendorModel.js');
+        if (VendorLite && mongoose.Types.ObjectId.isValid(cleanVendorId)) {
+          vendor = await VendorLite.findById(cleanVendorId);
+        }
+      } catch (err) {
+        console.warn('VendorLite import/lookup error:', err);
+      }
+    }
+
+    if (!vendor) {
+      return res.status(404).json({ error: 'Vendor not found' });
+    }
+
+    // Upsert session in SurveySession collection
+    const session = await SurveySession.findOneAndUpdate(
+      { identifier: cleanUid },
+      {
+        identifier: cleanUid,
+        vendor_id: vendor._id,
+        actual_user_id: cleanUid,
+        survey_id: surveyId ? String(surveyId).trim() : null,
+        base_url: 'vendor_flow',
+        identifier_param_name: 'uid',
+        created_at: new Date()
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    console.log(`✅ Registered vendor survey session: UID=${cleanUid}, Vendor=${vendor.name || vendor.vendor_name || vendor._id}`);
+    res.json({ success: true, session });
+  } catch (e) {
+    console.error('Failed to register survey session:', e);
+    res.status(500).json({ error: 'Failed to register survey session' });
+  }
+});
+
 // ---------- Survey Redirect Tracking ----------
 app.get('/api/redirect', async (req, res) => {
   try {
     // 🔥 STEP 1: IDENTIFY PARAMS - Handle pid, uid, user_id, user, status
     const { pid, uid, user_id, user, status } = req.query;
+    const effectiveUid = String(uid || user_id || user || '').trim();
 
     console.log("🔥 /api/redirect HIT ==========================================");
     console.log("   PID:", pid);
-    console.log("   UID:", uid);
-    console.log("   User_ID:", user_id);
-    console.log("   User:", user);
+    console.log("   UID:", effectiveUid);
     console.log("   Status:", status);
     console.log("   Request URL:", req.url);
     console.log("================================================================");
@@ -1301,8 +1354,8 @@ app.get('/api/redirect', async (req, res) => {
       return ipPattern.test(str);
     };
 
-    if (uid && isIpAddress(String(uid))) {
-      console.error("❌ INVALID UID: IP address detected instead of user ID:", uid);
+    if (effectiveUid && isIpAddress(effectiveUid)) {
+      console.error("❌ INVALID UID: IP address detected instead of user ID:", effectiveUid);
       return res.status(400).json({
         success: false,
         error: 'Invalid uid parameter: IP address detected. Please provide a valid user ID.'
@@ -1310,13 +1363,13 @@ app.get('/api/redirect', async (req, res) => {
     }
 
     // 🔥 STEP 2: LOOKUP SESSION - Find session by uid
-    let surveySession = null;
-    let vendor = null;
+    let surveySession: any = null;
+    let vendor: any = null;
 
-    if (uid) {
+    if (effectiveUid) {
       try {
-        console.log("🔍 STEP 2: Looking up survey session for uid:", uid);
-        surveySession = await SurveySession.findOne({ identifier: String(uid) })
+        console.log("🔍 STEP 2: Looking up survey session for uid:", effectiveUid);
+        surveySession = await SurveySession.findOne({ identifier: effectiveUid })
           .populate('vendor_id')
           .exec();
 
@@ -1327,13 +1380,10 @@ app.get('/api/redirect', async (req, res) => {
           console.log("   - Vendor ID (from session):", surveySession.vendor_id?._id || surveySession.vendor_id);
           console.log("   - Actual User ID:", surveySession.actual_user_id);
           console.log("   - Survey ID (PID):", surveySession.survey_id);
-          console.log("   - Base URL:", surveySession.base_url);
 
-          // Check if vendor was populated successfully
-          vendor = surveySession.vendor_id as any;
+          vendor = surveySession.vendor_id;
 
           if (!vendor || (!vendor.complete_url && !vendor.redirectLinks?.complete)) {
-            // 🔥 FALLBACK: Try to lookup vendor from VendorLite collection if populate failed
             console.log("⚠️ Vendor not populated or missing URLs, trying VendorLite lookup...");
             try {
               const { default: VendorLite } = await import('./vendor-lite/vendorModel.js');
@@ -1341,8 +1391,6 @@ app.get('/api/redirect', async (req, res) => {
               if (vendorLite) {
                 console.log("✅ Found vendor in VendorLite collection");
                 vendor = vendorLite;
-              } else {
-                console.log("⚠️ Vendor not found in VendorLite collection either");
               }
             } catch (vendorLookupError) {
               const error = vendorLookupError as Error;
@@ -1350,7 +1398,29 @@ app.get('/api/redirect', async (req, res) => {
             }
           }
         } else {
-          console.log("⚠️ STEP 2: No survey session found for uid:", uid);
+          // Fallback: Check Response collection for previous vendor submission
+          const lastResponse: any = await Response.findOne({
+            userId: effectiveUid,
+            vendorId: { $exists: true, $ne: null }
+          }).sort({ createdAt: -1 });
+
+          if (lastResponse && lastResponse.vendorId) {
+            console.log("✅ Found vendor via recent Response record:", lastResponse.vendorId);
+            if (mongoose.Types.ObjectId.isValid(lastResponse.vendorId)) {
+              vendor = await Vendor.findById(lastResponse.vendorId);
+              if (!vendor) {
+                const { default: VendorLite } = await import('./vendor-lite/vendorModel.js').catch(() => ({ default: null }));
+                if (VendorLite) vendor = await VendorLite.findById(lastResponse.vendorId);
+              }
+            }
+            if (vendor) {
+              surveySession = {
+                actual_user_id: effectiveUid,
+                vendor_id: vendor._id,
+                identifier: effectiveUid
+              };
+            }
+          }
         }
       } catch (sessionError) {
         console.error("❌ Error looking up survey session:", sessionError);
@@ -1361,7 +1431,7 @@ app.get('/api/redirect', async (req, res) => {
 
     // If survey session found, handle vendor redirect
     if (surveySession && vendor) {
-      const statusCode = Number(status);
+      const statusCode = Number(status) || 1;
 
       console.log("📋 STEP 3: Vendor data loaded");
       console.log("   - Vendor ID:", vendor?._id || vendor?.id);
@@ -1369,27 +1439,55 @@ app.get('/api/redirect', async (req, res) => {
       console.log("   - Has Terminate URL:", !!(vendor?.terminate_url || vendor?.redirectLinks?.terminate));
       console.log("   - Has Quota URL:", !!(vendor?.quota_full_url || vendor?.redirectLinks?.quotaFull));
 
-      // 🔥 STEP 3: FETCH VENDOR REDIRECTS - Support both Vendor and VendorLite models
-      // VendorLite has: complete_url, terminate_url, quota_full_url
-      // Main Vendor has: redirectLinks: { complete, terminate, quotaFull }
       let vendorUrl = "";
       if (statusCode === 1) {
         vendorUrl = vendor.complete_url || vendor.redirectLinks?.complete || "";
         console.log(`🎯 Status 1 (Complete): URL = ${vendorUrl || "NOT FOUND"}`);
-      }
-      else if (statusCode === 2) {
+      } else if (statusCode === 2) {
         vendorUrl = vendor.terminate_url || vendor.redirectLinks?.terminate || "";
         console.log(`🎯 Status 2 (Terminate): URL = ${vendorUrl || "NOT FOUND"}`);
-      }
-      else if (statusCode === 3) {
+      } else if (statusCode === 3) {
         vendorUrl = vendor.quota_full_url || vendor.redirectLinks?.quotaFull || "";
         console.log(`🎯 Status 3 (Quota Full): URL = ${vendorUrl || "NOT FOUND"}`);
+      } else if (statusCode === 4) {
+        vendorUrl = vendor.terminate_url || vendor.redirectLinks?.terminate || "";
+        console.log(`🎯 Status 4 (Security): URL = ${vendorUrl || "NOT FOUND"}`);
       }
 
-      // 🔥 STEP 4 & 5: REDIRECT BASED ON STATUS + PASS ORIGINAL USER ID
       if (vendorUrl) {
-        // Replace [identifier] placeholder with actual_user_id
-        const finalVendorUrl = vendorUrl.replace(/\[identifier\]/g, String(surveySession.actual_user_id));
+        let finalVendorUrl = vendorUrl.trim();
+        const placeholderRegex = /\[(identifier|uid|user_id|userid|id|rid|respid|click_id|clickid|pid|respondent_id|value)\]|\{(identifier|uid|user_id|userid|id|rid|respid|click_id|clickid|pid|respondent_id|value)\}|###(UID|USER_ID|IDENTIFIER|RID)###|%%(UID|USER_ID|IDENTIFIER|RID)%%/gi;
+        
+        let hadPlaceholder = false;
+        if (placeholderRegex.test(finalVendorUrl)) {
+          hadPlaceholder = true;
+          finalVendorUrl = finalVendorUrl.replace(placeholderRegex, encodeURIComponent(String(surveySession.actual_user_id)));
+        }
+
+        try {
+          const parsed = new URL(finalVendorUrl);
+          const targetKeys = ['uid', 'user_id', 'userid', 'rid', 'respid', 'id', 'user'];
+          let found = false;
+          for (const k of targetKeys) {
+            if (parsed.searchParams.has(k)) {
+              found = true;
+              const cur = parsed.searchParams.get(k) || '';
+              if (!cur || cur === String(surveySession.actual_user_id) || /^(\[.*\]|\{.*\}|###.*###|%%.*%%|XXXXX?)$/i.test(cur) || !hadPlaceholder) {
+                parsed.searchParams.set(k, String(surveySession.actual_user_id));
+              } else {
+                parsed.searchParams.set(k, cur);
+              }
+            }
+          }
+          if (!found && !hadPlaceholder) {
+            parsed.searchParams.set('uid', String(surveySession.actual_user_id));
+          }
+          finalVendorUrl = parsed.toString();
+        } catch {
+          if (!hadPlaceholder) {
+            finalVendorUrl = finalVendorUrl.replace(/\[identifier\]/gi, String(surveySession.actual_user_id));
+          }
+        }
 
         console.log("🚀 Vendor redirect from session:", {
           statusCode,
@@ -1398,6 +1496,23 @@ app.get('/api/redirect', async (req, res) => {
           finalRedirectUrl: finalVendorUrl,
           source: 'survey_session'
         });
+
+        // Non-blocking log creation
+        const finalPid = pid ? String(pid) : "AUTO_" + Date.now();
+        const statusMap: Record<string, string> = {
+          "1": "Completed",
+          "2": "Terminated",
+          "3": "Quota Full",
+          "4": "Security Terminated"
+        };
+        SurveyRedirectLogs.create({
+          pid: finalPid,
+          uid: String(surveySession.actual_user_id),
+          status: statusCode,
+          statusText: statusMap[String(statusCode)] || "Unknown",
+          ipAddress: req.ip || req.socket.remoteAddress || "0.0.0.0",
+          userAgent: req.get('User-Agent') || "Unknown"
+        }).catch(err => console.error("Error creating redirect log:", err));
 
         // For AJAX requests, return JSON
         if (req.get('Accept')?.includes('application/json')) {
@@ -1411,29 +1526,28 @@ app.get('/api/redirect', async (req, res) => {
 
         // For regular browser requests, redirect directly to vendor
         return res.redirect(finalVendorUrl);
-      } else {
-        console.log("⚠️ No vendor URL found for status:", statusCode, "- falling through to default redirect");
       }
     }
 
-    // 🔥 STEP 6: FALLBACK - Run existing redirect logic unchanged if no session found
-    console.log("⚠️ No survey session found, running existing redirect logic");
+    // 🔥 STEP 6: FALLBACK - If no vendor session found, return hasVendorRedirect: false for AJAX
+    console.log("⚠️ No survey session found for vendor redirect");
 
-    // 🔥 Explicitly use the Netlify domain where the frontend is reliable
+    if (req.get('Accept')?.includes('application/json')) {
+      return res.json({
+        success: true,
+        hasVendorRedirect: false,
+        message: 'No vendor redirect configured for this user'
+      });
+    }
+
     const BASE_URL = "https://surveypanelgo.netlify.app";
 
-    if (!uid || !status) {
-      console.error("❌ Missing required parameters (uid/status)");
-      // For AJAX requests, return JSON error
-      if (req.get('Accept')?.includes('application/json')) {
-        return res.status(400).json({ error: "Missing required parameters (uid/status)" });
-      }
+    if (!effectiveUid || !status) {
       return res.redirect(`${BASE_URL}/error`);
     }
 
-    const finalPid = pid || "AUTO_" + Date.now();
-    const statusCode = Number(status);
-
+    const finalPid = pid ? String(pid) : "AUTO_" + Date.now();
+    const statusCode = Number(status) || 1;
     const statusMap: Record<string, string> = {
       "1": "Completed",
       "2": "Terminated",
@@ -1442,37 +1556,30 @@ app.get('/api/redirect', async (req, res) => {
     };
 
     const statusText = statusMap[String(statusCode)] || "Unknown";
-
-    // Non-blocking log creation to avoid delaying the redirect
-    SurveyRedirectLogs.create({
-      pid: finalPid,
-      uid: uid,
-      status: statusCode,
-      statusText,
-      ipAddress: (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req.socket.remoteAddress,
-      userAgent: req.headers["user-agent"],
-      createdAt: new Date()
-    }).catch(err => console.error("❌ Background log error:", err));
-
-    // Capture diagnostic info
     const rawIp = req.headers["x-forwarded-for"] as string;
     const ip = rawIp
       ? rawIp.split(",")[0].trim()
       : req.socket.remoteAddress || "Unknown";
     const timestamp = new Date().toISOString();
 
-    // 🔥 Check for external survey mapping to enable auto-forwarding to vendors
+    SurveyRedirectLogs.create({
+      pid: finalPid,
+      uid: effectiveUid,
+      status: statusCode,
+      statusText: statusText,
+      ipAddress: ip,
+      userAgent: req.get('User-Agent') || "Unknown"
+    }).catch(err => console.error("Error creating redirect log:", err));
+
+    // Check for external survey mapping to enable auto-forwarding to vendors
     let vendorRedirectUrl = "";
     try {
       const { findTokenByUid, loadSurveys } = await import('./externalCreate.js');
-      // First try to find token by UID from database
-      const token = await findTokenByUid(String(uid));
-
-      // Fallback to old method if database lookup fails
+      const token = await findTokenByUid(effectiveUid);
       const fallbackToken = await (async () => {
         if (!token) {
           const { findTokenByRid } = await import('./externalCreate.js');
-          return findTokenByRid(String(uid));
+          return findTokenByRid(effectiveUid);
         }
         return token;
       })();
@@ -1487,11 +1594,18 @@ app.get('/api/redirect', async (req, res) => {
           if (statusCode === 1) vendorUrl = survey.vendor.complete_url;
           else if (statusCode === 2) vendorUrl = survey.vendor.terminate_url;
           else if (statusCode === 3) vendorUrl = survey.vendor.quota_full_url;
+          else if (statusCode === 4) vendorUrl = survey.vendor.terminate_url;
 
           if (vendorUrl) {
-            const sep = vendorUrl.includes("?") ? "&" : "?";
-            vendorRedirectUrl = `${vendorUrl}${sep}rid=${uid}&uid=${uid}&pid=${survey.pid || ''}&transactionId=AUTO`;
-            console.log(`🔥 Found vendor redirect for UID ${uid}: ${vendorRedirectUrl}`);
+            vendorRedirectUrl = vendorUrl.trim();
+            const placeholderRegex = /\[(identifier|uid|user_id|userid|id|rid|respid|click_id|clickid|pid|respondent_id|value)\]|\{(identifier|uid|user_id|userid|id|rid|respid|click_id|clickid|pid|respondent_id|value)\}|###(UID|USER_ID|IDENTIFIER|RID)###|%%(UID|USER_ID|IDENTIFIER|RID)%%/gi;
+            if (placeholderRegex.test(vendorRedirectUrl)) {
+              vendorRedirectUrl = vendorRedirectUrl.replace(placeholderRegex, encodeURIComponent(effectiveUid));
+            } else {
+              const sep = vendorRedirectUrl.includes("?") ? "&" : "?";
+              vendorRedirectUrl = `${vendorRedirectUrl}${sep}uid=${encodeURIComponent(effectiveUid)}`;
+            }
+            console.log(`🔥 Found vendor redirect for UID ${effectiveUid}: ${vendorRedirectUrl}`);
           }
         }
       }
@@ -1503,27 +1617,27 @@ app.get('/api/redirect', async (req, res) => {
     if (req.get('Accept')?.includes('application/json')) {
       return res.json({
         success: true,
-        redirectUrl: vendorRedirectUrl,
+        redirectUrl: vendorRedirectUrl || undefined,
         hasVendorRedirect: !!vendorRedirectUrl
       });
     }
 
-    // For regular browser requests, redirect as before
-    const redirectPages = {
-      1: `/survey-result/success?pid=${finalPid}&uid=${uid}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      2: `/survey-result/terminated?pid=${finalPid}&uid=${uid}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      3: `/survey-result/quota-full?pid=${finalPid}&uid=${uid}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
-      4: `/survey-result/security?pid=${finalPid}&uid=${uid}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
-    };
-
-    const finalPath = redirectPages[statusCode as keyof typeof redirectPages] || `/survey-result?pid=${finalPid}&uid=${uid}&status=${statusCode}&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`;
-    let finalUrl = `${BASE_URL}${finalPath}`;
-
+    // For regular browser requests
     if (vendorRedirectUrl) {
-      finalUrl += `&redirect=${encodeURIComponent(vendorRedirectUrl)}`;
+      return res.redirect(vendorRedirectUrl);
     }
 
-    console.log("🚀 Redirecting NOW to:", finalUrl);
+    const redirectPages: Record<number, string> = {
+      1: `/survey-result/success?pid=${finalPid}&uid=${encodeURIComponent(effectiveUid)}&status=1&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      2: `/survey-result/terminated?pid=${finalPid}&uid=${encodeURIComponent(effectiveUid)}&status=2&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      3: `/survey-result/quota-full?pid=${finalPid}&uid=${encodeURIComponent(effectiveUid)}&status=3&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`,
+      4: `/survey-result/security?pid=${finalPid}&uid=${encodeURIComponent(effectiveUid)}&status=4&ip=${encodeURIComponent(ip)}&time=${encodeURIComponent(timestamp)}`
+    };
+
+    const finalPath = redirectPages[statusCode] || redirectPages[2];
+    const finalUrl = `${BASE_URL}${finalPath}`;
+
+    console.log("🚀 Redirecting to frontend result:", finalUrl);
     return res.redirect(finalUrl);
 
   } catch (error) {

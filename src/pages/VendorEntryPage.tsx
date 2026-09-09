@@ -12,11 +12,17 @@ const VendorEntryPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { addToast } = useToast();
-  const surveyId = searchParams.get('survey');
-  const vendorId = searchParams.get('vendor');
 
   useEffect(() => {
     let cancelled = false;
+    const surveyId = searchParams.get('survey');
+    const vendorId = searchParams.get('vendor');
+    const uid = searchParams.get('uid') || '';
+
+    const targetQuery = new URLSearchParams();
+    if (vendorId) targetQuery.set('vendor', vendorId);
+    if (uid) targetQuery.set('uid', uid);
+    const targetPath = `/survey/${surveyId}/precheck${targetQuery.toString() ? `?${targetQuery.toString()}` : ''}`;
 
     async function run() {
       if (!surveyId) {
@@ -55,20 +61,20 @@ const VendorEntryPage: React.FC = () => {
         if (!authData) {
           // For vendor surveys, allow proceeding without login
           if (vendorId) {
-            sessionStorage.setItem('surveypanelgo_redirect', `/survey/${surveyId}/precheck`);
+            sessionStorage.setItem('surveypanelgo_redirect', targetPath);
             sessionStorage.setItem('surveypanelgo_vendor_flow', 'true');
             addToast('You can complete this survey without logging in', 'info');
-            navigate(`/survey/${surveyId}/precheck`);
+            navigate(targetPath);
             return;
           } else {
-            sessionStorage.setItem('surveypanelgo_redirect', `/survey/${surveyId}/precheck`);
+            sessionStorage.setItem('surveypanelgo_redirect', targetPath);
             addToast('Please login to continue', 'info');
             navigate('/panels/b2b/login');
             return;
           }
         }
 
-        navigate(`/survey/${surveyId}/precheck`);
+        navigate(targetPath);
       } catch {
         if (!cancelled) {
           addToast('Invalid survey link', 'error');

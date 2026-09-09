@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { PlayfulButton } from '@/components/ui/playful';
 import { Navbar } from '@/components/layout/Navbar';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { useAuth } from '@/hooks/useAuth';
+import { API_BASE_URL } from '@/lib/api';
 
 const statusConfig: Record<string, { label: string; color: string }> = {
   "1": { label: "Completed", color: "#22c55e" },
@@ -17,7 +18,6 @@ export default function SurveyResultCard() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [countdown, setCountdown] = useState<number | null>(null);
   const params = new URLSearchParams(location.search);
 
   // Helper function to navigate to dashboard or login
@@ -35,12 +35,28 @@ export default function SurveyResultCard() {
 
   const pid = params.get("pid");
   const uid = params.get("uid");
-  const status = params.get("status");
+  const rawStatus = params.get("status");
   const ip = params.get("ip");
   const time = params.get("time");
-  const redirectUrl = params.get("redirect"); // New parameter for vendor redirect
+  const redirectUrl = params.get("redirect");
 
-  const config = status ? statusConfig[status] : { label: "Result", color: "#7C83FD" };
+  // Infer status code from pathname if not in query
+  const inferStatus = (): string => {
+    if (rawStatus) return rawStatus;
+    const path = location.pathname.toLowerCase();
+    if (path.includes('terminated')) return '2';
+    if (path.includes('quota')) return '3';
+    if (path.includes('security')) return '4';
+    if (path.includes('success')) return '1';
+    return '1';
+  };
+
+  const status = inferStatus();
+  const config = statusConfig[status] || { label: "Result", color: "#7C83FD" };
+
+  // State to avoid flashing our card when vendor redirect exists
+  const [isCheckingVendor, setIsCheckingVendor] = useState(Boolean(uid || redirectUrl));
+  const [isVendorRedirecting, setIsVendorRedirecting] = useState(false);
 
   // Function to parse comma-separated IPs
   const parseIPs = (ipString: string | null) => {
@@ -55,59 +71,73 @@ export default function SurveyResultCard() {
 
   const { startIp, endIp } = parseIPs(ip);
 
-  // Auto-redirect logic
-  React.useEffect(() => {
+  // Instant vendor redirect logic
+  useEffect(() => {
+    let active = true;
+
     const checkVendorRedirect = async () => {
-      // If redirect URL is already provided, use it
+      // 1. If an explicit redirect URL parameter was provided
       if (redirectUrl) {
-        setCountdown(2);
-        const timer = setInterval(() => {
-          setCountdown((prev) => (prev !== null && prev > 0 ? prev - 1 : prev));
-        }, 1000);
-
-        const redirectTimer = setTimeout(() => {
-          window.location.href = redirectUrl;
-        }, 2000);
-
-        return () => {
-          clearInterval(timer);
-          clearTimeout(redirectTimer);
-        };
+        setIsVendorRedirecting(true);
+        window.location.replace(redirectUrl);
+        return;
       }
 
-      // If no redirect URL but we have uid and status, check for vendor redirect
-      if (uid && status && !redirectUrl) {
+      // 2. If UID is present, query backend to see if this UID belongs to a vendor session
+      if (uid) {
         try {
-          const response = await fetch(`/api/redirect?uid=${uid}&status=${status}${pid ? `&pid=${pid}` : ''}`, {
+          const queryParams = new URLSearchParams({
+            uid: uid.trim(),
+            status,
+          });
+          if (pid) queryParams.set('pid', pid.trim());
+
+          const response = await fetch(`${API_BASE_URL}/api/redirect?${queryParams.toString()}`, {
             headers: {
               'Accept': 'application/json'
             }
           });
+
+          if (!response.ok) {
+            if (active) setIsCheckingVendor(false);
+            return;
+          }
+
           const data = await response.json();
-          
-          if (data.success && data.redirectUrl) {
-            setCountdown(2);
-            const timer = setInterval(() => {
-              setCountdown((prev) => (prev !== null && prev > 0 ? prev - 1 : prev));
-            }, 1000);
 
-            const redirectTimer = setTimeout(() => {
-              window.location.href = data.redirectUrl;
-            }, 2000);
-
-            return () => {
-              clearInterval(timer);
-              clearTimeout(redirectTimer);
-            };
+          if (active && data.success && data.hasVendorRedirect && data.redirectUrl) {
+            setIsVendorRedirecting(true);
+            window.location.replace(data.redirectUrl);
+            return;
           }
         } catch (error) {
-          console.warn("Failed to check vendor redirect:", error);
+          console.warn("Vendor redirect lookup error:", error);
         }
+      }
+
+      if (active) {
+        setIsCheckingVendor(false);
       }
     };
 
     checkVendorRedirect();
+
+    return () => {
+      active = false;
+    };
   }, [redirectUrl, uid, status, pid]);
+
+  // When checking for or performing a vendor redirect, do NOT display our card
+  if (isCheckingVendor || isVendorRedirecting) {
+    return (
+      <div className="min-h-screen bg-[#EEF2FF] flex flex-col items-center justify-center p-4">
+        <div className="w-10 h-10 border-4 border-violet border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="font-jakarta text-navy font-medium text-sm">
+          {isVendorRedirecting ? 'Redirecting to vendor...' : 'Processing results...'}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <>

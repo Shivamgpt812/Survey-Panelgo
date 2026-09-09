@@ -6,43 +6,54 @@ export function generateIdentifier(): string {
   return randomUUID();
 }
 
-// Detect user identifier parameter in URL
 export function detectUserIdentifierParam(url: string): string | null {
-  const possibleParams = ['user_id', 'uid', 'user', 'participant_id'];
+  const possibleParams = ['uid', 'user_id', 'userid', 'rid', 'respid', 'id', 'user', 'participant_id'];
   
   try {
     const urlObj = new URL(url);
     const searchParams = urlObj.searchParams;
     
-    // Check for empty parameter values (indicates where to inject identifier)
+    // Check for empty parameter values or bracketed placeholders (indicates where to inject identifier)
     for (const param of possibleParams) {
-      if (searchParams.has(param) && !searchParams.get(param)) {
-        return param;
+      if (searchParams.has(param)) {
+        const val = searchParams.get(param) || '';
+        if (!val || /^(\[.*\]|\{.*\}|###.*###|%%.*%%|XXXXX?)$/i.test(val)) {
+          return param;
+        }
       }
     }
     
-    // If no empty param found, check for any of the possible params
+    // If no placeholder param found, check for any of the possible params
     for (const param of possibleParams) {
       if (searchParams.has(param)) {
         return param;
       }
     }
     
-    return null;
+    return 'uid';
   } catch (error) {
     console.error('Error parsing URL:', error);
-    return null;
+    return 'uid';
   }
 }
 
 // Inject identifier into external link
 export function injectIdentifierIntoUrl(url: string, identifier: string, paramName: string): string {
   try {
-    const urlObj = new URL(url);
+    let processed = url.trim();
+    const placeholderRegex = /\[(identifier|uid|user_id|userid|id|rid|respid|click_id|clickid|pid|respondent_id|value)\]|\{(identifier|uid|user_id|userid|id|rid|respid|click_id|clickid|pid|respondent_id|value)\}|###(UID|USER_ID|IDENTIFIER|RID)###|%%(UID|USER_ID|IDENTIFIER|RID)%%/gi;
+    
+    if (placeholderRegex.test(processed)) {
+      processed = processed.replace(placeholderRegex, encodeURIComponent(identifier));
+    }
+
+    const urlObj = new URL(processed);
     const searchParams = urlObj.searchParams;
     
     // Set or replace the identifier parameter
-    searchParams.set(paramName, identifier);
+    if (paramName) {
+      searchParams.set(paramName, identifier);
+    }
     
     // Reconstruct the URL
     urlObj.search = searchParams.toString();

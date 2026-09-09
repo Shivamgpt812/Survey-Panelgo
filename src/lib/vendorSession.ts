@@ -13,5 +13,5 @@ export function clearVendorSession(): void {
 }
 
 export function generateVendorLink(surveyId: string, vendorId: string): string {
-  return `${window.location.origin}/start?survey=${surveyId}&vendor=${vendorId}`;
+  return `${window.location.origin}/survey/${surveyId}/precheck?vendor=${vendorId}&uid=`;
 }

@@ -28,7 +28,8 @@ import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { useAuth, getStoredToken } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { apiGet } from '@/lib/api';
+import { resolveExternalSurveyLink } from '@/lib/urlUtils';
+import { apiGet, apiPost } from '@/lib/api';
 import type { Survey, User, SurveyResponseRecord } from '@/types';
 import { PanelOnboardingModal } from '@/components/panel/PanelOnboardingModal';
 
@@ -347,8 +348,11 @@ export const PanelDashboardPage: React.FC = () => {
   };
 
   const handleTakeSurvey = (survey: Survey) => {
-    if (survey.isExternal && survey.link) {
-      window.open(survey.link, '_blank');
+    if (survey.preScreener && survey.preScreener.length > 0) {
+      navigate(`/survey/${survey.id}/precheck`);
+    } else if (survey.isExternal && survey.link) {
+      const targetLink = resolveExternalSurveyLink(survey.link, user?.id ? String(user.id) : '');
+      window.open(targetLink, '_blank');
     } else {
       navigate(`/survey/${survey.id}`);
     }
