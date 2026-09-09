@@ -33,18 +33,7 @@ export default function SurveyResultCard() {
     }
   };
 
-  const initialPid =
-    params.get("pid") ||
-    params.get("projectid") ||
-    params.get("projectId") ||
-    params.get("project_id") ||
-    params.get("survey_id") ||
-    params.get("surveyId") ||
-    params.get("sid") ||
-    params.get("project") ||
-    "";
-
-  const [pid, setPid] = useState(initialPid);
+  const pid = params.get("pid");
   const uid = params.get("uid");
   const rawStatus = params.get("status");
   const ip = params.get("ip");
@@ -115,10 +104,6 @@ export default function SurveyResultCard() {
           }
 
           const data = await response.json();
-
-          if (data.pid && (!pid || pid.startsWith('AUTO_'))) {
-            setPid(data.pid);
-          }
 
           if (active && data.success && data.hasVendorRedirect && data.redirectUrl) {
             setIsVendorRedirecting(true);

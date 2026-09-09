@@ -13,8 +13,8 @@ export function resolveExternalSurveyLink(rawLink: string, respondentUid?: strin
 
   let processed = rawLink.trim();
 
-  // 1. Replace bracketed/template placeholders for respondent identifier (case-insensitive)
-  const placeholderRegex = /\[(identifier|uid|user_id|userid|id|rid|respid|click_id|clickid|respondent_id|value)\]|\{(identifier|uid|user_id|userid|id|rid|respid|click_id|clickid|respondent_id|value)\}|###(UID|USER_ID|IDENTIFIER|RID)###|%%(UID|USER_ID|IDENTIFIER|RID)%%/gi;
+  // 1. Replace bracketed/template placeholders across the entire URL string (case-insensitive)
+  const placeholderRegex = /\[(identifier|uid|user_id|userid|id|rid|respid|click_id|clickid|pid|respondent_id|value)\]|\{(identifier|uid|user_id|userid|id|rid|respid|click_id|clickid|pid|respondent_id|value)\}|###(UID|USER_ID|IDENTIFIER|RID)###|%%(UID|USER_ID|IDENTIFIER|RID)%%/gi;
   
   let hadPlaceholderMatch = false;
   if (placeholderRegex.test(processed)) {
@@ -75,60 +75,3 @@ export function resolveExternalSurveyLink(rawLink: string, respondentUid?: strin
     return processed;
   }
 }
-
-/**
- * Extracts project ID / projectid / pid from an external URL or query string.
- * Example: https://survey.market-mirror.com/survey/supplier-auth?projectid=860114895041&... -> "860114895041"
- */
-export function extractProjectIdFromUrl(urlOrString?: string | null): string | null {
-  if (!urlOrString) return null;
-  const str = String(urlOrString).trim();
-  if (!str) return null;
-
-  try {
-    const isAbsolute = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(str);
-    const parsed = new URL(str, isAbsolute ? undefined : 'https://placeholder.local');
-    const projectKeys = [
-      'projectid',
-      'projectId',
-      'project_id',
-      'pid',
-      'PID',
-      'survey_id',
-      'surveyId',
-      'sid',
-      'project',
-      'campaign_id',
-      'campaignId'
-    ];
-    for (const key of projectKeys) {
-      if (parsed.searchParams.has(key)) {
-        const val = parsed.searchParams.get(key);
-        if (
-          val &&
-          val.trim() &&
-          !val.includes('[') &&
-          !val.includes('{') &&
-          !val.startsWith('AUTO_') &&
-          !/^(undefined|null|nan)$/i.test(val.trim())
-        ) {
-          return val.trim();
-        }
-      }
-    }
-  } catch {
-    const match = str.match(/[?&](?:projectid|projectId|project_id|pid|PID|survey_id|surveyId|sid|project)=([^&#\s]+)/i);
-    if (
-      match &&
-      match[1] &&
-      !match[1].includes('[') &&
-      !match[1].includes('{') &&
-      !match[1].startsWith('AUTO_') &&
-      !/^(undefined|null|nan)$/i.test(match[1])
-    ) {
-      return decodeURIComponent(match[1]).trim();
-    }
-  }
-  return null;
-}
-
