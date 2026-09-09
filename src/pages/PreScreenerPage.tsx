@@ -99,14 +99,15 @@ const PreScreenerPage: React.FC = () => {
         const vendorData = vendors.find((v) => v.id === effectiveVendorId);
         setVendor(vendorData);
       });
+    }
 
-      if (uid && surveyId) {
-        void apiPost('/api/survey-session/register', {
-          surveyId,
-          vendorId: effectiveVendorId,
-          uid
-        }).catch((e) => console.warn('Survey session registration error:', e));
-      }
+    // Always register session with backend so projectid and vendor details are mapped
+    if (uid && surveyId) {
+      void apiPost('/api/survey-session/register', {
+        surveyId,
+        vendorId: effectiveVendorId || undefined,
+        uid
+      }).catch((e) => console.warn('Survey session registration error:', e));
     }
   }, [effectiveVendorId, uid, surveyId]);
 

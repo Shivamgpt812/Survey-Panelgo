@@ -1281,23 +1281,23 @@ app.get('/api/survey-tracking', requireAdmin, async (_req: any, res) => {
   }
 });
 
-// ---------- Survey Session Register (Vendor Flow) ----------
+// ---------- Survey Session Register (Vendor & Direct Flow) ----------
 app.post('/api/survey-session/register', async (req, res) => {
   try {
     const { surveyId, vendorId, uid } = req.body;
-    if (!uid || !vendorId) {
-      return res.status(400).json({ error: 'uid and vendorId are required' });
+    if (!uid) {
+      return res.status(400).json({ error: 'uid is required' });
     }
 
     const cleanUid = String(uid).trim();
-    const cleanVendorId = String(vendorId).trim();
+    const cleanVendorId = vendorId ? String(vendorId).trim() : '';
 
-    // Verify vendor
+    // Verify vendor if provided
     let vendor: any = null;
-    if (mongoose.Types.ObjectId.isValid(cleanVendorId)) {
+    if (cleanVendorId && mongoose.Types.ObjectId.isValid(cleanVendorId)) {
       vendor = await Vendor.findById(cleanVendorId);
     }
-    if (!vendor) {
+    if (cleanVendorId && !vendor) {
       try {
         const { default: VendorLite } = await import('./vendor-lite/vendorModel.js');
         if (VendorLite && mongoose.Types.ObjectId.isValid(cleanVendorId)) {
@@ -1306,10 +1306,6 @@ app.post('/api/survey-session/register', async (req, res) => {
       } catch (err) {
         console.warn('VendorLite import/lookup error:', err);
       }
-    }
-
-    if (!vendor) {
-      return res.status(404).json({ error: 'Vendor not found' });
     }
 
     // Try extracting actual project ID from the survey link or document
@@ -1339,7 +1335,7 @@ app.post('/api/survey-session/register', async (req, res) => {
       { identifier: cleanUid },
       {
         identifier: cleanUid,
-        vendor_id: vendor._id,
+        vendor_id: vendor ? vendor._id : null,
         actual_user_id: cleanUid,
         survey_id: surveyId ? String(surveyId).trim() : null,
         project_id: extractedPid,
@@ -1350,7 +1346,19 @@ app.post('/api/survey-session/register', async (req, res) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    console.log(`✅ Registered vendor survey session: UID=${cleanUid}, Vendor=${vendor.name || vendor.vendor_name || vendor._id}, ProjectID=${extractedPid || 'N/A'}`);
+    // Also persist in RespondentMapping
+    try {
+      const RespondentMapping = (await import('./models/RespondentMapping.js')).default;
+      if (RespondentMapping) {
+        await RespondentMapping.findOneAndUpdate(
+          { uid: cleanUid },
+          { uid: cleanUid, token: surveyId ? String(surveyId) : '', pid: extractedPid || undefined },
+          { upsert: true, new: true }
+        );
+      }
+    } catch {}
+
+    console.log(`✅ Registered survey session: UID=${cleanUid}, Vendor=${vendor?.name || vendor?.vendor_name || 'Direct'}, ProjectID=${extractedPid || 'N/A'}`);
     res.json({ success: true, session, projectId: extractedPid });
   } catch (e) {
     console.error('Failed to register survey session:', e);
@@ -1455,8 +1463,10 @@ app.get('/api/redirect', async (req, res) => {
       console.log("⚠️ STEP 2: No uid provided");
     }
 
-    // Determine the most accurate Project ID / PID
+    // Multi-tier PID Resolution
     let resolvedPid = (rawPid && !rawPid.startsWith('AUTO_')) ? rawPid : '';
+    
+    // 1. Try from surveySession
     if (!resolvedPid && surveySession) {
       if (surveySession.project_id) {
         resolvedPid = surveySession.project_id;
@@ -1480,6 +1490,61 @@ app.get('/api/redirect', async (req, res) => {
         }
       }
     }
+
+    // 2. Try from RespondentMapping
+    if (!resolvedPid && effectiveUid) {
+      try {
+        const RespondentMapping = (await import('./models/RespondentMapping.js')).default;
+        if (RespondentMapping) {
+          const mapping = await RespondentMapping.findOne({ uid: effectiveUid });
+          if (mapping) {
+            if (mapping.pid && !mapping.pid.startsWith('AUTO_')) {
+              resolvedPid = mapping.pid;
+            } else if (mapping.token) {
+              if (mongoose.Types.ObjectId.isValid(mapping.token)) {
+                const sDoc = await Survey.findById(mapping.token);
+                if (sDoc) {
+                  resolvedPid = extractProjectIdFromUrl(sDoc.link) || sDoc.pid || '';
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("RespondentMapping PID lookup error:", e);
+      }
+    }
+
+    // 3. Try from SurveyTracking
+    if (!resolvedPid && effectiveUid) {
+      try {
+        const tracking = await SurveyTracking.findOne({ userId: effectiveUid }).sort({ createdAt: -1 });
+        if (tracking && tracking.surveyId) {
+          const sDoc = await Survey.findById(tracking.surveyId);
+          if (sDoc) {
+            resolvedPid = extractProjectIdFromUrl(sDoc.link) || sDoc.pid || '';
+          }
+        }
+      } catch (e) {
+        console.warn("SurveyTracking PID lookup error:", e);
+      }
+    }
+
+    // 4. Try from Response
+    if (!resolvedPid && effectiveUid) {
+      try {
+        const lastResp = await Response.findOne({ userId: effectiveUid }).sort({ createdAt: -1 });
+        if (lastResp && lastResp.surveyId) {
+          const sDoc = await Survey.findById(lastResp.surveyId);
+          if (sDoc) {
+            resolvedPid = extractProjectIdFromUrl(sDoc.link) || sDoc.pid || '';
+          }
+        }
+      } catch (e) {
+        console.warn("Response PID lookup error:", e);
+      }
+    }
+
     const finalPid = resolvedPid || (rawPid ? rawPid : "AUTO_" + Date.now());
 
     // If survey session found, handle vendor redirect
