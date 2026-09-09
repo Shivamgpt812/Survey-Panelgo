@@ -19,6 +19,7 @@ import { OtpVerification } from './models/OtpVerification.js';
 import { sendOtpEmail, sendPasswordResetEmail } from './lib/mailer.js';
 import { preScreenerTemplates } from './preScreenerTemplates.js';
 import { REDIRECT_URLS, getStatusText, isValidStatus } from './config/redirectConfig.js';
+import { extractProjectIdFromUrl } from './lib/surveySessionUtils.js';
 import vendorLiteRoutes from './vendor-lite/routes.js';
 import externalRouter, { loadSurveys, ridToTokenMap } from './externalCreate.js';
 import {
@@ -1311,6 +1312,28 @@ app.post('/api/survey-session/register', async (req, res) => {
       return res.status(404).json({ error: 'Vendor not found' });
     }
 
+    // Try extracting actual project ID from the survey link or document
+    let extractedPid: string | null = null;
+    if (surveyId) {
+      try {
+        let sDoc: any = null;
+        if (mongoose.Types.ObjectId.isValid(String(surveyId).trim())) {
+          sDoc = await Survey.findById(surveyId);
+        }
+        if (!sDoc) {
+          const { default: SurveyLite } = await import('./vendor-lite/surveyModel.js').catch(() => ({ default: null }));
+          if (SurveyLite && mongoose.Types.ObjectId.isValid(String(surveyId).trim())) {
+            sDoc = await SurveyLite.findById(surveyId);
+          }
+        }
+        if (sDoc) {
+          extractedPid = extractProjectIdFromUrl(sDoc.link || sDoc.externalLink) || sDoc.pid || null;
+        }
+      } catch (err) {
+        console.warn('Error extracting project ID in session register:', err);
+      }
+    }
+
     // Upsert session in SurveySession collection
     const session = await SurveySession.findOneAndUpdate(
       { identifier: cleanUid },
@@ -1319,6 +1342,7 @@ app.post('/api/survey-session/register', async (req, res) => {
         vendor_id: vendor._id,
         actual_user_id: cleanUid,
         survey_id: surveyId ? String(surveyId).trim() : null,
+        project_id: extractedPid,
         base_url: 'vendor_flow',
         identifier_param_name: 'uid',
         created_at: new Date()
@@ -1326,8 +1350,8 @@ app.post('/api/survey-session/register', async (req, res) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    console.log(`✅ Registered vendor survey session: UID=${cleanUid}, Vendor=${vendor.name || vendor.vendor_name || vendor._id}`);
-    res.json({ success: true, session });
+    console.log(`✅ Registered vendor survey session: UID=${cleanUid}, Vendor=${vendor.name || vendor.vendor_name || vendor._id}, ProjectID=${extractedPid || 'N/A'}`);
+    res.json({ success: true, session, projectId: extractedPid });
   } catch (e) {
     console.error('Failed to register survey session:', e);
     res.status(500).json({ error: 'Failed to register survey session' });
@@ -1337,12 +1361,13 @@ app.post('/api/survey-session/register', async (req, res) => {
 // ---------- Survey Redirect Tracking ----------
 app.get('/api/redirect', async (req, res) => {
   try {
-    // 🔥 STEP 1: IDENTIFY PARAMS - Handle pid, uid, user_id, user, status
-    const { pid, uid, user_id, user, status } = req.query;
+    // 🔥 STEP 1: IDENTIFY PARAMS - Handle pid, projectid, projectId, project_id, survey_id, uid, user_id, user, status
+    const { pid, projectid, projectId, project_id, survey_id, surveyId, sid, project, uid, user_id, user, status } = req.query;
     const effectiveUid = String(uid || user_id || user || '').trim();
+    const rawPid = String(pid || projectid || projectId || project_id || survey_id || surveyId || sid || project || '').trim();
 
     console.log("🔥 /api/redirect HIT ==========================================");
-    console.log("   PID:", pid);
+    console.log("   Incoming PID/ProjectID:", rawPid || "None provided");
     console.log("   UID:", effectiveUid);
     console.log("   Status:", status);
     console.log("   Request URL:", req.url);
@@ -1379,7 +1404,8 @@ app.get('/api/redirect', async (req, res) => {
           console.log("   - Identifier:", surveySession.identifier);
           console.log("   - Vendor ID (from session):", surveySession.vendor_id?._id || surveySession.vendor_id);
           console.log("   - Actual User ID:", surveySession.actual_user_id);
-          console.log("   - Survey ID (PID):", surveySession.survey_id);
+          console.log("   - Survey ID:", surveySession.survey_id);
+          console.log("   - Stored Project ID:", surveySession.project_id);
 
           vendor = surveySession.vendor_id;
 
@@ -1429,12 +1455,40 @@ app.get('/api/redirect', async (req, res) => {
       console.log("⚠️ STEP 2: No uid provided");
     }
 
+    // Determine the most accurate Project ID / PID
+    let resolvedPid = (rawPid && !rawPid.startsWith('AUTO_')) ? rawPid : '';
+    if (!resolvedPid && surveySession) {
+      if (surveySession.project_id) {
+        resolvedPid = surveySession.project_id;
+      } else if (surveySession.survey_id) {
+        try {
+          let sDoc: any = null;
+          if (mongoose.Types.ObjectId.isValid(surveySession.survey_id)) {
+            sDoc = await Survey.findById(surveySession.survey_id);
+          }
+          if (!sDoc) {
+            const { default: SurveyLite } = await import('./vendor-lite/surveyModel.js').catch(() => ({ default: null }));
+            if (SurveyLite && mongoose.Types.ObjectId.isValid(surveySession.survey_id)) {
+              sDoc = await SurveyLite.findById(surveySession.survey_id);
+            }
+          }
+          if (sDoc) {
+            resolvedPid = extractProjectIdFromUrl(sDoc.link || sDoc.externalLink) || sDoc.pid || '';
+          }
+        } catch (e) {
+          console.warn("Survey PID lookup error:", e);
+        }
+      }
+    }
+    const finalPid = resolvedPid || (rawPid ? rawPid : "AUTO_" + Date.now());
+
     // If survey session found, handle vendor redirect
     if (surveySession && vendor) {
       const statusCode = Number(status) || 1;
 
       console.log("📋 STEP 3: Vendor data loaded");
       console.log("   - Vendor ID:", vendor?._id || vendor?.id);
+      console.log("   - Final PID:", finalPid);
       console.log("   - Has Complete URL:", !!(vendor?.complete_url || vendor?.redirectLinks?.complete));
       console.log("   - Has Terminate URL:", !!(vendor?.terminate_url || vendor?.redirectLinks?.terminate));
       console.log("   - Has Quota URL:", !!(vendor?.quota_full_url || vendor?.redirectLinks?.quotaFull));
@@ -1456,35 +1510,51 @@ app.get('/api/redirect', async (req, res) => {
 
       if (vendorUrl) {
         let finalVendorUrl = vendorUrl.trim();
-        const placeholderRegex = /\[(identifier|uid|user_id|userid|id|rid|respid|click_id|clickid|pid|respondent_id|value)\]|\{(identifier|uid|user_id|userid|id|rid|respid|click_id|clickid|pid|respondent_id|value)\}|###(UID|USER_ID|IDENTIFIER|RID)###|%%(UID|USER_ID|IDENTIFIER|RID)%%/gi;
+        const userPlaceholderRegex = /\[(identifier|uid|user_id|userid|id|rid|respid|click_id|clickid|respondent_id|value)\]|\{(identifier|uid|user_id|userid|id|rid|respid|click_id|clickid|respondent_id|value)\}|###(UID|USER_ID|IDENTIFIER|RID)###|%%(UID|USER_ID|IDENTIFIER|RID)%%/gi;
+        const pidPlaceholderRegex = /\[(pid|projectid|project_id)\]|\{(pid|projectid|project_id)\}|\[#pid#\]|\[#PID#\]|###(PID|PROJECTID)###|%%(PID|PROJECTID)%%/gi;
         
-        let hadPlaceholder = false;
-        if (placeholderRegex.test(finalVendorUrl)) {
-          hadPlaceholder = true;
-          finalVendorUrl = finalVendorUrl.replace(placeholderRegex, encodeURIComponent(String(surveySession.actual_user_id)));
+        let hadUserPlaceholder = false;
+        if (userPlaceholderRegex.test(finalVendorUrl)) {
+          hadUserPlaceholder = true;
+          finalVendorUrl = finalVendorUrl.replace(userPlaceholderRegex, encodeURIComponent(String(surveySession.actual_user_id)));
+        }
+
+        if (pidPlaceholderRegex.test(finalVendorUrl)) {
+          finalVendorUrl = finalVendorUrl.replace(pidPlaceholderRegex, encodeURIComponent(finalPid));
         }
 
         try {
           const parsed = new URL(finalVendorUrl);
-          const targetKeys = ['uid', 'user_id', 'userid', 'rid', 'respid', 'id', 'user'];
-          let found = false;
-          for (const k of targetKeys) {
+          const targetUserKeys = ['uid', 'user_id', 'userid', 'rid', 'respid', 'id', 'user'];
+          let foundUserKey = false;
+          for (const k of targetUserKeys) {
             if (parsed.searchParams.has(k)) {
-              found = true;
+              foundUserKey = true;
               const cur = parsed.searchParams.get(k) || '';
-              if (!cur || cur === String(surveySession.actual_user_id) || /^(\[.*\]|\{.*\}|###.*###|%%.*%%|XXXXX?)$/i.test(cur) || !hadPlaceholder) {
+              if (!cur || cur === String(surveySession.actual_user_id) || /^(\[.*\]|\{.*\}|###.*###|%%.*%%|XXXXX?)$/i.test(cur) || !hadUserPlaceholder) {
                 parsed.searchParams.set(k, String(surveySession.actual_user_id));
               } else {
                 parsed.searchParams.set(k, cur);
               }
             }
           }
-          if (!found && !hadPlaceholder) {
+          if (!foundUserKey && !hadUserPlaceholder) {
             parsed.searchParams.set('uid', String(surveySession.actual_user_id));
           }
+
+          const targetPidKeys = ['pid', 'projectid', 'project_id'];
+          for (const k of targetPidKeys) {
+            if (parsed.searchParams.has(k)) {
+              const cur = parsed.searchParams.get(k) || '';
+              if (!cur || /^(\[.*\]|\{.*\}|###.*###|%%.*%%|AUTO_.*|XXXXX?)$/i.test(cur)) {
+                parsed.searchParams.set(k, finalPid);
+              }
+            }
+          }
+
           finalVendorUrl = parsed.toString();
         } catch {
-          if (!hadPlaceholder) {
+          if (!hadUserPlaceholder) {
             finalVendorUrl = finalVendorUrl.replace(/\[identifier\]/gi, String(surveySession.actual_user_id));
           }
         }
@@ -1493,12 +1563,12 @@ app.get('/api/redirect', async (req, res) => {
           statusCode,
           vendorId: vendor?._id || vendor?.id,
           actualUserId: surveySession.actual_user_id,
+          pid: finalPid,
           finalRedirectUrl: finalVendorUrl,
           source: 'survey_session'
         });
 
-        // Non-blocking log creation
-        const finalPid = pid ? String(pid) : "AUTO_" + Date.now();
+        // Non-blocking log creation with accurate PID
         const statusMap: Record<string, string> = {
           "1": "Completed",
           "2": "Terminated",
@@ -1518,6 +1588,7 @@ app.get('/api/redirect', async (req, res) => {
         if (req.get('Accept')?.includes('application/json')) {
           return res.json({
             success: true,
+            pid: finalPid,
             redirectUrl: finalVendorUrl,
             hasVendorRedirect: true,
             source: 'survey_session'
@@ -1535,6 +1606,7 @@ app.get('/api/redirect', async (req, res) => {
     if (req.get('Accept')?.includes('application/json')) {
       return res.json({
         success: true,
+        pid: finalPid,
         hasVendorRedirect: false,
         message: 'No vendor redirect configured for this user'
       });
@@ -1546,7 +1618,6 @@ app.get('/api/redirect', async (req, res) => {
       return res.redirect(`${BASE_URL}/error`);
     }
 
-    const finalPid = pid ? String(pid) : "AUTO_" + Date.now();
     const statusCode = Number(status) || 1;
     const statusMap: Record<string, string> = {
       "1": "Completed",

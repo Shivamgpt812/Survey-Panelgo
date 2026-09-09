@@ -6,6 +6,7 @@ export interface ISurveySession {
   vendor_id: mongoose.Types.ObjectId;
   actual_user_id: string;
   survey_id?: string | null;
+  project_id?: string | null;
   base_url: string;
   identifier_param_name: string;
   created_at: Date;
@@ -30,7 +31,11 @@ const surveySessionSchema = new mongoose.Schema(
     },
     survey_id: {
       type: String,
-      required: false // pid if available
+      required: false // survey ID in MongoDB
+    },
+    project_id: {
+      type: String,
+      required: false // projectid from external link or provider (e.g. 860114895041)
     },
     base_url: {
       type: String,
