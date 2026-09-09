@@ -15,7 +15,7 @@ import { DecorativeBlob, DotGrid, IconCircle } from '@/components/decorations';
 import type { Survey, Vendor } from '@/types';
 import { validatePreScreener, type PreScreenerAnswer } from '@/lib/preScreenerValidation';
 import { apiGet, apiPost } from '@/lib/api';
-import { getVendorSession } from '@/lib/vendorSession';
+import { getVendorSession, storeVendorSession } from '@/lib/vendorSession';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import { useToast } from '@/hooks/useToast';
 import { getStoredToken, useAuth } from '@/hooks/useAuth';
@@ -154,7 +154,8 @@ const PreScreenerPage: React.FC = () => {
       }
       if (survey.link) {
         const targetLink = resolveExternalSurveyLink(survey.link, effectiveUid);
-        window.open(targetLink, '_blank');
+        window.location.href = targetLink;
+        return;
       }
       navigateToDashboard();
     };
@@ -237,9 +238,20 @@ const PreScreenerPage: React.FC = () => {
   }
 
   if (preScreenerQuestions.length === 0) {
+    const effectiveUid = uid || (user?.id ? String(user.id) : '');
+    const targetLink = survey.isExternal && survey.link ? resolveExternalSurveyLink(survey.link, effectiveUid) : '';
     return (
-      <div className="min-h-screen flex items-center justify-center bg-periwinkle">
-        <div className="w-10 h-10 border-4 border-violet border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-periwinkle p-4">
+        <PlayfulCard className="p-8 text-center max-w-md">
+          <div className="w-10 h-10 border-4 border-violet border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <h2 className="font-outfit font-bold text-2xl text-navy mb-2">Redirecting to Survey...</h2>
+          <p className="font-jakarta text-navy-light mb-6">Connecting you to the survey session.</p>
+          {targetLink && (
+            <PlayfulButton onClick={() => window.location.href = targetLink}>
+              Click here if not redirected
+            </PlayfulButton>
+          )}
+        </PlayfulCard>
       </div>
     );
   }
