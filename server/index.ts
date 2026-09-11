@@ -62,6 +62,53 @@ function userJson(u: InstanceType<typeof User>) {
   return u.toJSON() as Record<string, unknown>;
 }
 
+async function syncUserPointsAndCompletions(userDoc: InstanceType<typeof User>) {
+  try {
+    const userId = userDoc._id.toString();
+    const completedResponses = await Response.find({
+      userId,
+      status: 'complete',
+    });
+
+    if (completedResponses.length > 0) {
+      let earnedPoints = 0;
+      for (const resp of completedResponses) {
+        if (resp.surveyId && mongoose.isValidObjectId(resp.surveyId)) {
+          const s = await Survey.findById(resp.surveyId);
+          if (s && typeof s.pointsReward === 'number') {
+            earnedPoints += s.pointsReward;
+          } else {
+            earnedPoints += 500;
+          }
+        } else {
+          earnedPoints += 500;
+        }
+      }
+
+      const totalRedeemed = userDoc.rewardsRedeemed || 0;
+      const expectedPoints = Math.max(0, earnedPoints - totalRedeemed);
+
+      let changed = false;
+      if ((userDoc.surveysCompleted || 0) < completedResponses.length) {
+        userDoc.surveysCompleted = completedResponses.length;
+        changed = true;
+      }
+      if ((userDoc.points || 0) < expectedPoints) {
+        userDoc.points = expectedPoints;
+        changed = true;
+      }
+
+      if (changed) {
+        await userDoc.save();
+        console.log(`🔄 Synced points for ${userDoc.name}: ${userDoc.points} pts (${userDoc.surveysCompleted} completed)`);
+      }
+    }
+  } catch (err) {
+    console.error('Error syncing user points:', err);
+  }
+  return userDoc;
+}
+
 // ---------- Auth ----------
 app.post('/api/auth/register', async (req, res) => {
   try {
@@ -107,7 +154,7 @@ app.post('/api/auth/login', async (req, res) => {
       res.status(400).json({ error: 'Email and password are required' });
       return;
     }
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    let user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
       res.status(401).json({ error: 'Invalid email or password' });
       return;
@@ -127,6 +174,8 @@ app.post('/api/auth/login', async (req, res) => {
       return;
     }
 
+    user = await syncUserPointsAndCompletions(user);
+
     const token = signToken(user._id.toString(), String(user.role));
     await ActivityLog.create({
       message: `${user.name} logged in`,
@@ -141,15 +190,12 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/auth/me', requireAuth, async (req: AuthedRequest, res) => {
   try {
-    const u = await User.findById(req.user!._id);
+    let u = await User.findById(req.user!._id);
     if (!u) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
-    if (u.surveysCompleted === 0 && u.points > 0) {
-      u.points = 0;
-      await u.save();
-    }
+    u = await syncUserPointsAndCompletions(u);
     res.json({ user: userJson(u) });
   } catch (e) {
     console.error(e);
@@ -337,13 +383,7 @@ app.post('/api/panel-auth/login', async (req, res) => {
           error: `This account was not created for the ${requestedPanelName}. Please sign up for this panel or log in through the main portal.`,
         });
         return;
-      }
-    }
-
-    if (user.surveysCompleted === 0 && user.points > 0) {
-      user.points = 0;
-      await user.save();
-    }
+    user = await syncUserPointsAndCompletions(user);
 
     const token = signToken(user._id.toString(), String(user.role));
 
@@ -541,15 +581,12 @@ app.post('/api/panel-auth/complete-profile', requireAuth, async (req: AuthedRequ
 // 5. Get current panel user profile
 app.get('/api/panel-auth/me', requireAuth, async (req: AuthedRequest, res) => {
   try {
-    const u = await User.findById(req.user!._id);
+    let u = await User.findById(req.user!._id);
     if (!u) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
-    if (u.surveysCompleted === 0 && u.points > 0) {
-      u.points = 0;
-      await u.save();
-    }
+    u = await syncUserPointsAndCompletions(u);
     res.json({ user: userJson(u) });
   } catch (e) {
     console.error(e);
@@ -915,14 +952,15 @@ app.get('/api/responses', requireAdmin, async (_req, res) => {
 
 app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
   try {
-    const { surveyId, status, vendorId, preScreenerAnswers, failureReason } = req.body as {
+    const { surveyId, status, vendorId, preScreenerAnswers, failureReason, userId: bodyUserId } = req.body as {
       surveyId?: string;
       status?: 'complete' | 'terminate' | 'quota_full';
       vendorId?: string;
       preScreenerAnswers?: { questionId: string; value: string | number | boolean }[];
       failureReason?: string;
+      userId?: string;
     };
-    const userId = req.user?.id; // May be undefined for vendor flow without login
+    const userId = req.user?._id?.toString() || req.user?.id || (bodyUserId && bodyUserId !== 'undefined' ? bodyUserId : undefined);
 
     if (!surveyId || !status) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -1017,6 +1055,24 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
       }
     }
 
+    // Award points to the panelist / user upon survey completion
+    let updatedUserJson: Record<string, unknown> | undefined = undefined;
+    if (status === 'complete' && userId && mongoose.isValidObjectId(userId)) {
+      try {
+        const userToAward = await User.findById(userId);
+        if (userToAward) {
+          const rewardPts = typeof survey.pointsReward === 'number' ? survey.pointsReward : 500;
+          userToAward.points = (userToAward.points || 0) + rewardPts;
+          userToAward.surveysCompleted = (userToAward.surveysCompleted || 0) + 1;
+          await userToAward.save();
+          console.log(`✅ Awarded ${rewardPts} points to user ${userToAward.name} (${userId}). Total balance: ${userToAward.points}`);
+          updatedUserJson = userJson(userToAward);
+        }
+      } catch (awardErr) {
+        console.error('Failed to award points to user on response completion:', awardErr);
+      }
+    }
+
     const uname =
       req.user && 'name' in req.user ? (req.user as { name?: string }).name : 'A respondent';
     if (status === 'complete') {
@@ -1039,7 +1095,7 @@ app.post('/api/responses', optionalAuth, async (req: AuthedRequest, res) => {
       });
     }
 
-    res.status(201).json({ response: r.toJSON() });
+    res.status(201).json({ response: r.toJSON(), user: updatedUserJson });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to record response' });

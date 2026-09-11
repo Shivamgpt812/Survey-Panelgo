@@ -90,7 +90,7 @@ function checkCountryMismatch(fullText: string, userCountryStr?: string): boolea
 
 export const PanelDashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout, setAuthUser } = useAuth() as any;
+  const { user, logout, setAuthUser, refreshUser } = useAuth() as any;
   const { addToast } = useToast();
 
   const [surveys, setSurveys] = useState<Survey[]>([]);
@@ -101,6 +101,9 @@ export const PanelDashboardPage: React.FC = () => {
   const fetchSurveys = () => {
     setSurveysLoading(true);
     const token = getStoredToken();
+    if (refreshUser) {
+      refreshUser().catch(() => {});
+    }
 
     Promise.all([
       apiGet<{ surveys: Survey[] }>('/api/surveys'),

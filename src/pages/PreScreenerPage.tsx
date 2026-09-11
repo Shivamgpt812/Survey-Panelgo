@@ -37,7 +37,7 @@ const PreScreenerPage: React.FC = () => {
   const navigate = useNavigate();
   const { surveyId } = useParams<{ surveyId: string }>();
   const { addToast } = useToast();
-  const { user } = useAuth();
+  const { user, refreshUser, setAuthUser } = useAuth();
   const [searchParams] = useSearchParams();
 
   const [survey, setSurvey] = useState<Survey | undefined>(undefined);
@@ -349,18 +349,24 @@ const PreScreenerPage: React.FC = () => {
 
     const recordStart = async () => {
       try {
-        await apiPost(
+        const effectiveUid = uid || (user?.id ? String(user.id) : undefined);
+        const data = await apiPost<{ response: any; user?: User }>(
           '/api/responses',
           {
             surveyId: survey!.id,
             vendorId: vendorId || undefined,
-            userId: user?.id || undefined, // Allow undefined for vendor flow without login
+            userId: effectiveUid,
             status: 'complete',
             preScreenerAnswers: answers,
           },
-          user ? getStoredToken() : undefined // No token for vendor flow without login
+          user ? getStoredToken() : undefined
         );
-        console.log('Response recorded successfully');
+        if (data?.user && setAuthUser) {
+          setAuthUser(data.user);
+        } else if (refreshUser) {
+          await refreshUser().catch(() => {});
+        }
+        console.log('Response recorded successfully and user refreshed');
       } catch (e) {
         console.error('Failed to record response:', e);
         addToast(e instanceof Error ? e.message : 'Could not record response', 'error');
