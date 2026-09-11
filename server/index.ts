@@ -352,7 +352,7 @@ app.post('/api/panel-auth/login', async (req, res) => {
       return;
     }
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    let user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
       res.status(401).json({ error: 'Invalid email or password' });
       return;
@@ -383,6 +383,9 @@ app.post('/api/panel-auth/login', async (req, res) => {
           error: `This account was not created for the ${requestedPanelName}. Please sign up for this panel or log in through the main portal.`,
         });
         return;
+      }
+    }
+
     user = await syncUserPointsAndCompletions(user);
 
     const token = signToken(user._id.toString(), String(user.role));
