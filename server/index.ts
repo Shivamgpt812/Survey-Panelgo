@@ -32,14 +32,12 @@ import { OAuth2Client } from 'google-auth-library';
 const app = express();
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://surveypanelgo.netlify.app',
   'https://surveypanelgo.com',
   'https://www.surveypanelgo.com'
 ];
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://surveypanelgo.netlify.app',
     'https://surveypanelgo.com',
     'https://www.surveypanelgo.com'
   ],
@@ -1599,7 +1597,7 @@ app.get('/api/redirect', async (req, res) => {
       });
     }
 
-    const BASE_URL = "https://surveypanelgo.netlify.app";
+    const BASE_URL = process.env.FRONTEND_URL || "https://surveypanelgo.com";
 
     if (!effectiveUid || !status) {
       return res.redirect(`${BASE_URL}/error`);
@@ -1706,7 +1704,7 @@ app.get('/api/redirect', async (req, res) => {
     console.error("   Request URL:", req.url);
     console.error("   Query params:", req.query);
     
-    const fallback = "https://surveypanelgo.netlify.app";
+    const fallback = process.env.FRONTEND_URL || "https://surveypanelgo.com";
     // For AJAX requests, return JSON error
     if (req.get('Accept')?.includes('application/json')) {
       return res.status(500).json({ 

@@ -1,4 +1,5 @@
-/api/redirect  https://survey-panelgo.onrender.com/api/redirect  200
-/assets/*   /assets/:splat   200
-/*          /index.html      200
+/api/*        https://survey-panelgo.onrender.com/api/:splat        200
+/external/*   https://survey-panelgo.onrender.com/external/:splat   200
+/assets/*     /assets/:splat                                        200
+/*            /index.html                                           200
 

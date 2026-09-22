@@ -3,6 +3,7 @@ import { AuthProvider } from '@/hooks/useAuth';
 import { ToastProvider } from '@/hooks/useToast';
 import { AdminRoute, UserRoute, PanelRoute } from '@/components/auth/ProtectedRoute';
 import { LandingPage, AuthPage, DashboardPage, SurveyPage, RewardsPage, InternalSurveyPage, ServicesPage, ServiceDetailPage, BlogPage, AboutPage, BlogDetailPage, CountryDetailPage, CountryHeroSection, SuccessPage, TerminatedPage, QuotaFullPage, SecurityBlockPage, B2BPanelPage, B2CPanelPage, PatientsCarersPage, HealthcareProfessionalsPage, PanelAuthPage, PanelDashboardPage } from '@/pages';
+import SurveyResultCard from '@/components/SurveyResultCard';
 import SurveySuccess from '@/pages/SurveySuccess';
 import SurveyTerminated from '@/pages/SurveyTerminated';
 import SurveyQuota from '@/pages/SurveyQuota';
@@ -35,6 +36,8 @@ function AppContent() {
         <Route path="/survey-result/terminated" element={<SurveyTerminated />} />
         <Route path="/survey-result/quota-full" element={<SurveyQuota />} />
         <Route path="/survey-result/security" element={<SurveySecurity />} />
+        <Route path="/api/redirect" element={<SurveyResultCard />} />
+        <Route path="/redirect" element={<SurveyResultCard />} />
         {/* Test route */}
         <Route path="/test" element={<h1 style={{ color: "black" }}>TEST ROUTE WORKS</h1>} />
         {/* Dynamic route temporarily removed for testing */}

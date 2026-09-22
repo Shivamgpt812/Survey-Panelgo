@@ -216,8 +216,8 @@ router.get('/external/router', async (req, res) => {
                 if (backendHost.includes('localhost') || backendHost.includes('127.0.0.1')) {
                     frontendBase = "http://localhost:5173";
                 } else {
-                    // Use Netlify or production domain
-                    frontendBase = "https://surveypanelgo.netlify.app";
+                    // Use production domain
+                    frontendBase = "https://surveypanelgo.com";
                 }
             }
 
@@ -375,7 +375,7 @@ router.get("/external/redirect/:status", async (req, res) => {
         }
 
         // For other statuses (complete, quota), redirect to frontend first for 2-second delay
-        const frontendBase = "https://surveypanelgo.netlify.app";
+        const frontendBase = process.env.FRONTEND_URL || "https://surveypanelgo.com";
         const resPath = status === "complete" ? "/survey-result/success" :
             status === "quota" ? "/survey-result/quota-full" :
                 "/survey-result/terminated";

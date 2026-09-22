@@ -68,10 +68,9 @@ export default function VendorSurveyPublicPage() {
 
   const fetchSurvey = async () => {
     try {
-      // Multiple environment detection strategies for Netlify
+      // Environment detection for API endpoint
       const isProduction = import.meta.env.PROD ||
-        window.location.hostname !== 'localhost' ||
-        window.location.hostname.includes('netlify.app');
+        window.location.hostname !== 'localhost';
 
       let apiUrl = isProduction
         ? 'https://survey-panelgo.onrender.com'
