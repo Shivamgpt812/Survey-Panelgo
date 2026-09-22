@@ -1,0 +1,24 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/redirect",
+      "destination": "https://survey-panelgo.onrender.com/api/redirect"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://survey-panelgo.onrender.com/api/:path*"
+    },
+    {
+      "source": "/external/:path*",
+      "destination": "https://survey-panelgo.onrender.com/external/:path*"
+    },
+    {
+      "source": "/survey/redirect/:path*",
+      "destination": "https://survey-panelgo.onrender.com/survey/redirect/:path*"
+    },
+    {
+      "source": "/((?!assets/|.*\\..*).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
